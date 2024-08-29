@@ -267,4 +267,16 @@ python3 grade.py 5 1 #测试lab5进阶要求
 
 
 ## lab5:目标代码生成
+<<<<<<< HEAD
 >>>>>>> 94af9b3 (Create README.md)
+=======
+
+
+## Testcase reference
+2023编译系统实现赛官方样例：https://gitlab.eduxiji.net/nscscc/compiler2023
+
+北京大学编译原理实验课样例：https://github.com/pku-minic/awesome-sysy
+
+洛谷OJ题解：
+
+>>>>>>> b4a598b (Update README.md)
