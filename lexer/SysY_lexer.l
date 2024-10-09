@@ -13,42 +13,101 @@ extern IdTable id_table;
 void yyerror(char* s, ...);
 %}
 
-%%
-    /* TODO():增加处理注释的代码*/
+SINGLE_COMMENT \/\/.*\n          
+MULTI_COMMENT \/\*([^*]|\*+[^/])*\*\/
+ID         [_a-zA-Z][_a-zA-Z0-9]* 
+INT_CONST  ([1-9][0-9]*)|0           
+OPERATOR   [\.\+\-\*\/\=\<\!\%\>]     
+SYMBOL     [\{\}\;\(\)\,\[\]]         
+WS [ \t\f\r\v]
+OCTAL_CONST 0[0-7]+
+HEXA_CONST  0[xX][0-9a-fA-F]+
 
-    /* TODO():增加处理列号的代码(cur_col_number表示当前token开始位置, col_number表示当前token结束位置) */
-"<=" {return LEQ;}         
-">=" {return GEQ;}         
-"==" {return EQ;}        
-"!=" {return NE;}
-"&&" {return AND;}         
-"||" {return OR;}               
-"const" {return CONST;}     
-"if" {return IF;}       
-"else" {return ELSE;}  
-"while" {return WHILE;}
-"void" {return NONE_TYPE;}    
-"int" {return INT;}    
-"float" {return FLOAT;}      
-"return" {return RETURN;}    
-"break" {return BREAK;}     
-"continue" {return CONTINUE;}
+
+
+%%
+
+{SINGLE_COMMENT} {cur_col_number = col_number; col_number += strlen(yytext); ++line_number;}
+{MULTI_COMMENT} {
+    for (char* p = yytext; *p; ++p) {
+        if (*p == '\n') {
+            ++line_number;
+            col_number = 0;
+        } else {
+            ++col_number;
+        }
+    }
+}
+
+"<=" {  cur_col_number = col_number;
+        col_number += strlen(yytext);
+        return LEQ;}
+">=" {  cur_col_number = col_number;
+        col_number += strlen(yytext);
+        return GEQ;}
+"==" {  cur_col_number = col_number;
+        col_number += strlen(yytext);
+        return EQ;}
+"!=" {  cur_col_number = col_number;
+        col_number += strlen(yytext);
+        return NE;}
+"&&" {  cur_col_number = col_number;
+        col_number += strlen(yytext);
+        return AND;}         
+"||" {  cur_col_number = col_number;
+        col_number += strlen(yytext);
+        return OR;}               
+"const" {   cur_col_number = col_number;
+            col_number += strlen(yytext);
+            return CONST;}     
+"if" {  cur_col_number = col_number;
+        col_number += strlen(yytext);
+        return IF;}       
+"else" {cur_col_number = col_number;
+        col_number += strlen(yytext);
+        return ELSE;}  
+"while" {   cur_col_number = col_number;
+            col_number += strlen(yytext);
+            return WHILE;}
+"void" {cur_col_number = col_number;
+        col_number += strlen(yytext);
+        return NONE_TYPE;}    
+"int" { cur_col_number = col_number;
+        col_number += strlen(yytext);
+        return INT;}    
+"float" {   cur_col_number = col_number;
+            col_number += strlen(yytext);
+            return FLOAT;}      
+"return" {  cur_col_number = col_number;
+            col_number += strlen(yytext);
+            return RETURN;}    
+"break" {   cur_col_number = col_number;
+            col_number += strlen(yytext);
+            return BREAK;}     
+"continue" {    cur_col_number = col_number;
+                col_number += strlen(yytext);
+                return CONTINUE;}
 
 \n {++line_number;col_number = 0;}
 
-[ \t\f\r\v] {col_number += strlen(yytext);}
+{WS} {col_number += strlen(yytext);}
 
-[\.\+\-\*\/\=\<\!\%\>] {return yytext[0];}
+{OPERATOR} {    cur_col_number = col_number;
+                col_number += strlen(yytext);
+                return yytext[0];}
 
-[\{\}\;\(\)\,\[\]] {return yytext[0];}
-
-[_a-zA-Z][_a-zA-Z0-9]* {
+{SYMBOL} {
     cur_col_number = col_number;
     col_number += strlen(yytext);
-    yylval.symbol_token = id_table.add_id(std::string(yytext));
-    return IDENT;
-}
-([1-9][0-9]*)|0 {
+    return yytext[0];}
+
+{ID} {  cur_col_number = col_number;
+        col_number += strlen(yytext);
+        yylval.symbol_token = id_table.add_id(std::string(yytext));
+        return IDENT;}
+
+
+{INT_CONST} {
     cur_col_number = col_number;
     col_number += strlen(yytext);
     // yylval.int_token = stoi(std::string(yytext));
@@ -64,8 +123,24 @@ void yyerror(char* s, ...);
       之所以要定义这三种类型，是因为我们只返回这个token的类型是不够的，我们还需要知道这个token的属性
       例如我们需要知道INT_CONST具体的值是多少
     */
-    /*TODO():参考SysY2022定义, 处理更多的词法, 如浮点数，十六进制数等*/
-    
+
+{OCTAL_CONST} {
+    cur_col_number = col_number; // 保存当前 token 开始位置
+    col_number += strlen(yytext); // 更新结束位置
+    yylval.int_token = strtol(yytext, nullptr, 8); // 处理八进制整型常量
+    return INT_CONST;
+}
+
+{HEXA_CONST} {
+    cur_col_number = col_number; // 保存当前 token 开始位置
+    col_number += strlen(yytext); // 更新结束位置
+    yylval.int_token = strtol(yytext, nullptr, 16); // 处理十六进制整型常量
+    return INT_CONST;
+}
+
+
+
+
 
     /*unknown tokens, return ERROR*/
 . {
