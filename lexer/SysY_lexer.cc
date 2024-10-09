@@ -1028,14 +1028,20 @@ YY_RULE_SETUP
 #line 140 "lexer/SysY_lexer.l"
 {
     cur_col_number = col_number;
-    col_number += strlen(yytext);
-    yylval.int_token = strtol(yytext, nullptr, 16);
+    yylval.int_token = 0;
+    for (int i = 2; yytext[i] != '\0'; ++i) {
+        char c = yytext[i];
+        int digit = (c >= '0' && c <= '9') ? (c - '0') : 
+                    (c >= 'a' && c <= 'f') ? (c - 'a' + 10) : 
+                    (c - 'A' + 10);
+        yylval.int_token = yylval.int_token * 16 + digit;
+    }
     return INT_CONST;
 }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 147 "lexer/SysY_lexer.l"
+#line 153 "lexer/SysY_lexer.l"
 {
     cur_col_number = col_number;
     col_number += strlen(yytext);
@@ -1089,16 +1095,15 @@ YY_RULE_SETUP
             i++;
         }
         exponent *= expSign;
-        
-    }
-    value *= pow(10, exponent);
+        value *= pow(10, exponent);  
+    } 
     yylval.float_token = value;
     return FLOAT_CONST;
 }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 207 "lexer/SysY_lexer.l"
+#line 212 "lexer/SysY_lexer.l"
 {
     cur_col_number = col_number;
     col_number += strlen(yytext);
@@ -1166,7 +1171,7 @@ YY_RULE_SETUP
 /*unknown tokens, return ERROR*/
 case 29:
 YY_RULE_SETUP
-#line 274 "lexer/SysY_lexer.l"
+#line 279 "lexer/SysY_lexer.l"
 {
     cur_col_number = col_number;
     col_number += strlen(yytext);
@@ -1176,10 +1181,10 @@ YY_RULE_SETUP
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 280 "lexer/SysY_lexer.l"
+#line 285 "lexer/SysY_lexer.l"
 ECHO;
 	YY_BREAK
-#line 1183 "lexer/SysY_lexer.cc"
+#line 1188 "lexer/SysY_lexer.cc"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2184,7 +2189,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 280 "lexer/SysY_lexer.l"
+#line 285 "lexer/SysY_lexer.l"
 
 
 
