@@ -4,15 +4,12 @@ IDENT           main                 main                             1         
 LPAREN          (                                                     1              8              
 RPAREN          )                                                     1              9              
 LBRACE          {                                                     1              10             
-INT             int                                                   3              4              
-IDENT           b                    b                                3              8              
-ASSIGN          =                                                     3              10             
-INT_CONST       010                  8                                3              12             
-SEMICOLON       ;                                                     3              15             
-IDENT           b                    b                                4              4              
-ASSIGN          =                                                     4              6              
-IDENT           a                    a                                4              8              
-ADD             +                                                     4              10             
-INT_CONST       2                    2                                4              12             
-SEMICOLON       ;                                                     4              13             
-RBRACE          }                                                     5              0              
+FLOAT           float                                                 2              0              
+IDENT           a                    a                                2              6              
+ASSIGN          =                                                     2              8              
+FLOAT_CONST     2.2                  2.200000047684                   2              10             
+SEMICOLON       ;                                                     2              13             
+FLOAT_CONST     0.666                0.666000008583                   3              0              
+FLOAT_CONST     3e2                  300.000000000000                 4              0              
+FLOAT_CONST     0xap-1               5.000000000000                   5              0              
+RBRACE          }                                                     6              0              

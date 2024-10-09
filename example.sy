@@ -1,5 +1,6 @@
 int main(){
-    /*int a = 0;*/
-    int b = 010;
-    b = a + 2;
+float a = 2.2;
+0.666
+3e2
+0xap-1
 }

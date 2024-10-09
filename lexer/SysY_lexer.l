@@ -23,6 +23,8 @@ WS [ \t\f\r\v]
 OCTAL_CONST 0[0-7]+
 HEXA_CONST  0[xX][0-9a-fA-F]+
 
+FLOAT_CONST (([0-9]*[.][0-9]+)|([0-9]+[.][0-9]*)([eE][+-]?[0-9]+)?)|([0-9]+[eE][+-]?[0-9]+)
+HEX_FLOAT 0[xX]([0-9A-Fa-f]+[.]?[0-9A-Fa-f]*|[.][0-9A-Fa-f]+)([pP][+-]?[0-9]+)
 
 
 %%
@@ -125,20 +127,145 @@ HEXA_CONST  0[xX][0-9a-fA-F]+
     */
 
 {OCTAL_CONST} {
-    cur_col_number = col_number; // 保存当前 token 开始位置
-    col_number += strlen(yytext); // 更新结束位置
-    yylval.int_token = strtol(yytext, nullptr, 8); // 处理八进制整型常量
+    cur_col_number = col_number;
+    col_number += strlen(yytext);
+    // yylval.int_token = strtol(yytext, nullptr, 8);
+    yylval.int_token = 0;
+    for (int i = 1; yytext[i] != '\0'; ++i) {
+        yylval.int_token = yylval.int_token * 8 + (yytext[i] - '0');
+    }
     return INT_CONST;
 }
 
 {HEXA_CONST} {
-    cur_col_number = col_number; // 保存当前 token 开始位置
-    col_number += strlen(yytext); // 更新结束位置
-    yylval.int_token = strtol(yytext, nullptr, 16); // 处理十六进制整型常量
+    cur_col_number = col_number;
+    col_number += strlen(yytext);
+    yylval.int_token = strtol(yytext, nullptr, 16);
     return INT_CONST;
 }
 
+{FLOAT_CONST} {
+    cur_col_number = col_number;
+    col_number += strlen(yytext);
 
+    float value = 0.0;          //最终结果
+    int exponent = 0;           //指数
+    bool hasDecimal = false;    //指示小数点前后
+    float decimalFactor = 1.0;  //指示小数位数
+    int i = 0;
+
+    // 处理小数部分
+    while (yytext[i] != '\0' && yytext[i] != 'e' && yytext[i] != 'E') 
+    {
+        if (yytext[i] == '.')
+        {
+            hasDecimal = true;
+        } 
+        else
+        {
+            if (hasDecimal) 
+            {
+                //小数部分
+                decimalFactor *= 0.1;
+                value += (yytext[i] - '0') * decimalFactor;
+            } 
+            else 
+            {
+                // 整数部分
+                value = value * 10.0 + (yytext[i] - '0');
+            }
+        }
+        i++;
+    }
+
+    // 处理指数部分
+    if (yytext[i] == 'e' || yytext[i] == 'E') 
+    {
+        i++;
+        int expSign = 1;
+        if (yytext[i] == '+' || yytext[i] == '-') 
+        {
+            if (yytext[i] == '-') 
+            {
+                expSign = -1;
+            }
+            i++;
+        }
+        while (yytext[i] >= '0' && yytext[i] <= '9') 
+        {
+            exponent = exponent * 10 + (yytext[i] - '0');
+            i++;
+        }
+        exponent *= expSign;
+        value *= pow(10, exponent);  
+    } 
+    yylval.float_token = value;
+    return FLOAT_CONST;
+}
+
+{HEX_FLOAT} {
+    cur_col_number = col_number;
+    col_number += strlen(yytext);
+
+
+    float value = 0.0;
+    int exponent = 0;
+    bool hasFraction = false;
+    float decimalFactor = 1.0;
+    int i = 2;       //跳过 "0x/0x"
+
+    // 处理小数部分
+    while (yytext[i] != '\0' && yytext[i] != 'p' && yytext[i] != 'P') 
+    {
+        if (yytext[i] == '.') 
+        {
+            hasFraction = true;
+        } 
+        else
+        {
+            if (hasFraction) 
+            {
+                decimalFactor *= 0.0625; // 1/16
+                value += (yytext[i] >= '0' && yytext[i] <= '9') ? (yytext[i] - '0') :
+                         (yytext[i] >= 'a' && yytext[i] <= 'f') ? (yytext[i] - 'a' + 10) :
+                         (yytext[i] - 'A' + 10);
+                value *= decimalFactor;
+            } 
+            else
+            {   value *= 16.0;
+                value += (yytext[i] >= '0' && yytext[i] <= '9') ? (yytext[i] - '0') :
+                        (yytext[i] >= 'a' && yytext[i] <= 'f') ? (yytext[i] - 'a' + 10) :
+                        (yytext[i] - 'A' + 10);
+            }
+        }
+        i++;
+    }
+
+    // 处理指数部分
+    if (yytext[i] == 'p' || yytext[i] == 'P') 
+    {
+        i++;
+        int expSign = 1;
+        if (yytext[i] == '+' || yytext[i] == '-') 
+        {
+            if (yytext[i] == '-') 
+            {
+                expSign = -1;
+            }
+            i++;
+        }
+        while (yytext[i] >= '0' && yytext[i] <= '9')
+        {
+            exponent = exponent * 10 + (yytext[i] - '0');
+            i++;
+        }
+        exponent *= expSign;
+        value *= pow(2, exponent);
+    }
+
+    yylval.float_token = value;
+    return FLOAT_CONST;
+}
 
 
 
