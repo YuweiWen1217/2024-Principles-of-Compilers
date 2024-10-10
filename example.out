@@ -1,32 +1,12 @@
 Token           Lexeme               Property                        Line           Column         
-INT             int                                                   1              0              
-IDENT           main                 main                             1              4              
-LPAREN          (                                                     1              8              
-RPAREN          )                                                     1              9              
-LBRACE          {                                                     1              10             
-IDENT           f                    f                                4              4              
-ASSIGN          =                                                     4              6              
-IDENT           g                    g                                4              8              
-DIV             /                                                     4              13             
-IDENT           h                    h                                4              14             
-SEMICOLON       ;                                                     4              15             
-IDENT           l                    l                                5              11             
-LPAREN          (                                                     5              12             
-RPAREN          )                                                     5              13             
-SEMICOLON       ;                                                     5              14             
-IDENT           m                    m                                6              4              
-ASSIGN          =                                                     6              6              
-IDENT           n                    n                                6              8              
-ADD             +                                                     7              4              
-IDENT           p                    p                                7              6              
-SEMICOLON       ;                                                     7              7              
-IDENT           a                    a                                8              18             
-ASSIGN          =                                                     8              20             
-IDENT           b                    b                                8              22             
-ADD             +                                                     8              24             
-IDENT           c                    c                                8              26             
-MUL             *                                                     8              28             
-IDENT           d                    d                                8              30             
-DIV             /                                                     8              32             
-IDENT           e                    e                                8              34             
+IDENT           main                 main                             1              0              
+LPAREN          (                                                     1              4              
+RPAREN          )                                                     1              5              
+LBRACE          {                                                     1              7              
+FLOAT_CONST     0.2                  0.200000002980                   2              0              
+FLOAT_CONST     0.22                 0.219999998808                   3              0              
+ADD             +                                                     4              0              
+SUB             -                                                     5              0              
+LPAREN          (                                                     6              0              
+RPAREN          )                                                     8              0              
 RBRACE          }                                                     9              0              
