@@ -29,7 +29,7 @@ HEX_FLOAT 0[xX]([0-9A-Fa-f]+[.]?[0-9A-Fa-f]*|[.][0-9A-Fa-f]+)([pP][+-]?[0-9]+)
 
 %%
 
-{SINGLE_COMMENT} {cur_col_number = col_number; col_number += strlen(yytext); ++line_number;}
+{SINGLE_COMMENT} {cur_col_number = col_number; col_number = 0; ++line_number;}
 {MULTI_COMMENT} {
     for (char* p = yytext; *p; ++p) {
         if (*p == '\n') {

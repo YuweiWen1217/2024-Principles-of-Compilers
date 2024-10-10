@@ -4,12 +4,29 @@ IDENT           main                 main                             1         
 LPAREN          (                                                     1              8              
 RPAREN          )                                                     1              9              
 LBRACE          {                                                     1              10             
-FLOAT           float                                                 2              0              
-IDENT           a                    a                                2              6              
-ASSIGN          =                                                     2              8              
-FLOAT_CONST     2.2                  2.200000047684                   2              10             
-SEMICOLON       ;                                                     2              13             
-FLOAT_CONST     0.666                0.666000008583                   3              0              
-FLOAT_CONST     3e2                  300.000000000000                 4              0              
-FLOAT_CONST     0xap-1               5.000000000000                   5              0              
-RBRACE          }                                                     6              0              
+IDENT           f                    f                                4              4              
+ASSIGN          =                                                     4              6              
+IDENT           g                    g                                4              8              
+DIV             /                                                     4              13             
+IDENT           h                    h                                4              14             
+SEMICOLON       ;                                                     4              15             
+IDENT           l                    l                                5              11             
+LPAREN          (                                                     5              12             
+RPAREN          )                                                     5              13             
+SEMICOLON       ;                                                     5              14             
+IDENT           m                    m                                6              4              
+ASSIGN          =                                                     6              6              
+IDENT           n                    n                                6              8              
+ADD             +                                                     7              4              
+IDENT           p                    p                                7              6              
+SEMICOLON       ;                                                     7              7              
+IDENT           a                    a                                8              18             
+ASSIGN          =                                                     8              20             
+IDENT           b                    b                                8              22             
+ADD             +                                                     8              24             
+IDENT           c                    c                                8              26             
+MUL             *                                                     8              28             
+IDENT           d                    d                                8              30             
+DIV             /                                                     8              32             
+IDENT           e                    e                                8              34             
+RBRACE          }                                                     9              0              
