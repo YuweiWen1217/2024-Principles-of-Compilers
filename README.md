@@ -24,7 +24,7 @@ https://github.com/yuhuifishash/SysY
 
 5. 其他试图获取不公平优势的行为
 
-事实上，2024年编译系统设计赛中频繁有队伍进行第4点行为，包括一些性能分较高的队伍(~~决赛结束后复核被正义执行了~~), 但是在本学期的编译实验中，我们严禁此项行为，并且会对代码进行严格的审查，如果你不清楚什么级别的模式匹配是合法的，下面有一些例子
+事实上，2024年编译系统设计赛中频繁有队伍进行第4点行为，包括一些性能分较高的队伍(~~决赛结束后复核被正义执行了~~)。在本学期的编译实验中，我们严禁此项行为，并且会对代码进行严格的审查，如果你不清楚什么级别的模式匹配是合法的，下面有一些例子
 
 合理的模式匹配:
 
@@ -95,13 +95,19 @@ make -j
 ./bin/SysYc -select -o "output_filename" "input_filename" [-O1] #查看目标代码生成指令选择阶段结果
 ./bin/SysYc -S -o "output_filename" "input_filename" [-O1] #目标代码生成
 
+# 使用gdb调试编译器  -lexer可替换为其他上述出现的参数
+gdb --args bin/SysYc -lexer -o "output_filenme" "input_filename" [-O1]
+
+#[-O1]表示-O1是可选项
 ```
 
 ## Test your Compiler
 ```bash
 # lab1和lab2不支持自动评测
+
 python3 grade.py 3 0 #测试lab3基本要求
 python3 grade.py 3 1 #测试lab3进阶要求
+
 python3 grade.py 4 0 #测试lab4开启优化后的基本语法要求(你还需要通过optimize_test的测试)
 python3 grade.py 4 1 #测试lab4开启优化后的进阶语法要求(你还需要通过optimize_test的测试)
 python3 optimize_test.py #测试lab4基本优化要求, 结果不一定正确，以助教线下检查为准
@@ -208,33 +214,34 @@ python3 grade.py 5 1 #测试lab5开启优化时的进阶要求
 
 **include/cfg.h**:控制流图的定义
 
-**optimize/cfg/cfg.cc**:基本的cfg优化函数及辅助函数定义
+**optimize/analysis/cfg.cc**:控制流图建立和cfg相关的辅助函数
 
-**optimize/ssa/mem2reg.h**:Mem2Reg类的定义
+**optimize/transform/simplify_cfg.h**:控制流图简化类的定义
 
-**optimize/ssa/mem2reg.cc**:Mem2Reg类的实现, 基本要求只需要实现部分函数即可
+**optimize/transform/simplify_cfg.cc**:控制流图简化的实现, 对于基本要求, 你只需要实现消除不可达基本块和指令即可
+
+**optimize/transform/mem2reg.h**:Mem2Reg类的定义
+
+**optimize/transform/mem2reg.cc**:Mem2Reg类的实现, 基本要求只需要实现部分函数即可
 
 **进阶要求**需要阅读并编写的代码:
 
-**optimize/cfg/dominator_tree.h**:支配树类的定义
+**optimize/analysis/dominator_tree.h**:支配树类的定义
 
-**optimize/cfg/dominator_tree.cc**:支配树类的实现
+**optimize/analysis/dominator_tree.cc**:支配树类的实现
 
-**optimize/ssa/mem2reg.cc**:进阶要求中，你需要实现完整的mem2reg
+**optimize/transform/mem2reg.cc**:进阶要求中，你需要实现完整的mem2reg
 
 同时，如果你想在本次实验获得满分，你还需要根据大作业要求自行选择一些优化pass编写, 你需要自己从头开始编写你的优化pass
 
 
 
 ## lab5:目标代码生成
-<<<<<<< HEAD
->>>>>>> 94af9b3 (Create README.md)
-=======
 
 后端的代码框架设计上旨在易于扩展到多后端，所以代码上分为common文件夹和riscv64gc文件夹，其中common文件夹主要是架构无关的代码，例如寄存器分配算法，基本Machine指令的定义。
 而riscv64gc文件夹中主要为体系结构相关代码。
 
-**指令选择阶段**需要阅读(你可能也需要在这些文件中加一些定义，来方便你代码的编写)的代码：
+**指令选择阶段**需要阅读的代码(你可能也需要在这些文件中加一些定义，来方便你代码的编写)：
 
 **target/common/MachineBaseInstruction.h**:主要定义了基本的机器指令，RISC-V汇编指令继承了该文件中定义的类
 
@@ -290,4 +297,3 @@ python3 grade.py 5 1 #测试lab5开启优化时的进阶要求
 
 洛谷P3380题解：https://www.luogu.com.cn/article/55088clb
 
->>>>>>> b4a598b (Update README.md)

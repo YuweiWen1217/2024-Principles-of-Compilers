@@ -31,7 +31,7 @@ def add_returncode(file,ret):
 # 测试用例的返回值的不要为124或139，否则会导致测试程序误判
 
 def execute_ir(input,output,opt,stdin,stdout,testout):
-    result = execute(["timeout","300","./bin/SysYc","-llvm","-o",output,input,opt])
+    result = execute(["timeout","10","./bin/SysYc","-llvm","-o",output,input,opt])
     if(result.returncode != 0):
         print("\033[93mCompile Error on \033[0m"+input)
         return 0
@@ -54,7 +54,7 @@ def execute_ir(input,output,opt,stdin,stdout,testout):
     else:
         result = execute_with_stdin_out("timeout 10 ./a.out < "+stdin+" > "+testout + " 2>/dev/null")
     if(result == 124):
-        print("\033[93mTime Limit Execced on \033[0m"+input)
+        print("\033[93mTime Limit Exceed on \033[0m"+input)
         return 0
     elif(result == 139):
         print("\033[95mRunTime Error on \033[0m"+input)
@@ -70,7 +70,7 @@ def execute_ir(input,output,opt,stdin,stdout,testout):
         return 0
    
 def execute_asm(input,output,opt,stdin,stdout,testout):
-    result = execute(["timeout","300","./bin/SysYc","-S","-o",output,input,opt])
+    result = execute(["timeout","60","./bin/SysYc","-S","-o",output,input,opt])
     if(result.returncode != 0):
         print("\033[93mCompile Error on \033[0m"+input)
         return 0
@@ -93,7 +93,7 @@ def execute_asm(input,output,opt,stdin,stdout,testout):
     else:
         result = execute_with_stdin_out("timeout 20 qemu-riscv64 ./a.out < "+stdin+" > "+testout + " 2>/dev/null")
     if(result == 124):
-        print("\033[93mTime Limit Execced on \033[0m"+input)
+        print("\033[93mTime Limit Exceed on \033[0m"+input)
         return 0
     elif(result == 139):
         print("\033[95mRunTime Error on \033[0m"+input)
