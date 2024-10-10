@@ -1046,10 +1046,10 @@ YY_RULE_SETUP
     cur_col_number = col_number;
     col_number += strlen(yytext);
 
-    float value = 0.0;          //最终结果
+    double value = 0.0;          //最终结果
     int exponent = 0;           //指数
     bool hasDecimal = false;    //指示小数点前后
-    float decimalFactor = 1.0;  //指示小数位数
+    double decimalFactor = 1.0;  //指示小数位数
     int i = 0;
 
     // 处理小数部分
@@ -1097,7 +1097,7 @@ YY_RULE_SETUP
         exponent *= expSign;
         value *= pow(10, exponent);  
     } 
-    yylval.float_token = value;
+    yylval.float_token = (float)value;
     return FLOAT_CONST;
 }
 	YY_BREAK
@@ -1109,10 +1109,10 @@ YY_RULE_SETUP
     col_number += strlen(yytext);
 
 
-    float value = 0.0;
+    double value = 0.0;
     int exponent = 0;
     bool hasFraction = false;
-    float decimalFactor = 1.0;
+    double decimalFactor = 1.0;
     int i = 2;       //跳过 "0x/0x"
 
     // 处理小数部分
@@ -1164,7 +1164,7 @@ YY_RULE_SETUP
         value *= pow(2, exponent);
     }
 
-    yylval.float_token = value;
+    yylval.float_token = (float)value;
     return FLOAT_CONST;
 }
 	YY_BREAK
