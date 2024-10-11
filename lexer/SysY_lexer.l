@@ -80,7 +80,7 @@ HEX_FLOAT 0[xX]([0-9A-Fa-f]+[.]?[0-9A-Fa-f]*|[.][0-9A-Fa-f]+)([pP][+-]?[0-9]+)
 "float" {   cur_col_number = col_number;
             col_number += strlen(yytext);
             return FLOAT;}
-"for"{  cur_col_number = col_number;
+"for" {  cur_col_number = col_number;
         col_number += strlen(yytext);
         return FOR;}      
 "return" {  cur_col_number = col_number;
@@ -92,9 +92,6 @@ HEX_FLOAT 0[xX]([0-9A-Fa-f]+[.]?[0-9A-Fa-f]*|[.][0-9A-Fa-f]+)([pP][+-]?[0-9]+)
 "continue" {    cur_col_number = col_number;
                 col_number += strlen(yytext);
                 return CONTINUE;}
-"TODO"{ cur_col_number = col_number;
-        col_number += strlen(yytext);
-        return TODO;}
 
 \n {++line_number;col_number = 0;}
 
@@ -225,6 +222,7 @@ HEX_FLOAT 0[xX]([0-9A-Fa-f]+[.]?[0-9A-Fa-f]*|[.][0-9A-Fa-f]+)([pP][+-]?[0-9]+)
     bool hasFraction = false;
     double decimalFactor = 1.0;
     int i = 2;       //跳过 "0x/0x"
+    double addvalue = 0.0;
 
     // 处理小数部分
     while (yytext[i] != '\0' && yytext[i] != 'p' && yytext[i] != 'P') 
@@ -238,10 +236,10 @@ HEX_FLOAT 0[xX]([0-9A-Fa-f]+[.]?[0-9A-Fa-f]*|[.][0-9A-Fa-f]+)([pP][+-]?[0-9]+)
             if (hasFraction) 
             {
                 decimalFactor *= 0.0625; // 1/16
-                value += (yytext[i] >= '0' && yytext[i] <= '9') ? (yytext[i] - '0') :
+                addvalue = (yytext[i] >= '0' && yytext[i] <= '9') ? (yytext[i] - '0') :
                          (yytext[i] >= 'a' && yytext[i] <= 'f') ? (yytext[i] - 'a' + 10) :
                          (yytext[i] - 'A' + 10);
-                value *= decimalFactor;
+                value += decimalFactor * addvalue;
             } 
             else
             {   value *= 16.0;

@@ -3,10 +3,5 @@ IDENT           main                 main                             1         
 LPAREN          (                                                     1              4              
 RPAREN          )                                                     1              5              
 LBRACE          {                                                     1              7              
-FLOAT_CONST     0.2                  0.200000002980                   2              0              
-FLOAT_CONST     0.22                 0.219999998808                   3              0              
-ADD             +                                                     4              0              
-SUB             -                                                     5              0              
-LPAREN          (                                                     6              0              
-RPAREN          )                                                     8              0              
-RBRACE          }                                                     9              0              
+FLOAT_CONST     0x1.91eb86p+1        3.140000104904                   2              0              
+RBRACE          }                                                     3              0              
