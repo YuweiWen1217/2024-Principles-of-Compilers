@@ -144,6 +144,7 @@ HEX_FLOAT 0[xX]([0-9A-Fa-f]+[.]?[0-9A-Fa-f]*|[.][0-9A-Fa-f]+)([pP][+-]?[0-9]+)
 
 {HEXA_CONST} {
     cur_col_number = col_number;
+    col_number += strlen(yytext);
     yylval.int_token = 0;
     for (int i = 2; yytext[i] != '\0'; ++i) {
         char c = yytext[i];

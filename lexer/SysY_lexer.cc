@@ -1038,6 +1038,7 @@ YY_RULE_SETUP
 #line 145 "lexer/SysY_lexer.l"
 {
     cur_col_number = col_number;
+    col_number += strlen(yytext);
     yylval.int_token = 0;
     for (int i = 2; yytext[i] != '\0'; ++i) {
         char c = yytext[i];
@@ -1051,7 +1052,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 158 "lexer/SysY_lexer.l"
+#line 159 "lexer/SysY_lexer.l"
 {
     cur_col_number = col_number;
     col_number += strlen(yytext);
@@ -1113,7 +1114,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 217 "lexer/SysY_lexer.l"
+#line 218 "lexer/SysY_lexer.l"
 {
     cur_col_number = col_number;
     col_number += strlen(yytext);
@@ -1182,7 +1183,7 @@ YY_RULE_SETUP
 /*unknown tokens, return ERROR*/
 case 30:
 YY_RULE_SETUP
-#line 285 "lexer/SysY_lexer.l"
+#line 286 "lexer/SysY_lexer.l"
 {
     cur_col_number = col_number;
     col_number += strlen(yytext);
@@ -1192,10 +1193,10 @@ YY_RULE_SETUP
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 291 "lexer/SysY_lexer.l"
+#line 292 "lexer/SysY_lexer.l"
 ECHO;
 	YY_BREAK
-#line 1199 "lexer/SysY_lexer.cc"
+#line 1200 "lexer/SysY_lexer.cc"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2200,7 +2201,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 291 "lexer/SysY_lexer.l"
+#line 292 "lexer/SysY_lexer.l"
 
 
 
