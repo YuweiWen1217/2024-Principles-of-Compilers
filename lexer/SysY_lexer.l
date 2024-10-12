@@ -80,9 +80,6 @@ HEX_FLOAT 0[xX]([0-9A-Fa-f]+[.]?[0-9A-Fa-f]*|[.][0-9A-Fa-f]+)([pP][+-]?[0-9]+)
 "float" {   cur_col_number = col_number;
             col_number += strlen(yytext);
             return FLOAT;}    
-"for" { cur_col_number = col_number;
-        col_number += strlen(yytext);
-        return FOR;}     
 "return" {  cur_col_number = col_number;
             col_number += strlen(yytext);
             return RETURN;}
@@ -287,6 +284,5 @@ HEX_FLOAT 0[xX]([0-9A-Fa-f]+[.]?[0-9A-Fa-f]*|[.][0-9A-Fa-f]+)([pP][+-]?[0-9]+)
     return ERROR;
 }
 %%
-
 
 
