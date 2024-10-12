@@ -41,6 +41,11 @@ HEX_FLOAT 0[xX]([0-9A-Fa-f]+[.]?[0-9A-Fa-f]*|[.][0-9A-Fa-f]+)([pP][+-]?[0-9]+)
     }
 }
 
+"/*" {  cur_col_number = col_number;
+        col_number += strlen(yytext);
+        yylval.error_msg = yytext;
+        return ERROR;} 
+
 "<=" {  cur_col_number = col_number;
         col_number += strlen(yytext);
         return LEQ;}

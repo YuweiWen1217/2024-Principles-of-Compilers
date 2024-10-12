@@ -355,8 +355,8 @@ static void yynoreturn yy_fatal_error ( const char* msg  );
 	(yy_hold_char) = *yy_cp; \
 	*yy_cp = '\0'; \
 	(yy_c_buf_p) = yy_cp;
-#define YY_NUM_RULES 30
-#define YY_END_OF_BUFFER 31
+#define YY_NUM_RULES 31
+#define YY_END_OF_BUFFER 32
 /* This struct is not used in this scanner,
    but its presence is necessary. */
 struct yy_trans_info
@@ -366,18 +366,18 @@ struct yy_trans_info
 	};
 static const flex_int16_t yy_accept[104] =
     {   0,
-        0,    0,   31,   29,   20,   19,   21,   21,   29,   22,
-       21,   21,   24,   24,   21,   21,   21,   23,   23,   23,
-       23,   23,   23,   23,   23,   23,   29,    6,    7,   27,
-        0,    0,   27,   25,    0,    0,    0,   24,    3,    5,
-        4,   23,   23,   23,   23,   23,   10,   23,   23,   23,
-       23,    8,    0,    0,    0,    1,   27,    0,    0,   27,
-        0,   26,   23,   23,   23,   23,   14,   23,   23,   23,
-        0,    2,    0,   27,    0,    0,   26,    0,   23,   23,
-       23,   11,   23,   23,   13,   23,    0,    0,    0,    0,
-       28,   17,    9,   23,   15,   23,   12,    2,   23,   16,
+        0,    0,   32,   30,   21,   20,   22,   22,   30,   23,
+       22,   22,   25,   25,   22,   22,   22,   24,   24,   24,
+       24,   24,   24,   24,   24,   24,   30,    7,    8,   28,
+        3,    0,   28,   26,    0,    0,    0,   25,    4,    6,
+        5,   24,   24,   24,   24,   24,   11,   24,   24,   24,
+       24,    9,    0,    0,    0,    1,   28,    0,    0,   28,
+        0,   27,   24,   24,   24,   24,   15,   24,   24,   24,
+        0,    2,    0,   28,    0,    0,   27,    0,   24,   24,
+       24,   12,   24,   24,   14,   24,    0,    0,    0,    0,
+       29,   18,   10,   24,   16,   24,   13,    2,   24,   17,
 
-       23,   18,    0
+       24,   19,    0
     } ;
 
 static const YY_CHAR yy_ec[256] =
@@ -848,150 +848,158 @@ YY_RULE_SETUP
 #line 44 "lexer/SysY_lexer.l"
 {  cur_col_number = col_number;
         col_number += strlen(yytext);
-        return LEQ;}
+        yylval.error_msg = yytext;
+        return ERROR;} 
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 47 "lexer/SysY_lexer.l"
+#line 49 "lexer/SysY_lexer.l"
+{  cur_col_number = col_number;
+        col_number += strlen(yytext);
+        return LEQ;}
+	YY_BREAK
+case 5:
+YY_RULE_SETUP
+#line 52 "lexer/SysY_lexer.l"
 {  cur_col_number = col_number;
         col_number += strlen(yytext);
         return GEQ;}
 	YY_BREAK
-case 5:
+case 6:
 YY_RULE_SETUP
-#line 50 "lexer/SysY_lexer.l"
+#line 55 "lexer/SysY_lexer.l"
 {  cur_col_number = col_number;
         col_number += strlen(yytext);
         return EQ;}
 	YY_BREAK
-case 6:
+case 7:
 YY_RULE_SETUP
-#line 53 "lexer/SysY_lexer.l"
+#line 58 "lexer/SysY_lexer.l"
 {  cur_col_number = col_number;
         col_number += strlen(yytext);
         return NE;}
 	YY_BREAK
-case 7:
+case 8:
 YY_RULE_SETUP
-#line 56 "lexer/SysY_lexer.l"
+#line 61 "lexer/SysY_lexer.l"
 {  cur_col_number = col_number;
         col_number += strlen(yytext);
         return AND;}         
 	YY_BREAK
-case 8:
+case 9:
 YY_RULE_SETUP
-#line 59 "lexer/SysY_lexer.l"
+#line 64 "lexer/SysY_lexer.l"
 {  cur_col_number = col_number;
         col_number += strlen(yytext);
         return OR;}               
 	YY_BREAK
-case 9:
+case 10:
 YY_RULE_SETUP
-#line 62 "lexer/SysY_lexer.l"
+#line 67 "lexer/SysY_lexer.l"
 {   cur_col_number = col_number;
             col_number += strlen(yytext);
             return CONST;}     
 	YY_BREAK
-case 10:
+case 11:
 YY_RULE_SETUP
-#line 65 "lexer/SysY_lexer.l"
+#line 70 "lexer/SysY_lexer.l"
 {  cur_col_number = col_number;
         col_number += strlen(yytext);
         return IF;}       
 	YY_BREAK
-case 11:
+case 12:
 YY_RULE_SETUP
-#line 68 "lexer/SysY_lexer.l"
+#line 73 "lexer/SysY_lexer.l"
 {cur_col_number = col_number;
         col_number += strlen(yytext);
         return ELSE;}  
 	YY_BREAK
-case 12:
+case 13:
 YY_RULE_SETUP
-#line 71 "lexer/SysY_lexer.l"
+#line 76 "lexer/SysY_lexer.l"
 {   cur_col_number = col_number;
             col_number += strlen(yytext);
             return WHILE;}
 	YY_BREAK
-case 13:
+case 14:
 YY_RULE_SETUP
-#line 74 "lexer/SysY_lexer.l"
+#line 79 "lexer/SysY_lexer.l"
 {cur_col_number = col_number;
         col_number += strlen(yytext);
         return NONE_TYPE;}    
 	YY_BREAK
-case 14:
+case 15:
 YY_RULE_SETUP
-#line 77 "lexer/SysY_lexer.l"
+#line 82 "lexer/SysY_lexer.l"
 { cur_col_number = col_number;
         col_number += strlen(yytext);
         return INT;}    
 	YY_BREAK
-case 15:
+case 16:
 YY_RULE_SETUP
-#line 80 "lexer/SysY_lexer.l"
+#line 85 "lexer/SysY_lexer.l"
 {   cur_col_number = col_number;
             col_number += strlen(yytext);
             return FLOAT;}    
 	YY_BREAK
-case 16:
+case 17:
 YY_RULE_SETUP
-#line 83 "lexer/SysY_lexer.l"
+#line 88 "lexer/SysY_lexer.l"
 {  cur_col_number = col_number;
             col_number += strlen(yytext);
             return RETURN;}
 	YY_BREAK
-case 17:
+case 18:
 YY_RULE_SETUP
-#line 86 "lexer/SysY_lexer.l"
+#line 91 "lexer/SysY_lexer.l"
 {   cur_col_number = col_number;
             col_number += strlen(yytext);
             return BREAK;}     
 	YY_BREAK
-case 18:
+case 19:
 YY_RULE_SETUP
-#line 89 "lexer/SysY_lexer.l"
+#line 94 "lexer/SysY_lexer.l"
 {    cur_col_number = col_number;
                 col_number += strlen(yytext);
                 return CONTINUE;}
 	YY_BREAK
-case 19:
-/* rule 19 can match eol */
-YY_RULE_SETUP
-#line 93 "lexer/SysY_lexer.l"
-{++line_number;col_number = 0;}
-	YY_BREAK
 case 20:
+/* rule 20 can match eol */
 YY_RULE_SETUP
-#line 95 "lexer/SysY_lexer.l"
-{col_number += strlen(yytext);}
+#line 98 "lexer/SysY_lexer.l"
+{++line_number;col_number = 0;}
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 97 "lexer/SysY_lexer.l"
+#line 100 "lexer/SysY_lexer.l"
+{col_number += strlen(yytext);}
+	YY_BREAK
+case 22:
+YY_RULE_SETUP
+#line 102 "lexer/SysY_lexer.l"
 {    cur_col_number = col_number;
                 col_number += strlen(yytext);
                 return yytext[0];}
 	YY_BREAK
-case 22:
+case 23:
 YY_RULE_SETUP
-#line 101 "lexer/SysY_lexer.l"
+#line 106 "lexer/SysY_lexer.l"
 {
     cur_col_number = col_number;
     col_number += strlen(yytext);
     return yytext[0];}
 	YY_BREAK
-case 23:
+case 24:
 YY_RULE_SETUP
-#line 106 "lexer/SysY_lexer.l"
+#line 111 "lexer/SysY_lexer.l"
 {  cur_col_number = col_number;
         col_number += strlen(yytext);
         yylval.symbol_token = id_table.add_id(std::string(yytext));
         return IDENT;}
 	YY_BREAK
-case 24:
+case 25:
 YY_RULE_SETUP
-#line 112 "lexer/SysY_lexer.l"
+#line 117 "lexer/SysY_lexer.l"
 {
     cur_col_number = col_number;
     col_number += strlen(yytext);
@@ -1009,9 +1017,9 @@ YY_RULE_SETUP
       之所以要定义这三种类型，是因为我们只返回这个token的类型是不够的，我们还需要知道这个token的属性
       例如我们需要知道INT_CONST具体的值是多少
     */
-case 25:
+case 26:
 YY_RULE_SETUP
-#line 129 "lexer/SysY_lexer.l"
+#line 134 "lexer/SysY_lexer.l"
 {
     cur_col_number = col_number;
     col_number += strlen(yytext);
@@ -1023,9 +1031,9 @@ YY_RULE_SETUP
     return INT_CONST;
 }
 	YY_BREAK
-case 26:
+case 27:
 YY_RULE_SETUP
-#line 140 "lexer/SysY_lexer.l"
+#line 145 "lexer/SysY_lexer.l"
 {
     cur_col_number = col_number;
     yylval.int_token = 0;
@@ -1039,9 +1047,9 @@ YY_RULE_SETUP
     return INT_CONST;
 }
 	YY_BREAK
-case 27:
+case 28:
 YY_RULE_SETUP
-#line 153 "lexer/SysY_lexer.l"
+#line 158 "lexer/SysY_lexer.l"
 {
     cur_col_number = col_number;
     col_number += strlen(yytext);
@@ -1101,9 +1109,9 @@ YY_RULE_SETUP
     return FLOAT_CONST;
 }
 	YY_BREAK
-case 28:
+case 29:
 YY_RULE_SETUP
-#line 212 "lexer/SysY_lexer.l"
+#line 217 "lexer/SysY_lexer.l"
 {
     cur_col_number = col_number;
     col_number += strlen(yytext);
@@ -1170,9 +1178,9 @@ YY_RULE_SETUP
 }
 	YY_BREAK
 /*unknown tokens, return ERROR*/
-case 29:
+case 30:
 YY_RULE_SETUP
-#line 280 "lexer/SysY_lexer.l"
+#line 285 "lexer/SysY_lexer.l"
 {
     cur_col_number = col_number;
     col_number += strlen(yytext);
@@ -1180,12 +1188,12 @@ YY_RULE_SETUP
     return ERROR;
 }
 	YY_BREAK
-case 30:
+case 31:
 YY_RULE_SETUP
-#line 286 "lexer/SysY_lexer.l"
+#line 291 "lexer/SysY_lexer.l"
 ECHO;
 	YY_BREAK
-#line 1189 "lexer/SysY_lexer.cc"
+#line 1197 "lexer/SysY_lexer.cc"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2190,7 +2198,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 286 "lexer/SysY_lexer.l"
+#line 291 "lexer/SysY_lexer.l"
 
 
 
