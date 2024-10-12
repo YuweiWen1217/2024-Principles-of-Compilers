@@ -1,3 +1,24 @@
-main() {
-0x1.91eb86p+1
+int main() {
+float a=-0x1.91eb86p+1
+int b=-2147483648
+float d=0x1p10
+float e=0x2037.432p3
+float f=4.5243e11
+
+if(a>b){int c=2;}
+
+//SINGLE_COMMENT
+/*
+MULTI_COMMENT
+
+//
+
+*/
+// */ // comment, not syntax error
+f = g/**//h; // equivalent to f = g / h;
+/*//*/ l(); // equivalent to l();
+m = n//**/o
++ p; // equivalent to m = n + p;
+/* comment */ a = b + c * d / e // equivalent to a = b + c * d / e
+return 0;
 }
