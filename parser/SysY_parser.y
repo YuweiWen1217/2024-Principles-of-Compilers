@@ -336,11 +336,25 @@ Block
 ;
 
 BlockItem_list
-:TODO{}
+: BlockItem {
+    $$ = new std::vector<BlockItem>;
+    ($$)->push_back($1);
+}
+| BlockItem_list BlockItem {
+    ($1)->push_back($2);
+    $$ = $1;
+}
 ;
 
 BlockItem
-:TODO{}
+: Decl {
+    $$ = new BlockItem_Decl($1); 
+    $$->SetLineNumber(line_number);
+}
+| Stmt {
+    $$ = new BlockItem_Stmt($1); 
+    $$->SetLineNumber(line_number);
+}
 ;
 
 Stmt
