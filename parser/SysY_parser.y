@@ -109,6 +109,18 @@ VarDecl
     $$ = new VarDecl(Type::INT,$2); 
     $$->SetLineNumber(line_number);
 }
+| FLOAT VarDef_list ';' {
+    $$ = new VarDecl(Type::FLOAT, $2);
+    $$->SetLineNumber(line_number);
+}
+| VOID VarDef_list ';' { 
+    $$ = new VarDecl(Type::VOID, $2);
+    $$->SetLineNumber(line_number);
+}
+| BOOL VarDef_list ';' { 
+    $$ = new VarDecl(Type::BOOL, $2);
+    $$->SetLineNumber(line_number);
+}
 ;
 
 // TODO(): 考虑变量定义更多情况  
@@ -118,16 +130,42 @@ ConstDecl
     $$ = new ConstDecl(Type::INT,$3); 
     $$->SetLineNumber(line_number);
 }
+| CONST FLOAT ConstDef_list ';' {
+    $$ = new ConstDecl(Type::FLOAT, $3); 
+    $$->SetLineNumber(line_number);
+}
+| CONST VOID ConstDef_list ';' {
+    $$ = new ConstDecl(Type::VOID, $3); 
+    $$->SetLineNumber(line_number);
+}
+| CONST BOOL ConstDef_list ';' {
+    $$ = new ConstDecl(Type::BOOL, $3); 
+    $$->SetLineNumber(line_number);
+}
 ;
 
 // TODO(): 考虑变量定义更多情况  
 
 VarDef_list
-:TODO{}
+:VarDef {
+    $$ = new std::vector<VarDef>;
+    ($$)->push_back($1);
+}
+| VarDef_list ',' VarDef {
+    ($1)->push_back($3);
+    $$ = $1;
+}
 ;
 
 ConstDef_list
-:TODO{}
+:ConstDef {
+    $$ = new std::vector<ConstDef>;
+    ($$)->push_back($1);
+}
+| ConstDef_list ',' ConstDef {
+    ($1)->push_back($3);
+    $$ = $1;
+}
 ;
 
 FuncDef
@@ -154,23 +192,60 @@ VarDef
 
 
 ConstDef
-:TODO{}
+:IDENT '=' ConstInitVal { 
+    $$ = new ConstDef($1, $3); 
+    $$->SetLineNumber(line_number);
+}
+| IDENT { 
+    $$ = new ConstDef_no_init($1);
+    $$->SetLineNumber(line_number);
+}
 ;
 
 ConstInitVal
-:TODO{}
+: Exp { 
+    $$ = $1;
+}
+| '{' '}' { 
+    $$ = nullptr;
+}
+| '{' ConstInitVal_list '}' { 
+    $$ = new ConstInitValList($2);
+}
 ;
 
 VarInitVal
-:TODO{}
+: Exp { 
+    $$ = $1;
+}
+| '{' '}' { 
+    $$ = nullptr;
+}
+| '{' VarInitVal_list '}' { 
+    $$ = new VarInitValList($2);
+}
 ;
 
 ConstInitVal_list
-:TODO{}
+: ConstInitVal {
+    $$ = new std::vector<ConstInitVal>;
+    ($$)->push_back($1);
+}
+| ConstInitVal_list ',' ConstInitVal {
+    ($1)->push_back($3);
+    $$ = $1;
+}
 ;
 
 VarInitVal_list
-:TODO{}
+: VarInitVal {
+    $$ = new std::vector<VarInitVal>;
+    ($$)->push_back($1);
+}
+| VarInitVal_list ',' VarInitVal {
+    ($1)->push_back($3);
+    $$ = $1;
+}
 ;
 
 
