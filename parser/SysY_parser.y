@@ -121,9 +121,13 @@ VarDecl
     $$ = new VarDecl(Type::BOOL, $2);
     $$->SetLineNumber(line_number);
 }
+| PTR VarDef_list ';' { 
+    $$ = new VarDecl(Type::PTR, $2);
+    $$->SetLineNumber(line_number);
+}
 ;
 
-// TODO(): 考虑变量定义更多情况  
+// TODO(): 考虑变量定义更多情况  (done)
 
 ConstDecl
 :CONST INT ConstDef_list ';'{
@@ -142,9 +146,13 @@ ConstDecl
     $$ = new ConstDecl(Type::BOOL, $3); 
     $$->SetLineNumber(line_number);
 }
+| CONST PTR ConstDef_list ';' {
+    $$ = new ConstDecl(Type::PTR, $3); 
+    $$->SetLineNumber(line_number);
+}
 ;
 
-// TODO(): 考虑变量定义更多情况  
+// TODO(): 考虑变量定义更多情况  （done）
 
 VarDef_list
 :VarDef {
@@ -179,8 +187,40 @@ FuncDef
     $$ = new __FuncDef(Type::INT,$2,new std::vector<FuncFParam>(),$5); 
     $$->SetLineNumber(line_number);
 }
+| VOID IDENT '(' FuncFParams ')' Block {
+    $$ = new __FuncDef(Type::VOID, $2, $4, $6);
+    $$->SetLineNumber(line_number);
+}
+| VOID IDENT '(' ')' Block {
+    $$ = new __FuncDef(Type::VOID, $2, new std::vector<FuncFParam>(), $5);
+    $$->SetLineNumber(line_number);
+}
+| FLOAT IDENT '(' FuncFParams ')' Block {
+    $$ = new __FuncDef(Type::FLOAT, $2, $4, $6);
+    $$->SetLineNumber(line_number);
+}
+| FLOAT IDENT '(' ')' Block {
+    $$ = new __FuncDef(Type::FLOAT, $2, new std::vector<FuncFParam>(), $5);
+    $$->SetLineNumber(line_number);
+}
+| BOOL IDENT '(' FuncFParams ')' Block {
+    $$ = new __FuncDef(Type::BOOL, $2, $4, $6);
+    $$->SetLineNumber(line_number);
+}
+| BOOL IDENT '(' ')' Block {
+    $$ = new __FuncDef(Type::BOOL, $2, new std::vector<FuncFParam>(), $5);
+    $$->SetLineNumber(line_number);
+}
+| PTR IDENT '(' FuncFParams ')' Block {
+    $$ = new __FuncDef(Type::PTR, $2, $4, $6);
+    $$->SetLineNumber(line_number);
+}
+| PTR IDENT '(' ')' Block {
+    $$ = new __FuncDef(Type::PTR, $2, new std::vector<FuncFParam>(), $5);
+    $$->SetLineNumber(line_number);
+}
 ;
-// TODO(): 考虑函数定义更多情况    
+// TODO(): 考虑函数定义更多情况    (done)
 
 VarDef
 :IDENT '=' VarInitVal
@@ -265,8 +305,24 @@ FuncFParam
     $$ = new __FuncFParam(Type::INT,$2,nullptr);
     $$->SetLineNumber(line_number);
 }
+| FLOAT IDENT {
+    $$ = new __FuncFParam(Type::FLOAT, $2, nullptr);
+    $$->SetLineNumber(line_number);
+}
+| VOID IDENT {
+    $$ = new __FuncFParam(Type::VOID, $2, nullptr);
+    $$->SetLineNumber(line_number);
+}
+| BOOL IDENT {
+    $$ = new __FuncFParam(Type::BOOL, $2, nullptr);
+    $$->SetLineNumber(line_number);
+}
+| PTR IDENT {
+    $$ = new __FuncFParam(Type::PTR, $2, nullptr);
+    $$->SetLineNumber(line_number);
+}
 ;
-// TODO(): 考虑函数形参更多情况
+// TODO(): 考虑函数形参更多情况(done)
 
 Block
 :'{' BlockItem_list '}'{
