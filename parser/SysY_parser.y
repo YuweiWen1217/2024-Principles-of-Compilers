@@ -47,7 +47,7 @@ extern IdTable id_table;
 %type <func_def> FuncDef 
 %type <expression> Exp LOrExp AddExp MulExp RelExp EqExp LAndExp UnaryExp PrimaryExp
 %type <expression> ConstExp Lval FuncRParams Cond
-%type <expression> IntConst FloatConst
+%type <expression> IntConst FloatConst    
 %type <expressions> Exp_list;
 %type <stmt> Stmt 
 %type <block> Block
@@ -358,7 +358,42 @@ BlockItem
 ;
 
 Stmt
-:TODO{}
+: Exp ';' {
+    $$ = new ExpStmt($1); 
+    $$->SetLineNumber(line_number);
+}
+| Block {
+    $$ = new BlockStmt($1); 
+    $$->SetLineNumber(line_number);
+}
+| IF '(' Cond ')' Stmt ELSE Stmt {
+    $$ = new IfElseStmt($3, $5, $7); 
+    $$->SetLineNumber(line_number);
+}
+| IF '(' Cond ')' Stmt {
+    $$ = new IfStmt($3, $5); 
+    $$->SetLineNumber(line_number);
+}
+| WHILE '(' Cond ')' Stmt {
+    $$ = new WhileStmt($3, $5); 
+    $$->SetLineNumber(line_number);
+}
+| RETURN Exp ';' {
+    $$ = new ReturnStmt($2); 
+    $$->SetLineNumber(line_number);
+}
+| RETURN ';' {
+    $$ = new ReturnStmt(nullptr); 
+    $$->SetLineNumber(line_number);
+}
+| BREAK ';' {
+    $$ = new BreakStmt();
+    $$->SetLineNumber(line_number);
+}
+| CONTINUE ';' {
+    $$ = new ContinueStmt();
+    $$->SetLineNumber(line_number);
+}
 ;
 
 Exp
@@ -370,11 +405,33 @@ Cond
 ;
 
 Lval
-:TODO{}
+: IDENT {
+    $$ = new Lval($1, nullptr);
+    $$->SetLineNumber(line_number);
+}
+| IDENT '[' Exp ']' {
+    $$ = new Lval($1, $3);
+    $$->SetLineNumber(line_number);
+}
 ;
 
 PrimaryExp
-:TODO{}
+: '(' Exp ')' {
+    $$ = $2;
+    $$->SetLineNumber(line_number);
+}
+| Lval {
+    $$ = new LvalExp($1);
+    $$->SetLineNumber(line_number);
+}
+| IntConst {
+    $$ = $1;
+    $$->SetLineNumber(line_number);
+}
+| FloatConst {
+    $$ = $1;
+    $$->SetLineNumber(line_number);
+}
 ;
 
 IntConst
@@ -436,15 +493,44 @@ UnaryExp
 ;
 
 FuncRParams
-:TODO{}
+: Exp {
+    $$ = new std::vector<Expression>;
+    $$->push_back($1);
+}
+| FuncRParams ',' Exp {
+    ($1)->push_back($3);
+    $$ = $1;
+}
 ;
 
 Exp_list
-:TODO{}
+: Exp {
+    $$ = new std::vector<Expression>;
+    $$->push_back($1);
+}
+| Exp_list ',' Exp {
+    ($1)->push_back($3);
+    $$ = $1;
+}
 ;
 
 MulExp
-:TODO{}
+: PrimaryExp {
+    $$ = $1;
+    $$->SetLineNumber(line_number);
+}
+| MulExp '*' PrimaryExp {
+    $$ = new MulExp_mul($1, $3);
+    $$->SetLineNumber(line_number);
+}
+| MulExp '/' PrimaryExp {
+    $$ = new MulExp_div($1, $3);
+    $$->SetLineNumber(line_number);
+}
+| MulExp '%' PrimaryExp {
+    $$ = new MulExp_mod($1, $3);
+    $$->SetLineNumber(line_number);
+}
 ;
 
 AddExp
@@ -463,23 +549,74 @@ AddExp
 ;
 
 RelExp
-:TODO{}
+: AddExp {
+    $$ = $1;
+    $$->SetLineNumber(line_number);
+}
+| RelExp '<' AddExp {
+    $$ = new RelExp_lt($1, $3);
+    $$->SetLineNumber(line_number);
+}
+| RelExp '>' AddExp {
+    $$ = new RelExp_gt($1, $3);
+    $$->SetLineNumber(line_number);
+}
+| RelExp LEQ AddExp {  
+    $$ = new RelExp_le($1, $3);
+    $$->SetLineNumber(line_number);
+}
+| RelExp GEQ AddExp {  
+    $$ = new RelExp_ge($1, $3);
+    $$->SetLineNumber(line_number);
+}
 ;
 
 EqExp
-:TODO{}
+: RelExp {
+    $$ = $1;
+    $$->SetLineNumber(line_number);
+}
+| EqExp EQ RelExp {  
+    $$ = new EqExp_eq($1, $3);
+    $$->SetLineNumber(line_number);
+}
+| EqExp NE RelExp {  
+    $$ = new EqExp_ne($1, $3);
+    $$->SetLineNumber(line_number);
+}
 ;
 
 LAndExp
-:TODO{}
+: EqExp {
+    $$ = $1;
+    $$->SetLineNumber(line_number);
+}
+| LAndExp AND EqExp {  
+    $$ = new LAndExp_and($1, $3);
+    $$->SetLineNumber(line_number);
+}
 ;
 
 LOrExp
-:TODO{}
+: LAndExp {
+    $$ = $1;
+    $$->SetLineNumber(line_number);
+}
+| LOrExp OR LAndExp {  
+    $$ = new LOrExp_or($1, $3);
+    $$->SetLineNumber(line_number);
+}
 ;
 
 ConstExp
-:TODO{}
+: IntConst {
+    $$ = $1;
+    $$->SetLineNumber(line_number);
+}
+| FloatConst {
+    $$ = $1;
+    $$->SetLineNumber(line_number);
+}
 ;
 
 // TODO: 也许你需要添加更多的非终结符
