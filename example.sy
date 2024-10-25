@@ -1,6 +1,6 @@
 int a=5;
 int main()
 {
-	putf("hello word\n");
-	return a;
+putf("hello world\n");
+return a;
 }

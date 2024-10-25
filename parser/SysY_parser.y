@@ -58,6 +58,13 @@ extern IdTable id_table;
 %type <formal> FuncFParam 
 %type <formals> FuncFParams
 
+
+//jiejuezhuangtaichongtu 
+
+%nonassoc IDENT_FUNC // 用于函数调用的优先级
+%left '['            // 用于数组下标的优先级
+
+
 // THEN和ELSE用于处理if和else的移进-规约冲突
 %precedence THEN
 %precedence ELSE
@@ -323,21 +330,26 @@ BlockItem
 }
 ;
 
+
 Stmt
 : Exp ';' {
     $$ = new expr_stmt ($1); 
+    $$->SetLineNumber(line_number);
+}
+| Lval '=' Exp {
+    $$ = new assign_stmt($1, $3); 
     $$->SetLineNumber(line_number);
 }
 | Block {
     $$ = new block_stmt ($1); 
     $$->SetLineNumber(line_number);
 }
-| IF '(' Cond ')' Stmt ELSE Stmt {
-    $$ = new ifelse_stmt($3, $5, $7); 
+| IF'('Cond')'Stmt %prec THEN{
+    $$ = new if_stmt($3,$5);
     $$->SetLineNumber(line_number);
 }
-| IF '(' Cond ')' Stmt {
-    $$ = new if_stmt($3, $5); 
+| IF'('Cond')'Stmt ELSE Stmt %prec ELSE{
+    $$ = new ifelse_stmt($3,$5,$7);
     $$->SetLineNumber(line_number);
 }
 | WHILE '(' Cond ')' Stmt {
@@ -349,7 +361,7 @@ Stmt
     $$->SetLineNumber(line_number);
 }
 | RETURN ';' {
-    $$ = new return_stmt(nullptr); 
+    $$ = new return_stmt_void(); 
     $$->SetLineNumber(line_number);
 }
 | BREAK ';' {
@@ -364,10 +376,6 @@ Stmt
 
 Exp
 :AddExp{$$ = $1; $$->SetLineNumber(line_number);}
-| ConstExp {
-    $$ = $1;
-    $$->SetLineNumber(line_number);
-}
 | UnaryExp { $$ = $1; $$->SetLineNumber(line_number); }
 | PrimaryExp { $$ = $1; $$->SetLineNumber(line_number); }
 ;
@@ -376,49 +384,13 @@ Cond
 :LOrExp{$$ = $1; $$->SetLineNumber(line_number);}
 ;
 
-Lval
-: IDENT {
-    $$ = new Lval($1, nullptr);  
-    $$->SetLineNumber(line_number);
-}
-| IDENT '[' Exp ']' {
-    $$ = new Lval($1, new std::vector<Expression>{$3});
-    $$->SetLineNumber(line_number);
-}
-;
-
-PrimaryExp
-: '(' Exp ')' {
-    $$ = $2;
-    $$->SetLineNumber(line_number);
-}
-| Lval {
-    $$ = $1;
-    $$->SetLineNumber(line_number);
-}
-;
-
-IntConst
-:INT_CONST{
-    $$ = new IntConst($1);
-    $$->SetLineNumber(line_number);
-}
-;
-
-FloatConst
-:FLOAT_CONST{
-    $$ = new FloatConst($1);
-    $$->SetLineNumber(line_number);
-}
-;
-
 UnaryExp
 :PrimaryExp{$$ = $1;}
-|IDENT '(' FuncRParams ')'{
+ | IDENT '(' FuncRParams ')' %prec IDENT_FUNC {  // 添加优先级
     $$ = new Func_call($1,$3);
     $$->SetLineNumber(line_number);
 }
-|IDENT '(' ')'{
+ | IDENT '(' ')' %prec IDENT_FUNC {  // 添加优先级
     // 在sylib.h这个文件中,starttime()是一个宏定义
     // #define starttime() _sysy_starttime(__LINE__)
     // 我们在语法分析中将其替换为_sysy_starttime(line_number)
@@ -456,28 +428,37 @@ UnaryExp
 }
 ;
 
-FuncRParams
-: Exp {
-    // 这里将 Expression 转换为 FuncRParams
-    FuncRParams *newParams = new FuncRParams(new std::vector<Expression>);
-    newParams->params->push_back($1);  // 将 $1 (Exp) 添加到 params 中
-    $$ = newParams;  // 将 $$ 赋值为 newParams
+
+
+Lval
+: IDENT '[' Exp ']' {  
+    $$ = new Lval($1, new std::vector<Expression>{$3}); 
+    $$->SetLineNumber(line_number);
 }
-| FuncRParams ',' Exp {
-    // 确保 $1 是 FuncRParams 类型
-    FuncRParams *funcParams = dynamic_cast<FuncRParams*>($1);  // 动态类型转换
-    if (funcParams) {
-        funcParams->params->push_back($3);  // 将 $3 (Exp) 添加到 params 中
-        $$ = funcParams;  // 保持 $$ 为 FuncRParams
-    } else {
-        // 错误处理，如果转换失败
-        $$ = nullptr;
-    }
+;
+
+PrimaryExp
+: '(' Exp ')' {
+    $$ = $2;
+    $$->SetLineNumber(line_number);
 }
-| Exp_list {
-    // 将 Exp_list 转换为 FuncRParams
-    FuncRParams *newParams = new FuncRParams($1);  // $1 是 Exp_list (std::vector<Expression>*)
-    $$ = newParams;
+| ConstExp {
+   $$ = $1;
+   $$->SetLineNumber(line_number);
+}
+;
+
+IntConst
+:INT_CONST{
+    $$ = new IntConst($1);
+    $$->SetLineNumber(line_number);
+}
+;
+
+FloatConst
+:FLOAT_CONST{
+    $$ = new FloatConst($1);
+    $$->SetLineNumber(line_number);
 }
 ;
 
@@ -485,32 +466,59 @@ FuncRParams
 
 
 
+FuncRParams
+: Exp {
+    // 创建新的 FuncRParams 对象并将第一个表达式添加到参数列表中
+    $$ = new FuncRParams(new std::vector<Expression>);
+    $$->params->push_back($1);  
+}
+| FuncRParams ',' Exp {
+    // 确保 $1 是 FuncRParams 类型
+    FuncRParams *funcParams = dynamic_cast<FuncRParams*>($1);
+    if (funcParams) {
+        funcParams->params->push_back($3);  // 将 $3 (Exp) 添加到 params 中
+        $$ = funcParams;  // 保持 $$ 为 FuncRParams
+    } else {
+        // 错误处理
+        yyerror("Invalid FuncRParams structure");
+        $$ = nullptr;  // 如果转换失败，将 $$ 设置为 nullptr
+    }
+}
+| Exp_list {
+    // 将 Exp_list 转换为 FuncRParams
+    $$ = new FuncRParams($1);  // 创建 FuncRParams 并将 Exp_list 作为参数
+}
+;
+
 Exp_list
 : Exp ',' Exp_list {
+    // 创建一个新的 vector 并将第一个表达式和后续的表达式列表合并
     $$ = new std::vector<Expression>;
     $$->push_back($1);
     $$->insert($$->end(), $3->begin(), $3->end());
 }
 | Exp {
+    // 创建一个新的 vector 并将单个表达式添加到其中
     $$ = new std::vector<Expression>;
     $$->push_back($1);
 }
 ;
+
 
 MulExp
 : PrimaryExp {
     $$ = $1;
     $$->SetLineNumber(line_number);
 }
-| MulExp '*' PrimaryExp {
+| MulExp '*' UnaryExp {
     $$ = new MulExp_mul($1, $3);
     $$->SetLineNumber(line_number);
 }
-| MulExp '/' PrimaryExp {
+| MulExp '/' UnaryExp {
     $$ = new MulExp_div($1, $3);
     $$->SetLineNumber(line_number);
 }
-| MulExp '%' PrimaryExp {
+| MulExp '%' UnaryExp {
     $$ = new MulExp_mod($1, $3);
     $$->SetLineNumber(line_number);
 }
@@ -567,6 +575,7 @@ EqExp
     $$ = new EqExp_neq($1, $3);
     $$->SetLineNumber(line_number);
 }
+
 ;
 
 LAndExp
@@ -600,7 +609,6 @@ ConstExp
     $$ = $1;
     $$->SetLineNumber(line_number);
 }
-
 ;
 
 
