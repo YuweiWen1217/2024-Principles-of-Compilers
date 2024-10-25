@@ -62,6 +62,8 @@ extern IdTable id_table;
 %precedence THEN
 %precedence ELSE
 %%
+
+
 Program 
 :Comp_list
 {
@@ -113,16 +115,8 @@ VarDecl
     $$ = new VarDecl(Type::FLOAT, $2);
     $$->SetLineNumber(line_number);
 }
-| VOID VarDef_list ';' { 
+| NONE_TYPE VarDef_list ';' { 
     $$ = new VarDecl(Type::VOID, $2);
-    $$->SetLineNumber(line_number);
-}
-| BOOL VarDef_list ';' { 
-    $$ = new VarDecl(Type::BOOL, $2);
-    $$->SetLineNumber(line_number);
-}
-| PTR VarDef_list ';' { 
-    $$ = new VarDecl(Type::PTR, $2);
     $$->SetLineNumber(line_number);
 }
 ;
@@ -138,25 +132,18 @@ ConstDecl
     $$ = new ConstDecl(Type::FLOAT, $3); 
     $$->SetLineNumber(line_number);
 }
-| CONST VOID ConstDef_list ';' {
+| CONST NONE_TYPE ConstDef_list ';' {
     $$ = new ConstDecl(Type::VOID, $3); 
     $$->SetLineNumber(line_number);
 }
-| CONST BOOL ConstDef_list ';' {
-    $$ = new ConstDecl(Type::BOOL, $3); 
-    $$->SetLineNumber(line_number);
-}
-| CONST PTR ConstDef_list ';' {
-    $$ = new ConstDecl(Type::PTR, $3); 
-    $$->SetLineNumber(line_number);
-}
+
 ;
 
 // TODO(): 考虑变量定义更多情况  （done）
 
 VarDef_list
 :VarDef {
-    $$ = new std::vector<VarDef>;
+    $$ = new std::vector<Def>;
     ($$)->push_back($1);
 }
 | VarDef_list ',' VarDef {
@@ -167,7 +154,7 @@ VarDef_list
 
 ConstDef_list
 :ConstDef {
-    $$ = new std::vector<ConstDef>;
+    $$ = new std::vector<Def>;
     ($$)->push_back($1);
 }
 | ConstDef_list ',' ConstDef {
@@ -187,11 +174,11 @@ FuncDef
     $$ = new __FuncDef(Type::INT,$2,new std::vector<FuncFParam>(),$5); 
     $$->SetLineNumber(line_number);
 }
-| VOID IDENT '(' FuncFParams ')' Block {
+| NONE_TYPE IDENT '(' FuncFParams ')' Block {
     $$ = new __FuncDef(Type::VOID, $2, $4, $6);
     $$->SetLineNumber(line_number);
 }
-| VOID IDENT '(' ')' Block {
+| NONE_TYPE IDENT '(' ')' Block {
     $$ = new __FuncDef(Type::VOID, $2, new std::vector<FuncFParam>(), $5);
     $$->SetLineNumber(line_number);
 }
@@ -201,22 +188,6 @@ FuncDef
 }
 | FLOAT IDENT '(' ')' Block {
     $$ = new __FuncDef(Type::FLOAT, $2, new std::vector<FuncFParam>(), $5);
-    $$->SetLineNumber(line_number);
-}
-| BOOL IDENT '(' FuncFParams ')' Block {
-    $$ = new __FuncDef(Type::BOOL, $2, $4, $6);
-    $$->SetLineNumber(line_number);
-}
-| BOOL IDENT '(' ')' Block {
-    $$ = new __FuncDef(Type::BOOL, $2, new std::vector<FuncFParam>(), $5);
-    $$->SetLineNumber(line_number);
-}
-| PTR IDENT '(' FuncFParams ')' Block {
-    $$ = new __FuncDef(Type::PTR, $2, $4, $6);
-    $$->SetLineNumber(line_number);
-}
-| PTR IDENT '(' ')' Block {
-    $$ = new __FuncDef(Type::PTR, $2, new std::vector<FuncFParam>(), $5);
     $$->SetLineNumber(line_number);
 }
 ;
@@ -232,59 +203,62 @@ VarDef
 
 
 ConstDef
-:IDENT '=' ConstInitVal { 
-    $$ = new ConstDef($1, $3); 
+: IDENT '=' ConstInitVal { 
+    $$ = new ConstDef($1, nullptr, $3);  // 如果没有数组下标，传递 nullptr
     $$->SetLineNumber(line_number);
 }
-| IDENT { 
-    $$ = new ConstDef_no_init($1);
+| IDENT '[' Exp ']' '=' ConstInitVal { 
+    std::vector<Expression> *dims = new std::vector<Expression>;
+    dims->push_back($3);
+    $$ = new ConstDef($1, dims, $6);  // 带数组下标的情况
     $$->SetLineNumber(line_number);
 }
 ;
 
+
 ConstInitVal
 : Exp { 
-    $$ = $1;
+    $$ = new ConstInitVal_exp($1); // 包装Expression为ConstInitVal_exp
 }
 | '{' '}' { 
     $$ = nullptr;
 }
 | '{' ConstInitVal_list '}' { 
-    $$ = new ConstInitValList($2);
+    $$ = new ConstInitVal($2); 
 }
 ;
 
 VarInitVal
 : Exp { 
-    $$ = $1;
+    $$ = new VarInitVal_exp($1); // 包装Expression为VarInitVal_exp
 }
 | '{' '}' { 
     $$ = nullptr;
 }
 | '{' VarInitVal_list '}' { 
-    $$ = new VarInitValList($2);
+    $$ = new VarInitVal($2);
 }
 ;
 
 ConstInitVal_list
 : ConstInitVal {
-    $$ = new std::vector<ConstInitVal>;
-    ($$)->push_back($1);
+    $$ = new std::vector<InitVal>;
+    $$->push_back($1);
 }
 | ConstInitVal_list ',' ConstInitVal {
-    ($1)->push_back($3);
     $$ = $1;
+    $$->push_back($3);
 }
 ;
 
 VarInitVal_list
 : VarInitVal {
-    $$ = new std::vector<VarInitVal>;
-    ($$)->push_back($1);
+    $$ = new std::vector<InitVal>;
+    $$->push_back($1);
 }
 | VarInitVal_list ',' VarInitVal {
-    ($1)->push_back($3);
     $$ = $1;
+    $$->push_back($3);
 }
 ;
 
@@ -309,16 +283,8 @@ FuncFParam
     $$ = new __FuncFParam(Type::FLOAT, $2, nullptr);
     $$->SetLineNumber(line_number);
 }
-| VOID IDENT {
+| NONE_TYPE IDENT {
     $$ = new __FuncFParam(Type::VOID, $2, nullptr);
-    $$->SetLineNumber(line_number);
-}
-| BOOL IDENT {
-    $$ = new __FuncFParam(Type::BOOL, $2, nullptr);
-    $$->SetLineNumber(line_number);
-}
-| PTR IDENT {
-    $$ = new __FuncFParam(Type::PTR, $2, nullptr);
     $$->SetLineNumber(line_number);
 }
 ;
@@ -359,45 +325,51 @@ BlockItem
 
 Stmt
 : Exp ';' {
-    $$ = new ExpStmt($1); 
+    $$ = new expr_stmt ($1); 
     $$->SetLineNumber(line_number);
 }
 | Block {
-    $$ = new BlockStmt($1); 
+    $$ = new block_stmt ($1); 
     $$->SetLineNumber(line_number);
 }
 | IF '(' Cond ')' Stmt ELSE Stmt {
-    $$ = new IfElseStmt($3, $5, $7); 
+    $$ = new ifelse_stmt($3, $5, $7); 
     $$->SetLineNumber(line_number);
 }
 | IF '(' Cond ')' Stmt {
-    $$ = new IfStmt($3, $5); 
+    $$ = new if_stmt($3, $5); 
     $$->SetLineNumber(line_number);
 }
 | WHILE '(' Cond ')' Stmt {
-    $$ = new WhileStmt($3, $5); 
+    $$ = new while_stmt($3, $5); 
     $$->SetLineNumber(line_number);
 }
 | RETURN Exp ';' {
-    $$ = new ReturnStmt($2); 
+    $$ = new return_stmt($2); 
     $$->SetLineNumber(line_number);
 }
 | RETURN ';' {
-    $$ = new ReturnStmt(nullptr); 
+    $$ = new return_stmt(nullptr); 
     $$->SetLineNumber(line_number);
 }
 | BREAK ';' {
-    $$ = new BreakStmt();
+    $$ = new break_stmt();
     $$->SetLineNumber(line_number);
 }
 | CONTINUE ';' {
-    $$ = new ContinueStmt();
+    $$ = new continue_stmt();
     $$->SetLineNumber(line_number);
 }
 ;
 
 Exp
 :AddExp{$$ = $1; $$->SetLineNumber(line_number);}
+| ConstExp {
+    $$ = $1;
+    $$->SetLineNumber(line_number);
+}
+| UnaryExp { $$ = $1; $$->SetLineNumber(line_number); }
+| PrimaryExp { $$ = $1; $$->SetLineNumber(line_number); }
 ;
 
 Cond
@@ -406,11 +378,11 @@ Cond
 
 Lval
 : IDENT {
-    $$ = new Lval($1, nullptr);
+    $$ = new Lval($1, nullptr);  
     $$->SetLineNumber(line_number);
 }
 | IDENT '[' Exp ']' {
-    $$ = new Lval($1, $3);
+    $$ = new Lval($1, new std::vector<Expression>{$3});
     $$->SetLineNumber(line_number);
 }
 ;
@@ -421,14 +393,6 @@ PrimaryExp
     $$->SetLineNumber(line_number);
 }
 | Lval {
-    $$ = new LvalExp($1);
-    $$->SetLineNumber(line_number);
-}
-| IntConst {
-    $$ = $1;
-    $$->SetLineNumber(line_number);
-}
-| FloatConst {
     $$ = $1;
     $$->SetLineNumber(line_number);
 }
@@ -494,23 +458,42 @@ UnaryExp
 
 FuncRParams
 : Exp {
-    $$ = new std::vector<Expression>;
-    $$->push_back($1);
+    // 这里将 Expression 转换为 FuncRParams
+    FuncRParams *newParams = new FuncRParams(new std::vector<Expression>);
+    newParams->params->push_back($1);  // 将 $1 (Exp) 添加到 params 中
+    $$ = newParams;  // 将 $$ 赋值为 newParams
 }
 | FuncRParams ',' Exp {
-    ($1)->push_back($3);
-    $$ = $1;
+    // 确保 $1 是 FuncRParams 类型
+    FuncRParams *funcParams = dynamic_cast<FuncRParams*>($1);  // 动态类型转换
+    if (funcParams) {
+        funcParams->params->push_back($3);  // 将 $3 (Exp) 添加到 params 中
+        $$ = funcParams;  // 保持 $$ 为 FuncRParams
+    } else {
+        // 错误处理，如果转换失败
+        $$ = nullptr;
+    }
+}
+| Exp_list {
+    // 将 Exp_list 转换为 FuncRParams
+    FuncRParams *newParams = new FuncRParams($1);  // $1 是 Exp_list (std::vector<Expression>*)
+    $$ = newParams;
 }
 ;
 
+
+
+
+
 Exp_list
-: Exp {
+: Exp ',' Exp_list {
     $$ = new std::vector<Expression>;
     $$->push_back($1);
+    $$->insert($$->end(), $3->begin(), $3->end());
 }
-| Exp_list ',' Exp {
-    ($1)->push_back($3);
-    $$ = $1;
+| Exp {
+    $$ = new std::vector<Expression>;
+    $$->push_back($1);
 }
 ;
 
@@ -562,11 +545,11 @@ RelExp
     $$->SetLineNumber(line_number);
 }
 | RelExp LEQ AddExp {  
-    $$ = new RelExp_le($1, $3);
+    $$ = new RelExp_leq($1, $3);
     $$->SetLineNumber(line_number);
 }
 | RelExp GEQ AddExp {  
-    $$ = new RelExp_ge($1, $3);
+    $$ = new RelExp_geq($1, $3);
     $$->SetLineNumber(line_number);
 }
 ;
@@ -581,7 +564,7 @@ EqExp
     $$->SetLineNumber(line_number);
 }
 | EqExp NE RelExp {  
-    $$ = new EqExp_ne($1, $3);
+    $$ = new EqExp_neq($1, $3);
     $$->SetLineNumber(line_number);
 }
 ;
@@ -617,7 +600,9 @@ ConstExp
     $$ = $1;
     $$->SetLineNumber(line_number);
 }
+
 ;
+
 
 // TODO: 也许你需要添加更多的非终结符
 
