@@ -77,8 +77,7 @@ extern int yydebug;
     CONTINUE = 278,                /* CONTINUE  */
     ERROR = 279,                   /* ERROR  */
     TODO = 280,                    /* TODO  */
-    IDENT_FUNC = 281,              /* IDENT_FUNC  */
-    THEN = 282                     /* THEN  */
+    THEN = 281                     /* THEN  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -105,7 +104,7 @@ union YYSTYPE
     FuncFParam formal;   std::vector<FuncFParam>* formals;
     BlockItem block_item;   std::vector<BlockItem>* block_items;
 
-#line 109 "SysY_parser.tab.h"
+#line 108 "SysY_parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

@@ -47,8 +47,9 @@ extern IdTable id_table;
 %type <func_def> FuncDef 
 %type <expression> Exp LOrExp AddExp MulExp RelExp EqExp LAndExp UnaryExp PrimaryExp
 %type <expression> ConstExp Lval FuncRParams Cond
-%type <expression> IntConst FloatConst    
-%type <expressions> Exp_list;
+%type <expression> IntConst FloatConst
+%type <expression> ArrayExp ArrayConstExp
+%type <expressions> ArrayExp_list ArrayConstExp_list Exp_list
 %type <stmt> Stmt 
 %type <block> Block
 %type <block_item> BlockItem
@@ -61,8 +62,8 @@ extern IdTable id_table;
 
 //jiejuezhuangtaichongtu 
 
-%nonassoc IDENT_FUNC // 用于函数调用的优先级
-%left '['            // 用于数组下标的优先级
+//%nonassoc IDENT_FUNC // 用于函数调用的优先级
+//%left '['            // 用于数组下标的优先级
 
 
 // THEN和ELSE用于处理if和else的移进-规约冲突
@@ -119,7 +120,7 @@ VarDecl
     $$->SetLineNumber(line_number);
 }
 | FLOAT VarDef_list ';' {
-    $$ = new VarDecl(Type::FLOAT, $2);
+    $$ = new VarDecl(Type::FLOAT, $2); 
     $$->SetLineNumber(line_number);
 }
 ;
@@ -177,7 +178,7 @@ FuncDef
     $$->SetLineNumber(line_number);
 }
 | NONE_TYPE IDENT '(' ')' Block {
-    $$ = new __FuncDef(Type::VOID, $2, new std::vector<FuncFParam>(), $5);
+    $$ = new __FuncDef(Type::VOID, $2, new std::vector<FuncFParam>(), $5); 
     $$->SetLineNumber(line_number);
 }
 | FLOAT IDENT '(' FuncFParams ')' Block {
@@ -185,11 +186,11 @@ FuncDef
     $$->SetLineNumber(line_number);
 }
 | FLOAT IDENT '(' ')' Block {
-    $$ = new __FuncDef(Type::FLOAT, $2, new std::vector<FuncFParam>(), $5);
+    $$ = new __FuncDef(Type::FLOAT, $2, new std::vector<FuncFParam>(), $5); 
     $$->SetLineNumber(line_number);
 }
 ;
-// TODO(): 考虑函数定义更多情况    (done)
+// TODO(): 考虑函数定义更多情况    (done)  
 
 VarDef
 : IDENT '=' VarInitVal {
@@ -200,57 +201,56 @@ VarDef
     $$ = new VarDef_no_init($1, nullptr); 
     $$->SetLineNumber(line_number);
 }
-| IDENT '[' Exp ']' {
-    std::vector<Expression> *dims = new std::vector<Expression>;
-    dims->push_back($3);
-    $$ = new VarDef_no_init($1, dims); 
+| IDENT ArrayConstExp_list {
+    $$ = new VarDef_no_init($1,$2);
     $$->SetLineNumber(line_number);
 }
-| IDENT '[' Exp ']' '=' VarInitVal {
-    std::vector<Expression> *dims = new std::vector<Expression>;
-    dims->push_back($3);
-    $$ = new VarDef($1, dims, $6); 
+| IDENT ArrayConstExp_list '=' VarInitVal {
+    $$ = new VarDef($1,$2,$4);
     $$->SetLineNumber(line_number);
 }
-;
+;   
 // TODO(): 考虑变量定义更多情况
 
 
 ConstDef
-: IDENT '=' ConstInitVal { 
-    $$ = new ConstDef($1, nullptr, $3);  
+: IDENT '=' ConstInitVal {
+    $$ = new ConstDef($1, nullptr, $3);
     $$->SetLineNumber(line_number);
-}
-| IDENT '[' Exp ']' '=' ConstInitVal { 
-    std::vector<Expression> *dims = new std::vector<Expression>;
-    dims->push_back($3);
-    $$ = new ConstDef($1, dims, $6);  
+    }
+| IDENT ArrayConstExp_list '=' ConstInitVal {
+    $$ = new ConstDef($1, $2, $4);
     $$->SetLineNumber(line_number);
 }
 ;
 
 
 ConstInitVal
-: Exp { 
-    $$ = new ConstInitVal_exp($1); 
+: ConstExp{
+    $$ = new ConstInitVal_exp($1);
+    $$->SetLineNumber(line_number);
 }
-| '{' '}' { 
+| '{' '}' {
     $$ = new ConstInitVal(new std::vector<InitVal>);  
+    $$->SetLineNumber(line_number);
 }
 | '{' ConstInitVal_list '}' { 
-    $$ = new ConstInitVal($2); 
+    $$ = new ConstInitVal($2);
+    $$->SetLineNumber(line_number);
 }
 ;
 
 VarInitVal
-: Exp { 
-    $$ = new VarInitVal_exp($1); 
+: Exp {
+    $$ = new VarInitVal_exp($1);
+    $$->SetLineNumber(line_number);
 }
-| '{' '}' { 
+| '{' '}' {
     $$ = new VarInitVal(new std::vector<InitVal>); 
-}
-| '{' VarInitVal_list '}' { 
+    $$->SetLineNumber(line_number);}
+| '{' VarInitVal_list '}' {
     $$ = new VarInitVal($2);
+    $$->SetLineNumber(line_number);
 }
 ;
 
@@ -260,8 +260,8 @@ ConstInitVal_list
     $$->push_back($1);
 }
 | ConstInitVal_list ',' ConstInitVal {
+    ($1)->push_back($3);
     $$ = $1;
-    $$->push_back($3);
 }
 ;
 
@@ -271,8 +271,8 @@ VarInitVal_list
     $$->push_back($1);
 }
 | VarInitVal_list ',' VarInitVal {
+    ($1)->push_back($3);
     $$ = $1;
-    $$->push_back($3);
 }
 ;
 
@@ -293,12 +293,34 @@ FuncFParam
     $$ = new __FuncFParam(Type::INT,$2,nullptr);
     $$->SetLineNumber(line_number);
 }
-| FLOAT IDENT {
+| FLOAT IDENT{
     $$ = new __FuncFParam(Type::FLOAT, $2, nullptr);
     $$->SetLineNumber(line_number);
 }
-| NONE_TYPE IDENT {
-    $$ = new __FuncFParam(Type::VOID, $2, nullptr);
+| INT IDENT '[' ']' ArrayExp_list {
+    std::vector<Expression>*i = new std::vector<Expression>;
+    i->push_back(nullptr);
+    i->insert(i->end(), $5->begin(), $5->end());
+    $$ = new __FuncFParam(Type::INT, $2, i);
+    $$->SetLineNumber(line_number);
+}
+| FLOAT IDENT '[' ']' ArrayExp_list {
+    std::vector<Expression>*i = new std::vector<Expression>;
+    i->push_back(nullptr);
+    i->insert(i->end(), $5->begin(), $5->end());
+    $$ = new __FuncFParam(Type::FLOAT, $2, i);
+    $$->SetLineNumber(line_number);
+}
+| INT IDENT '['  ']' {
+    std::vector<Expression>*i = new std::vector<Expression>;
+    i->push_back(nullptr);
+    $$ = new __FuncFParam(Type::INT, $2, i);
+    $$->SetLineNumber(line_number);
+}
+| FLOAT IDENT '['  ']' {
+    std::vector<Expression>* i = new std::vector<Expression>;
+    i->push_back(nullptr);
+    $$ = new __FuncFParam(Type::FLOAT, $2, i);
     $$->SetLineNumber(line_number);
 }
 ;
@@ -320,9 +342,9 @@ BlockItem_list
     $$ = new std::vector<BlockItem>;
     ($$)->push_back($1);
 }
-| BlockItem_list BlockItem {
-    ($1)->push_back($2);
-    $$ = $1;
+| BlockItem BlockItem_list {
+    ($2)->push_back($1);
+    $$ = $2;
 }
 ;
 
@@ -339,16 +361,20 @@ BlockItem
 
 
 Stmt
-: Exp ';' {
-    $$ = new expr_stmt ($1); 
+: ';' {
+    $$ = new null_stmt();
     $$->SetLineNumber(line_number);
 }
-| Lval '=' Exp {
-    $$ = new assign_stmt($1, $3); 
+| Exp ';' {
+    $$ = new expr_stmt($1);
+    $$->SetLineNumber(line_number);
+}
+| Lval '=' Exp ';'{
+    $$ = new assign_stmt($1, $3);
     $$->SetLineNumber(line_number);
 }
 | Block {
-    $$ = new block_stmt ($1); 
+    $$ = new block_stmt($1);
     $$->SetLineNumber(line_number);
 }
 | IF'('Cond')'Stmt %prec THEN{
@@ -360,15 +386,15 @@ Stmt
     $$->SetLineNumber(line_number);
 }
 | WHILE '(' Cond ')' Stmt {
-    $$ = new while_stmt($3, $5); 
+    $$ = new while_stmt($3, $5);
     $$->SetLineNumber(line_number);
 }
 | RETURN Exp ';' {
-    $$ = new return_stmt($2); 
+    $$ = new return_stmt($2);
     $$->SetLineNumber(line_number);
 }
 | RETURN ';' {
-    $$ = new return_stmt_void(); 
+    $$ = new return_stmt_void();
     $$->SetLineNumber(line_number);
 }
 | BREAK ';' {
@@ -382,22 +408,67 @@ Stmt
 ;
 
 Exp
-:AddExp{$$ = $1; $$->SetLineNumber(line_number);}
-| UnaryExp { $$ = $1; $$->SetLineNumber(line_number); }
-| PrimaryExp { $$ = $1; $$->SetLineNumber(line_number); }
+:AddExp{
+    $$ = $1;
+    $$->SetLineNumber(line_number);
+}
 ;
 
 Cond
 :LOrExp{$$ = $1; $$->SetLineNumber(line_number);}
 ;
 
+Lval
+: IDENT {
+    $$ = new Lval($1, nullptr);
+    $$->SetLineNumber(line_number);
+}
+| IDENT ArrayExp_list {
+    $$ = new Lval($1, $2);
+    $$->SetLineNumber(line_number);
+}
+;
+
+PrimaryExp
+:'(' Exp ')'{
+    $$ = new PrimaryExp_branch($2);
+    $$ ->SetLineNumber(line_number);
+}
+| Lval {
+    $$ = $1;
+    $$->SetLineNumber(line_number);
+}
+| IntConst {
+    $$ = $1;
+    $$->SetLineNumber(line_number);
+}
+| FloatConst {
+    $$ = $1;
+    $$->SetLineNumber(line_number);
+}
+;
+
+IntConst
+:INT_CONST{
+    $$ = new IntConst($1);
+    $$->SetLineNumber(line_number);
+}
+;
+
+FloatConst
+:FLOAT_CONST{
+    $$ = new FloatConst($1);
+    $$->SetLineNumber(line_number);
+}
+;
+
 UnaryExp
 :PrimaryExp{$$ = $1;}
- | IDENT '(' FuncRParams ')' %prec IDENT_FUNC {  // 添加优先级
+|IDENT '(' FuncRParams ')'{
     $$ = new Func_call($1,$3);
     $$->SetLineNumber(line_number);
 }
- | IDENT '(' ')' %prec IDENT_FUNC {  // 添加优先级
+|IDENT '(' ')'{
     // 在sylib.h这个文件中,starttime()是一个宏定义
     // #define starttime() _sysy_starttime(__LINE__)
     // 我们在语法分析中将其替换为_sysy_starttime(line_number)
@@ -435,96 +506,36 @@ UnaryExp
 }
 ;
 
-
-
-Lval
-: IDENT '[' Exp ']' {  
-    $$ = new Lval($1, new std::vector<Expression>{$3}); 
-    $$->SetLineNumber(line_number);
-}
-;
-
-PrimaryExp
-: '(' Exp ')' {
-    $$ = $2;
-    $$->SetLineNumber(line_number);
-}
-| ConstExp {
-   $$ = $1;
-   $$->SetLineNumber(line_number);
-}
-;
-
-IntConst
-:INT_CONST{
-    $$ = new IntConst($1);
-    $$->SetLineNumber(line_number);
-}
-;
-
-FloatConst
-:FLOAT_CONST{
-    $$ = new FloatConst($1);
-    $$->SetLineNumber(line_number);
-}
-;
-
-
-
-
-
 FuncRParams
-: Exp {
-    // 这里将 Expression 转换为 FuncRParams
-    FuncRParams *newParams = new FuncRParams(new std::vector<Expression>);
-    newParams->params->push_back($1);  // 将 $1 (Exp) 添加到 params 中
-    $$ = newParams;  // 将 $$ 赋值为 newParams
-}
-| FuncRParams ',' Exp {
-    // 确保 $1 是 FuncRParams 类型
-    FuncRParams *funcParams = dynamic_cast<FuncRParams*>($1);  // 动态类型转换
-    if (funcParams) {
-        funcParams->params->push_back($3);  // 将 $3 (Exp) 添加到 params 中
-        $$ = funcParams;  // 保持 $$ 为 FuncRParams
-    } else {
-        // 错误处理，如果转换失败
-        $$ = nullptr;
-    }
-}
-| Exp_list {
-    // 将 Exp_list 转换为 FuncRParams
-    FuncRParams *newParams = new FuncRParams($1);  // $1 是 Exp_list (std::vector<Expression>*)
-    $$ = newParams;
+: Exp_list {
+    $$ = new FuncRParams($1);
+    $$->SetLineNumber(line_number);
 }
 ;
-
 
 Exp_list
-: Exp ',' Exp_list {
+: Exp {
     $$ = new std::vector<Expression>;
     $$->push_back($1);
-    $$->insert($$->end(), $3->begin(), $3->end());
 }
-| Exp {
-    $$ = new std::vector<Expression>;
-    $$->push_back($1);
+| Exp ',' Exp_list {
+    ($3)->push_back($1);
+    $$ = $3;
 }
 ;
 
-
-
 MulExp
-: PrimaryExp {
+: UnaryExp {
     $$ = $1;
     $$->SetLineNumber(line_number);
 }
 | MulExp '*' UnaryExp {
-    $$ = new MulExp_mul($1, $3);
-    $$->SetLineNumber(line_number);
+	$$ = new MulExp_mul($1, $3); 
+	$$->SetLineNumber(line_number);
 }
 | MulExp '/' UnaryExp {
-    $$ = new MulExp_div($1, $3);
-    $$->SetLineNumber(line_number);
+	$$ = new MulExp_div($1, $3); 
+	$$->SetLineNumber(line_number);
 }
 | MulExp '%' UnaryExp {
     $$ = new MulExp_mod($1, $3);
@@ -583,7 +594,6 @@ EqExp
     $$ = new EqExp_neq($1, $3);
     $$->SetLineNumber(line_number);
 }
-
 ;
 
 LAndExp
@@ -609,17 +619,49 @@ LOrExp
 ;
 
 ConstExp
-: IntConst {
-    $$ = $1;
-    $$->SetLineNumber(line_number);
-}
-| FloatConst {
+: AddExp {
     $$ = $1;
     $$->SetLineNumber(line_number);
 }
 ;
 
 
+ArrayExp
+:'[' Exp ']'{
+    $$ = $2;
+    $$->SetLineNumber(line_number);
+}
+;
+
+ArrayExp_list
+: ArrayExp {
+    $$ = new std::vector<Expression>;
+    ($$)->push_back($1);
+}
+| ArrayExp ArrayExp_list
+{
+    ($2)->push_back($1);
+    $$ = $2;
+}
+;
+
+ArrayConstExp
+:'[' ConstExp ']'{
+    $$ = $2;
+    $$->SetLineNumber(line_number);
+}
+;
+
+ArrayConstExp_list
+: ArrayConstExp {
+    $$ = new std::vector<Expression>;
+    ($$)->push_back($1);
+}
+| ArrayConstExp ArrayConstExp_list {
+    ($2)->push_back($1);
+    $$ = $2;
+}
+;
 // TODO: 也许你需要添加更多的非终结符
 
 %% 

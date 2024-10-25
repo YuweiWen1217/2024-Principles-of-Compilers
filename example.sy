@@ -1,6 +1,5 @@
 int a=5;
 int main()
 {
-putf("hello world\n");
 return a;
 }

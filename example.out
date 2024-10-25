@@ -1,2 +1,10 @@
-parser error in line 4
-Parser error
+Program
+  VarDecls   Type: Int
+    VarDef   name:a   scope:-1
+      init:
+        VarInitVal_exp
+          Intconst   val:5   Type: Void   
+  FuncDef   Name:main   ReturnType: Int
+    Block   Size:1
+      ReturnStmt:
+        Lval   Type: Void      name:a   scope:-1
