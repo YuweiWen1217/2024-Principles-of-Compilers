@@ -122,10 +122,6 @@ VarDecl
     $$ = new VarDecl(Type::FLOAT, $2);
     $$->SetLineNumber(line_number);
 }
-| NONE_TYPE VarDef_list ';' { 
-    $$ = new VarDecl(Type::VOID, $2);
-    $$->SetLineNumber(line_number);
-}
 ;
 
 // TODO(): 考虑变量定义更多情况  (done)
@@ -139,11 +135,6 @@ ConstDecl
     $$ = new ConstDecl(Type::FLOAT, $3); 
     $$->SetLineNumber(line_number);
 }
-| CONST NONE_TYPE ConstDef_list ';' {
-    $$ = new ConstDecl(Type::VOID, $3); 
-    $$->SetLineNumber(line_number);
-}
-
 ;
 
 // TODO(): 考虑变量定义更多情况  （done）
@@ -201,23 +192,39 @@ FuncDef
 // TODO(): 考虑函数定义更多情况    (done)
 
 VarDef
-:IDENT '=' VarInitVal
-{$$ = new VarDef($1,nullptr,$3); $$->SetLineNumber(line_number);}
-|IDENT
-{$$ = new VarDef_no_init($1,nullptr); $$->SetLineNumber(line_number);}
-;   
+: IDENT '=' VarInitVal {
+    $$ = new VarDef($1, nullptr, $3); 
+    $$->SetLineNumber(line_number);
+}
+| IDENT {
+    $$ = new VarDef_no_init($1, nullptr); 
+    $$->SetLineNumber(line_number);
+}
+| IDENT '[' Exp ']' {
+    std::vector<Expression> *dims = new std::vector<Expression>;
+    dims->push_back($3);
+    $$ = new VarDef_no_init($1, dims); 
+    $$->SetLineNumber(line_number);
+}
+| IDENT '[' Exp ']' '=' VarInitVal {
+    std::vector<Expression> *dims = new std::vector<Expression>;
+    dims->push_back($3);
+    $$ = new VarDef($1, dims, $6); 
+    $$->SetLineNumber(line_number);
+}
+;
 // TODO(): 考虑变量定义更多情况
 
 
 ConstDef
 : IDENT '=' ConstInitVal { 
-    $$ = new ConstDef($1, nullptr, $3);  // 如果没有数组下标，传递 nullptr
+    $$ = new ConstDef($1, nullptr, $3);  
     $$->SetLineNumber(line_number);
 }
 | IDENT '[' Exp ']' '=' ConstInitVal { 
     std::vector<Expression> *dims = new std::vector<Expression>;
     dims->push_back($3);
-    $$ = new ConstDef($1, dims, $6);  // 带数组下标的情况
+    $$ = new ConstDef($1, dims, $6);  
     $$->SetLineNumber(line_number);
 }
 ;
@@ -225,10 +232,10 @@ ConstDef
 
 ConstInitVal
 : Exp { 
-    $$ = new ConstInitVal_exp($1); // 包装Expression为ConstInitVal_exp
+    $$ = new ConstInitVal_exp($1); 
 }
 | '{' '}' { 
-    $$ = nullptr;
+    $$ = new ConstInitVal(new std::vector<InitVal>);  
 }
 | '{' ConstInitVal_list '}' { 
     $$ = new ConstInitVal($2); 
@@ -237,10 +244,10 @@ ConstInitVal
 
 VarInitVal
 : Exp { 
-    $$ = new VarInitVal_exp($1); // 包装Expression为VarInitVal_exp
+    $$ = new VarInitVal_exp($1); 
 }
 | '{' '}' { 
-    $$ = nullptr;
+    $$ = new VarInitVal(new std::vector<InitVal>); 
 }
 | '{' VarInitVal_list '}' { 
     $$ = new VarInitVal($2);
@@ -468,41 +475,42 @@ FloatConst
 
 FuncRParams
 : Exp {
-    // 创建新的 FuncRParams 对象并将第一个表达式添加到参数列表中
-    $$ = new FuncRParams(new std::vector<Expression>);
-    $$->params->push_back($1);  
+    // 这里将 Expression 转换为 FuncRParams
+    FuncRParams *newParams = new FuncRParams(new std::vector<Expression>);
+    newParams->params->push_back($1);  // 将 $1 (Exp) 添加到 params 中
+    $$ = newParams;  // 将 $$ 赋值为 newParams
 }
 | FuncRParams ',' Exp {
     // 确保 $1 是 FuncRParams 类型
-    FuncRParams *funcParams = dynamic_cast<FuncRParams*>($1);
+    FuncRParams *funcParams = dynamic_cast<FuncRParams*>($1);  // 动态类型转换
     if (funcParams) {
         funcParams->params->push_back($3);  // 将 $3 (Exp) 添加到 params 中
         $$ = funcParams;  // 保持 $$ 为 FuncRParams
     } else {
-        // 错误处理
-        yyerror("Invalid FuncRParams structure");
-        $$ = nullptr;  // 如果转换失败，将 $$ 设置为 nullptr
+        // 错误处理，如果转换失败
+        $$ = nullptr;
     }
 }
 | Exp_list {
     // 将 Exp_list 转换为 FuncRParams
-    $$ = new FuncRParams($1);  // 创建 FuncRParams 并将 Exp_list 作为参数
+    FuncRParams *newParams = new FuncRParams($1);  // $1 是 Exp_list (std::vector<Expression>*)
+    $$ = newParams;
 }
 ;
 
+
 Exp_list
 : Exp ',' Exp_list {
-    // 创建一个新的 vector 并将第一个表达式和后续的表达式列表合并
     $$ = new std::vector<Expression>;
     $$->push_back($1);
     $$->insert($$->end(), $3->begin(), $3->end());
 }
 | Exp {
-    // 创建一个新的 vector 并将单个表达式添加到其中
     $$ = new std::vector<Expression>;
     $$->push_back($1);
 }
 ;
+
 
 
 MulExp
