@@ -1,124 +1,182 @@
-Token           Lexeme               Property                        Line           Column         
-CONST           const                                                 1              0              
-FLOAT           float                                                 1              6              
-IDENT           RADIUS               RADIUS                           1              12             
-ASSIGN          =                                                     1              19             
-FLOAT_CONST     5.5                  5.500000000000                   1              21             
-COMMA           ,                                                     1              24             
-IDENT           PI                   PI                               1              26             
-ASSIGN          =                                                     1              29             
-FLOAT_CONST     03.141592653589793   3.141592741013                   1              31             
-COMMA           ,                                                     1              49             
-IDENT           EPS                  EPS                              1              51             
-ASSIGN          =                                                     1              55             
-FLOAT_CONST     1e-6                 0.000001000000                   1              57             
-COMMA           ,                                                     1              61             
-IDENT           FACT                 FACT                             1              63             
-ASSIGN          =                                                     1              68             
-SUB             -                                                     1              70             
-FLOAT_CONST     .33E+5               33000.000000000000               1              71             
-COMMA           ,                                                     1              77             
-IDENT           PI_HEX               PI_HEX                           1              79             
-ASSIGN          =                                                     1              86             
-FLOAT_CONST     0x1.921fb6p+1        3.141592741013                   1              88             
-COMMA           ,                                                     1              101            
-IDENT           HEX2                 HEX2                             1              103            
-ASSIGN          =                                                     1              108            
-FLOAT_CONST     0x.AP-3              0.078125000000                   1              110            
-COMMA           ,                                                     1              117            
-IDENT           CONV1                CONV1                            1              118            
-ASSIGN          =                                                     1              124            
-INT_CONST       233                  233                              1              126            
-COMMA           ,                                                     1              129            
-IDENT           CONV2                CONV2                            1              131            
-ASSIGN          =                                                     1              137            
-INT_CONST       0xfff                4095                             1              139            
-COMMA           ,                                                     1              144            
-IDENT           MAX                  MAX                              1              146            
-ASSIGN          =                                                     1              150            
-FLOAT_CONST     1e9                  1000000000.000000000000          1              152            
-SEMICOLON       ;                                                     1              155            
-INT             int                                                   3              0              
-IDENT           limit1               limit1                           3              4              
-ASSIGN          =                                                     3              11             
-SUB             -                                                     3              13             
-INT_CONST       2147483648           -2147483648                      3              14             
-SEMICOLON       ;                                                     3              24             
-INT             int                                                   4              0              
-IDENT           limit2               limit2                           4              4              
-ASSIGN          =                                                     4              11             
-SUB             -                                                     4              13             
-INT_CONST       2147483648           -2147483648                      4              23             
-SEMICOLON       ;                                                     4              33             
-INT             int                                                   5              0              
-IDENT           limit3               limit3                           5              4              
-ASSIGN          =                                                     5              11             
-SUB             -                                                     5              13             
-INT_CONST       1                    1                                5              15             
-SUB             -                                                     5              17             
-SUB             -                                                     5              19             
-INT_CONST       2147483648           -2147483648                      9              0              
-SUB             -                                                     9              11             
-ADD             +                                                     9              13             
-INT_CONST       2                    2                                9              15             
-SEMICOLON       ;                                                     9              17             
-INT             int                                                   13             0              
-IDENT           main                 main                             13             4              
-LPAREN          (                                                     13             8              
-RPAREN          )                                                     13             9              
-LBRACE          {                                                     13             10             
-FLOAT           float                                                 18             1              
-IDENT           i                    i                                18             7              
-ASSIGN          =                                                     18             9              
-SUB             -                                                     18             11             
-INT_CONST       0111                 73                               18             12             
-SEMICOLON       ;                                                     18             16             
-WHILE           while                                                 19             1              
-LPAREN          (                                                     19             6              
-IDENT           i                    i                                19             7              
-LESS            <                                                     19             9              
-FLOAT_CONST     0x2f.a5p+5           1524.625000000000                19             11             
-RPAREN          )                                                     19             21             
-LBRACE          {                                                     19             22             
-IDENT           i                    i                                20             2              
-ASSIGN          =                                                     20             4              
-IDENT           i                    i                                20             6              
-ADD             +                                                     20             8              
-FLOAT_CONST     0x3.ap-2             0.906250000000                   20             10             
-SEMICOLON       ;                                                     20             18             
-IDENT           i                    i                                21             2              
-ASSIGN          =                                                     21             4              
-IDENT           i                    i                                21             6              
-SUB             -                                                     21             8              
-SUB             -                                                     21             10             
-INT_CONST       3                    3                                21             11             
-ADD             +                                                     21             13             
-ADD             +                                                     21             15             
-INT_CONST       2                    2                                21             16             
-SUB             -                                                     21             18             
-ADD             +                                                     21             19             
-INT_CONST       2                    2                                21             20             
-ADD             +                                                     21             22             
-INT_CONST       1                    1                                21             24             
-SUB             -                                                     21             26             
-INT_CONST       1                    1                                21             28             
-SEMICOLON       ;                                                     21             29             
-RBRACE          }                                                     22             1              
-RETURN          return                                                24             4              
-SUB             -                                                     24             11             
-INT_CONST       02000000000          268435456                        24             35             
-SEMICOLON       ;                                                     24             46             
-RETURN          return                                                25             1              
-SUB             -                                                     25             8              
-INT_CONST       0x80000000           -2147483648                      25             11             
-SEMICOLON       ;                                                     25             21             
-RETURN          return                                                26             4              
-INT_CONST       0x3f3f3f3f           1061109567                       26             45             
-MUL             *                                                     26             56             
-INT_CONST       07                   7                                26             58             
-MOD             %                                                     26             61             
-INT_CONST       010                  8                                26             63             
-DIV             /                                                     26             67             
-INT_CONST       0x10                 16                               26             69             
-SEMICOLON       ;                                                     26             73             
-RBRACE          }                                                     28             0              
+Program
+  FuncDef   Name:main   ReturnType: Int
+    Block   Size:8
+      VarDecls   Type: Int
+        VarDef   name:a   scope:-1
+
+      VarDecls   Type: Int
+        VarDef   name:b   scope:-1
+          init:
+            VarInitVal_exp
+              UnaryExp_neg:(-)   Type: Void   
+                UnaryExp_neg:(-)   Type: Void   
+                  UnaryExp_neg:(-)   Type: Void   
+                    UnaryExp_neg:(-)   Type: Void   
+                      UnaryExp_plus:(+)   Type: Void   
+                        Intconst   val:1324   Type: Void   
+      VarDecls   Type: Int
+        VarDef   name:c   scope:-1
+          init:
+            VarInitVal_exp
+              UnaryExp_plus:(+)   Type: Void   
+                UnaryExp_neg:(-)   Type: Void   
+                  UnaryExp_neg:(-)   Type: Void   
+                    UnaryExp_neg:(-)   Type: Void   
+                      UnaryExp_neg:(-)   Type: Void   
+                        Intconst   val:45561   Type: Void   
+      VarDecls   Type: Int
+        VarDef   name:d   scope:-1
+          init:
+            VarInitVal_exp
+              UnaryExp_neg:(-)   Type: Void   
+                Intconst   val:2   Type: Void   
+        VarDef   name:result   scope:-1
+          init:
+            VarInitVal_exp
+              Intconst   val:2   Type: Void   
+        VarDef   name:useless   scope:-1
+          init:
+            VarInitVal_exp
+              Intconst   val:13   Type: Void   
+      IfStmt:
+      Cond   type:bool
+        Lval   Type: Void      name:d   scope:-1
+      if_stmt:
+        IfElseStmt:
+        Cond   type:bool
+          Lval   Type: Void      name:d   scope:-1
+        if_stmt:
+          NullStmt
+        else_Stmt:
+          WhileStmt:
+          Cond   type:bool
+            Intconst   val:1   Type: Void   
+          Body:
+            BlockStmt:
+              Block   Size:1
+                WhileStmt:
+                Cond   type:bool
+                  Intconst   val:1   Type: Void   
+                Body:
+                  NullStmt
+      IfStmt:
+      Cond   type:bool
+        LOrExp_or: (||)   Type: Void   
+          RelExp_lt: (<)   Type: Void   
+            PrimaryExp_branch   Type: Void   
+              MulExp_div: (/)   Type: Void   
+                MulExp_mul: (*)   Type: Void   
+                  Lval   Type: Void      name:d   scope:-1
+                  UnaryExp_neg:(-)   Type: Void   
+                    Intconst   val:1   Type: Void   
+                Intconst   val:3   Type: Void   
+            Intconst   val:0   Type: Void   
+          LAndExp_and: (&&)   Type: Void   
+            EqExp_eq: (==)   Type: Void   
+              PrimaryExp_branch   Type: Void   
+                AddExp_sub: (-)   Type: Void   
+                  Lval   Type: Void      name:a   scope:-1
+                  UnaryExp_plus:(+)   Type: Void   
+                    Lval   Type: Void      name:b   scope:-1
+              Intconst   val:0   Type: Void   
+            RelExp_gt: (>)   Type: Void   
+              MulExp_mod: (%)   Type: Void   
+                PrimaryExp_branch   Type: Void   
+                  AddExp_sub: (-)   Type: Void   
+                    Lval   Type: Void      name:c   scope:-1
+                    UnaryExp_neg:(-)   Type: Void   
+                      Intconst   val:3   Type: Void   
+                Intconst   val:2   Type: Void   
+              Intconst   val:0   Type: Void   
+      if_stmt:
+        BlockStmt:
+          Block   Size:10
+            WhileStmt:
+            Cond   type:bool
+              Intconst   val:1   Type: Void   
+            Body:
+              BlockStmt:
+                Block   Size:0
+            IfStmt:
+            Cond   type:bool
+              Intconst   val:1   Type: Void   
+            if_stmt:
+              BlockStmt:
+                Block   Size:0
+            ExpressionStmt:   Type: Void   
+              FuncCall   name:putint   Type: Void   
+                FuncRParams:
+                  Lval   Type: Void      name:result   scope:-1
+            NullStmt
+            NullStmt
+            NullStmt
+            NullStmt
+            NullStmt
+            NullStmt
+            NullStmt
+      IfStmt:
+      Cond   type:bool
+        LOrExp_or: (||)   Type: Void   
+          MulExp_div: (/)   Type: Void   
+            PrimaryExp_branch   Type: Void   
+              AddExp_sub: (-)   Type: Void   
+                MulExp_mod: (%)   Type: Void   
+                  Lval   Type: Void      name:d   scope:-1
+                  Intconst   val:2   Type: Void   
+                UnaryExp_plus:(+)   Type: Void   
+                  UnaryExp_neg:(-)   Type: Void   
+                    Intconst   val:67   Type: Void   
+            Intconst   val:1   Type: Void   
+          LAndExp_and: (&&)   Type: Void   
+            EqExp_eq: (==)   Type: Void   
+              PrimaryExp_branch   Type: Void   
+                AddExp_sub: (-)   Type: Void   
+                  Lval   Type: Void      name:a   scope:-1
+                  UnaryExp_neg:(-)   Type: Void   
+                    UnaryExp_plus:(+)   Type: Void   
+                      Lval   Type: Void      name:b   scope:-1
+              Intconst   val:0   Type: Void   
+            RelExp_lt: (<)   Type: Void   
+              MulExp_mod: (%)   Type: Void   
+                PrimaryExp_branch   Type: Void   
+                  AddExp_plus: (+)   Type: Void   
+                    Lval   Type: Void      name:c   scope:-1
+                    UnaryExp_plus:(+)   Type: Void   
+                      Intconst   val:2   Type: Void   
+                Intconst   val:2   Type: Void   
+              Intconst   val:0   Type: Void   
+      if_stmt:
+        BlockStmt:
+          Block   Size:4
+            IfStmt:
+            Cond   type:bool
+              Intconst   val:0   Type: Void   
+            if_stmt:
+              WhileStmt:
+              Cond   type:bool
+                Intconst   val:1   Type: Void   
+              Body:
+                NullStmt
+            IfStmt:
+            Cond   type:bool
+              Intconst   val:1   Type: Void   
+            if_stmt:
+              BlockStmt:
+                Block   Size:1
+                  ExpressionStmt:   Type: Void   
+                    FuncCall   name:putint   Type: Void   
+                      FuncRParams:
+                        AddExp_sub: (-)   Type: Void   
+                          UnaryExp_neg:(-)   Type: Void   
+                            Intconst   val:8   Type: Void   
+                          UnaryExp_neg:(-)   Type: Void   
+                            Intconst   val:-2147483648   Type: Void   
+            AssignStmt:
+              Lval   Type: Void      name:result   scope:-1
+              Intconst   val:4   Type: Void   
+            ExpressionStmt:   Type: Void   
+              FuncCall   name:putint   Type: Void   
+                FuncRParams:
+                  Lval   Type: Void      name:result   scope:-1
+      ReturnStmt:
+        Intconst   val:0   Type: Void   

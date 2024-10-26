@@ -60,11 +60,6 @@ extern IdTable id_table;
 %type <formals> FuncFParams
 
 
-//jiejuezhuangtaichongtu 
-
-//%nonassoc IDENT_FUNC // 用于函数调用的优先级
-//%left '['            // 用于数组下标的优先级
-
 
 // THEN和ELSE用于处理if和else的移进-规约冲突
 %precedence THEN
@@ -342,9 +337,9 @@ BlockItem_list
     $$ = new std::vector<BlockItem>;
     ($$)->push_back($1);
 }
-| BlockItem BlockItem_list {
-    ($2)->push_back($1);
-    $$ = $2;
+| BlockItem_list BlockItem {
+    ($1)->push_back($2);
+    $$ = $1;
 }
 ;
 
@@ -518,9 +513,9 @@ Exp_list
     $$ = new std::vector<Expression>;
     $$->push_back($1);
 }
-| Exp ',' Exp_list {
-    ($3)->push_back($1);
-    $$ = $3;
+| Exp_list ',' Exp {
+    ($1)->push_back($3);
+    $$ = $1;
 }
 ;
 
@@ -620,7 +615,7 @@ LOrExp
 
 ConstExp
 : AddExp {
-    $$ = $1;
+    $$ = new ConstExp($1);
     $$->SetLineNumber(line_number);
 }
 ;
@@ -638,10 +633,10 @@ ArrayExp_list
     $$ = new std::vector<Expression>;
     ($$)->push_back($1);
 }
-| ArrayExp ArrayExp_list
+| ArrayExp_list ArrayExp
 {
-    ($2)->push_back($1);
-    $$ = $2;
+    ($1)->push_back($2);
+    $$ = $1;
 }
 ;
 
@@ -657,9 +652,9 @@ ArrayConstExp_list
     $$ = new std::vector<Expression>;
     ($$)->push_back($1);
 }
-| ArrayConstExp ArrayConstExp_list {
-    ($2)->push_back($1);
-    $$ = $2;
+| ArrayConstExp_list  ArrayConstExp {
+    ($1)->push_back($2);
+    $$ = $1;
 }
 ;
 // TODO: 也许你需要添加更多的非终结符
