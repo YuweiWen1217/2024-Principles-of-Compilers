@@ -1,6 +1,6 @@
 Program
   FuncDef   Name:main   ReturnType: Int
-    Block   Size:8
+    Block   Size:7
       VarDecls   Type: Int
         VarDef   name:a   scope:-1
 
@@ -8,22 +8,35 @@ Program
         VarDef   name:b   scope:-1
           init:
             VarInitVal_exp
-              UnaryExp_neg:(-)   Type: Void   
+              AddExp_plus: (+)   Type: Void   
+                AddExp_sub: (-)   Type: Void   
+                  Intconst   val:5   Type: Void   
+                  MulExp_div: (/)   Type: Void   
+                    MulExp_mul: (*)   Type: Void   
+                      UnaryExp_neg:(-)   Type: Void   
+                        UnaryExp_neg:(-)   Type: Void   
+                          UnaryExp_neg:(-)   Type: Void   
+                            Intconst   val:12   Type: Void   
+                      Intconst   val:11   Type: Void   
+                    Intconst   val:6   Type: Void   
                 UnaryExp_neg:(-)   Type: Void   
-                  UnaryExp_neg:(-)   Type: Void   
-                    UnaryExp_neg:(-)   Type: Void   
-                      UnaryExp_plus:(+)   Type: Void   
-                        Intconst   val:1324   Type: Void   
+                  Intconst   val:3   Type: Void   
       VarDecls   Type: Int
         VarDef   name:c   scope:-1
           init:
             VarInitVal_exp
-              UnaryExp_plus:(+)   Type: Void   
-                UnaryExp_neg:(-)   Type: Void   
+              AddExp_sub: (-)   Type: Void   
+                AddExp_plus: (+)   Type: Void   
+                  Intconst   val:123   Type: Void   
+                  UnaryExp_plus:(+)   Type: Void   
+                    UnaryExp_plus:(+)   Type: Void   
+                      UnaryExp_plus:(+)   Type: Void   
+                        Intconst   val:55   Type: Void   
+                UnaryExp_plus:(+)   Type: Void   
                   UnaryExp_neg:(-)   Type: Void   
-                    UnaryExp_neg:(-)   Type: Void   
+                    UnaryExp_plus:(+)   Type: Void   
                       UnaryExp_neg:(-)   Type: Void   
-                        Intconst   val:45561   Type: Void   
+                        Intconst   val:9961   Type: Void   
       VarDecls   Type: Int
         VarDef   name:d   scope:-1
           init:
@@ -46,121 +59,102 @@ Program
         Cond   type:bool
           Lval   Type: Void      name:d   scope:-1
         if_stmt:
-          NullStmt
-        else_Stmt:
-          WhileStmt:
+          IfElseStmt:
           Cond   type:bool
-            Intconst   val:1   Type: Void   
-          Body:
+            Lval   Type: Void      name:d   scope:-1
+          if_stmt:
+            NullStmt
+          else_Stmt:
+            NullStmt
+        else_Stmt:
+          IfStmt:
+          Cond   type:bool
+            LOrExp_or: (||)   Type: Void   
+              RelExp_lt: (<)   Type: Void   
+                PrimaryExp_branch   Type: Void   
+                  MulExp_div: (/)   Type: Void   
+                    MulExp_mul: (*)   Type: Void   
+                      Lval   Type: Void      name:d   scope:-1
+                      Intconst   val:1   Type: Void   
+                    Intconst   val:2   Type: Void   
+                Intconst   val:0   Type: Void   
+              LAndExp_and: (&&)   Type: Void   
+                EqExp_neq: (!=)   Type: Void   
+                  PrimaryExp_branch   Type: Void   
+                    AddExp_sub: (-)   Type: Void   
+                      Lval   Type: Void      name:a   scope:-1
+                      Lval   Type: Void      name:b   scope:-1
+                  Intconst   val:0   Type: Void   
+                EqExp_neq: (!=)   Type: Void   
+                  MulExp_mod: (%)   Type: Void   
+                    PrimaryExp_branch   Type: Void   
+                      AddExp_plus: (+)   Type: Void   
+                        Lval   Type: Void      name:c   scope:-1
+                        Intconst   val:3   Type: Void   
+                    Intconst   val:2   Type: Void   
+                  Intconst   val:0   Type: Void   
+          if_stmt:
             BlockStmt:
-              Block   Size:1
+              Block   Size:3
                 WhileStmt:
                 Cond   type:bool
                   Intconst   val:1   Type: Void   
                 Body:
-                  NullStmt
+                  BlockStmt:
+                    Block   Size:0
+                IfStmt:
+                Cond   type:bool
+                  Intconst   val:1   Type: Void   
+                if_stmt:
+                  BlockStmt:
+                    Block   Size:0
+                ExpressionStmt:   Type: Void   
+                  FuncCall   name:putint   Type: Void   
+                    FuncRParams:
+                      Lval   Type: Void      name:result   scope:-1
       IfStmt:
       Cond   type:bool
         LOrExp_or: (||)   Type: Void   
           RelExp_lt: (<)   Type: Void   
             PrimaryExp_branch   Type: Void   
-              MulExp_div: (/)   Type: Void   
-                MulExp_mul: (*)   Type: Void   
-                  Lval   Type: Void      name:d   scope:-1
-                  UnaryExp_neg:(-)   Type: Void   
-                    Intconst   val:1   Type: Void   
-                Intconst   val:3   Type: Void   
-            Intconst   val:0   Type: Void   
-          LAndExp_and: (&&)   Type: Void   
-            EqExp_eq: (==)   Type: Void   
-              PrimaryExp_branch   Type: Void   
-                AddExp_sub: (-)   Type: Void   
-                  Lval   Type: Void      name:a   scope:-1
-                  UnaryExp_plus:(+)   Type: Void   
-                    Lval   Type: Void      name:b   scope:-1
-              Intconst   val:0   Type: Void   
-            RelExp_gt: (>)   Type: Void   
-              MulExp_mod: (%)   Type: Void   
-                PrimaryExp_branch   Type: Void   
-                  AddExp_sub: (-)   Type: Void   
-                    Lval   Type: Void      name:c   scope:-1
-                    UnaryExp_neg:(-)   Type: Void   
-                      Intconst   val:3   Type: Void   
-                Intconst   val:2   Type: Void   
-              Intconst   val:0   Type: Void   
-      if_stmt:
-        BlockStmt:
-          Block   Size:10
-            WhileStmt:
-            Cond   type:bool
-              Intconst   val:1   Type: Void   
-            Body:
-              BlockStmt:
-                Block   Size:0
-            IfStmt:
-            Cond   type:bool
-              Intconst   val:1   Type: Void   
-            if_stmt:
-              BlockStmt:
-                Block   Size:0
-            ExpressionStmt:   Type: Void   
-              FuncCall   name:putint   Type: Void   
-                FuncRParams:
-                  Lval   Type: Void      name:result   scope:-1
-            NullStmt
-            NullStmt
-            NullStmt
-            NullStmt
-            NullStmt
-            NullStmt
-            NullStmt
-      IfStmt:
-      Cond   type:bool
-        LOrExp_or: (||)   Type: Void   
-          MulExp_div: (/)   Type: Void   
-            PrimaryExp_branch   Type: Void   
-              AddExp_sub: (-)   Type: Void   
+              AddExp_plus: (+)   Type: Void   
                 MulExp_mod: (%)   Type: Void   
                   Lval   Type: Void      name:d   scope:-1
                   Intconst   val:2   Type: Void   
-                UnaryExp_plus:(+)   Type: Void   
-                  UnaryExp_neg:(-)   Type: Void   
-                    Intconst   val:67   Type: Void   
-            Intconst   val:1   Type: Void   
+                Intconst   val:67   Type: Void   
+            Intconst   val:0   Type: Void   
           LAndExp_and: (&&)   Type: Void   
-            EqExp_eq: (==)   Type: Void   
+            EqExp_neq: (!=)   Type: Void   
               PrimaryExp_branch   Type: Void   
                 AddExp_sub: (-)   Type: Void   
                   Lval   Type: Void      name:a   scope:-1
-                  UnaryExp_neg:(-)   Type: Void   
-                    UnaryExp_plus:(+)   Type: Void   
-                      Lval   Type: Void      name:b   scope:-1
+                  Lval   Type: Void      name:b   scope:-1
               Intconst   val:0   Type: Void   
-            RelExp_lt: (<)   Type: Void   
+            EqExp_neq: (!=)   Type: Void   
               MulExp_mod: (%)   Type: Void   
                 PrimaryExp_branch   Type: Void   
                   AddExp_plus: (+)   Type: Void   
                     Lval   Type: Void      name:c   scope:-1
-                    UnaryExp_plus:(+)   Type: Void   
-                      Intconst   val:2   Type: Void   
+                    Intconst   val:2   Type: Void   
                 Intconst   val:2   Type: Void   
               Intconst   val:0   Type: Void   
       if_stmt:
         BlockStmt:
-          Block   Size:4
+          Block   Size:5
+            WhileStmt:
+            Cond   type:bool
+              Intconst   val:1   Type: Void   
+            Body:
+              NullStmt
             IfStmt:
             Cond   type:bool
               Intconst   val:0   Type: Void   
             if_stmt:
-              WhileStmt:
-              Cond   type:bool
-                Intconst   val:1   Type: Void   
-              Body:
-                NullStmt
-            IfStmt:
+              NullStmt
+            WhileStmt:
             Cond   type:bool
               Intconst   val:1   Type: Void   
-            if_stmt:
+            Body:
               BlockStmt:
                 Block   Size:1
                   ExpressionStmt:   Type: Void   
@@ -168,7 +162,7 @@ Program
                       FuncRParams:
                         AddExp_sub: (-)   Type: Void   
                           UnaryExp_neg:(-)   Type: Void   
-                            Intconst   val:8   Type: Void   
+                            Intconst   val:1   Type: Void   
                           UnaryExp_neg:(-)   Type: Void   
                             Intconst   val:-2147483648   Type: Void   
             AssignStmt:
