@@ -87,6 +87,7 @@ enum Target { ARMV7 = 1, RV64GC = 2 } target;
 bool optimize_flag = false;
 
 int main(int argc, char **argv) {
+    
     target = RV64GC;
 
     FILE *fin = fopen(argv[file_in], "r");
@@ -117,13 +118,13 @@ int main(int argc, char **argv) {
         return 0;
     }
     yyparse();
-
+    
     if (error_num > 0) {
         fout << "Parser error" << std::endl;
         fout.close();
         return 0;
     }
-
+    
     if (strcmp(argv[step_tag], "-parser") == 0) {
         /*
             如果你的语法分析实现不符合预期, 可能会导致语法树打印出现SegmentFault, 大概率是nullptr导致的
@@ -134,8 +135,9 @@ int main(int argc, char **argv) {
         fout.close();
         return 0;
     }
-
+    error_msgs.push_back("22222");
     ast_root->TypeCheck();
+    error_msgs.push_back("11111111111111111111111111111111111");
     if (error_msgs.size() > 0) {
         for (auto msg : error_msgs) {
             fout << msg << std::endl;
@@ -169,7 +171,7 @@ int main(int argc, char **argv) {
         // dom.Execute();   // 完成支配树建立后，取消该行代码的注释
         (Mem2RegPass(&llvmIR, &dom)).Execute();
 
-        // TODO: add more passes
+        // error_msgs.push_back: add more passes
     }
 
     if (strcmp(argv[step_tag], "-llvm") == 0) {

@@ -1,12 +1,31 @@
-Program
-  FuncDef   Name:main   ReturnType: Int
-    Block   Size:1
-      VarDecls   Type: Int
-        VarDef   name:a   scope:-1
-          init:
-            VarInitVal_exp
-              AddExp_plus: (+)   Type: Void   
-                AddExp_sub: (-)   Type: Void   
-                  Intconst   val:2   Type: Void   
-                  Intconst   val:3   Type: Void   
-                Intconst   val:5   Type: Void   
+22222
+Program Semant
+CompUnit_FuncDef Semant
+FuncDef Semant
+BlockItem_Decl Semant
+VarDecl Semant
+VarDef Semant
+VarInitVal Semant
+VarInitVal Semant
+VarInitVal Semant
+VarInitValExp Semant
+VarInitValExp Semant
+VarInitValExp Semant
+VarInitValExp Semant
+VarInitValExp Semant
+VarInitValExp Semant
+VarInitValExp Semant
+VarInitValExp Semant
+VarInitValExp Semant
+VarInitValExp Semant
+VarInitValExp Semant
+VarInitValExp Semant
+VarInitValExp Semant
+VarInitValExp Semant
+BlockItem_Decl Semant
+VarDecl Semant
+VarDef Semant
+VarInitValExp Semant
+AddExp_plus Semant
+Lval Semant
+11111111111111111111111111111111111

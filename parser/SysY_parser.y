@@ -292,14 +292,14 @@ FuncFParam
     $$ = new __FuncFParam(Type::FLOAT, $2, nullptr);
     $$->SetLineNumber(line_number);
 }
-| INT IDENT '[' ']' ArrayExp_list {
+| INT IDENT '[' ']' ArrayConstExp_list {
     std::vector<Expression>*i = new std::vector<Expression>;
     i->push_back(nullptr);
     i->insert(i->end(), $5->begin(), $5->end());
     $$ = new __FuncFParam(Type::INT, $2, i);
     $$->SetLineNumber(line_number);
 }
-| FLOAT IDENT '[' ']' ArrayExp_list {
+| FLOAT IDENT '[' ']' ArrayConstExp_list {
     std::vector<Expression>*i = new std::vector<Expression>;
     i->push_back(nullptr);
     i->insert(i->end(), $5->begin(), $5->end());

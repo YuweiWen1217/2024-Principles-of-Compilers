@@ -403,8 +403,14 @@ public:
 class __Decl;
 typedef __Decl *Decl;
 
+
+// 初始值类中的新增的相关函数（IsExp、IsConst、GetList、GetExp）参考自SysY相关部分。
 class __InitVal : public tree_node {
 public:
+    virtual int IsExp() = 0;
+    virtual int IsConst() = 0;
+    virtual std::vector<__InitVal *> *GetList() = 0;
+    virtual Expression GetExp() = 0;
 };
 typedef __InitVal *InitVal;
 
@@ -417,6 +423,10 @@ public:
     void codeIR();
     void TypeCheck();
     void printAST(std::ostream &s, int pad);
+    int IsExp() { return 0; }
+    int IsConst() { return 1; }
+    std::vector<InitVal> *GetList() { return initval; }
+    Expression GetExp() { return NULL; }
 };
 
 class ConstInitVal_exp : public __InitVal {
@@ -426,6 +436,10 @@ public:
     void codeIR();
     void TypeCheck();
     void printAST(std::ostream &s, int pad);
+    int IsExp() { return 1; }
+    int IsConst() { return 1; }
+    std::vector<InitVal> *GetList() { return NULL; }
+    Expression GetExp() { return exp; }
 };
 
 // InitVal -> {InitVal,InitVal,InitVal,...}
@@ -436,6 +450,10 @@ public:
     void codeIR();
     void TypeCheck();
     void printAST(std::ostream &s, int pad);
+    int IsExp() { return 0; }
+    int IsConst() { return 0; }
+    std::vector<InitVal> *GetList() { return initval; }
+    Expression GetExp() { return NULL; }
 };
 
 class VarInitVal_exp : public __InitVal {
@@ -445,11 +463,16 @@ public:
     void codeIR();
     void TypeCheck();
     void printAST(std::ostream &s, int pad);
+    int IsExp() { return 1; }
+    int IsConst() { return 0; }
+    std::vector<InitVal> *GetList() { return NULL; }
+    Expression GetExp() { return exp; }
 };
 
 class __Def : public tree_node {
 public:
     int scope = -1;    // 在语义分析阶段填入正确的作用域
+    Type::ty type_decl;
 };
 typedef __Def *Def;
 
