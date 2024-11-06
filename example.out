@@ -5,27 +5,9 @@ FuncDef Semant
 BlockItem_Decl Semant
 VarDecl Semant
 VarDef Semant
-VarInitVal Semant
-VarInitVal Semant
-VarInitVal Semant
 VarInitValExp Semant
-VarInitValExp Semant
-VarInitValExp Semant
-VarInitValExp Semant
-VarInitValExp Semant
-VarInitValExp Semant
-VarInitValExp Semant
-VarInitValExp Semant
-VarInitValExp Semant
-VarInitValExp Semant
-VarInitValExp Semant
-VarInitValExp Semant
-VarInitValExp Semant
-VarInitValExp Semant
+UnaryExp_neg
+UnaryExp_plus
 BlockItem_Decl Semant
-VarDecl Semant
-VarDef Semant
-VarInitValExp Semant
-AddExp_plus Semant
-Lval Semant
+AssignStmt Semant
 11111111111111111111111111111111111

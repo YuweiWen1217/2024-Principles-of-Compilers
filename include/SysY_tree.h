@@ -192,6 +192,9 @@ public:
     // 如果dims为nullptr, 表示该变量不含数组下标, 你也可以通过其他方式判断，但需要修改SysY_parser.y已有的代码
 
     int scope = -1;    // 在语义分析阶段填入正确的作用域
+
+    Type::ty ptrtype = Type::VOID;
+
     Lval(Symbol n, std::vector<Expression> *d) : name(n), dims(d) {}
     void codeIR();
     void TypeCheck();
