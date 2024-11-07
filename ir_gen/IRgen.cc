@@ -63,7 +63,16 @@ RegOperand *GetNewRegOperand(int RegNo);
 // eg. you can use fptosi instruction to converse float to int
 // eg. you can use zext instruction to converse bool to int
 void IRgenTypeConverse(LLVMBlock B, Type::ty type_src, Type::ty type_dst, int src, int dst) {
-    TODO("IRgenTypeConverse. Implement it if you need it");
+      if (type_src == Type::FLOAT&& type_dst == Type::FLOAT) {
+        IRgenSitofp(B, src, dst);  // Conversely, we use sitofp for float to int
+    } else if (type_src == Type::INT && type_dst == Type::FLOAT) {
+        IRgenFptosi(B, src, dst);  // Use fptosi for int to float
+    } else if (type_src == Type::BOOL && type_dst == Type::INT) {
+        IRgenZextI1toI32(B, src, dst);  // Zero extend bool to int
+    } else {
+        // Handle other type conversions as needed
+        assert(false && "Unsupported type conversion");
+    }
 }
 
 void BasicBlock::InsertInstruction(int pos, Instruction Ins) {
@@ -121,30 +130,315 @@ void __Program::codeIR() {
 
 void Exp::codeIR() { addexp->codeIR(); }
 
-void AddExp_plus::codeIR() { TODO("BinaryExp CodeIR"); }
+void AddExp_plus::codeIR() {  // 生成左操作数和右操作数的代码
+    addexp->codeIR();
+    mulexp->codeIR();
 
-void AddExp_sub::codeIR() { TODO("BinaryExp CodeIR"); }
+    // 获取最近使用的两个寄存器编号
+    int r0 = irgen_table.getLastReg();   // 左操作数结果
+    int r1 = irgen_table.getLastReg() - 1; // 右操作数结果
 
-void MulExp_mul::codeIR() { TODO("BinaryExp CodeIR"); }
 
-void MulExp_div::codeIR() { TODO("BinaryExp CodeIR"); }
+    // 获取新的寄存器编号，用于存储加法结果
+    RegOperand* r2 = GetNewRegOperand(irgen_table.getNewRegNo());
 
-void MulExp_mod::codeIR() { TODO("BinaryExp CodeIR"); }
+    // 获取当前基本块
+    LLVMBlock currentBlock = irgen_table.getCurrentBlock();
 
-void RelExp_leq::codeIR() { TODO("BinaryExp CodeIR"); }
+    // 根据操作数的类型，选择生成浮点数加法还是整数加法
+    if (type == Type::FLOAT) {
+        IRgenArithmeticF32(currentBlock, BasicInstruction::FADD, r0, r1, r2->GetRegNo());
+    } else {
+        IRgenArithmeticI32(currentBlock, BasicInstruction::ADD, r0, r1, r2->GetRegNo());
+    }
 
-void RelExp_lt::codeIR() { TODO("BinaryExp CodeIR"); }
+    // 更新最后一个寄存器编号
+    irgen_table.setLastReg(r2->GetRegNo());
+}
 
-void RelExp_geq::codeIR() { TODO("BinaryExp CodeIR"); }
+void AddExp_sub::codeIR() { 
+    // 生成左操作数和右操作数的代码
+    addexp->codeIR();
+    mulexp->codeIR();
 
-void RelExp_gt::codeIR() { TODO("BinaryExp CodeIR"); }
+    // 获取最近使用的两个寄存器编号
+    int r0 = irgen_table.getLastReg();   // 左操作数结果
+    int r1 = irgen_table.getLastReg() - 1; // 右操作数结果
 
-void EqExp_eq::codeIR() { TODO("BinaryExp CodeIR"); }
+    // 获取新的寄存器编号，用于存储减法结果
+    RegOperand* r2 = GetNewRegOperand(irgen_table.getNewRegNo());
 
-void EqExp_neq::codeIR() { TODO("BinaryExp CodeIR"); }
+    // 获取当前基本块
+    LLVMBlock currentBlock = irgen_table.getCurrentBlock();
+
+    // 根据操作数的类型，选择生成浮点数减法还是整数减法
+    if (type == Type::FLOAT) {
+        IRgenArithmeticF32(currentBlock, BasicInstruction::FSUB, r0, r1, r2->GetRegNo());
+    } else {
+        IRgenArithmeticI32(currentBlock, BasicInstruction::SUB, r0, r1, r2->GetRegNo());
+    }
+
+    // 更新最后一个寄存器编号
+    irgen_table.setLastReg(r2->GetRegNo());
+}
+
+void MulExp_mul::codeIR() { 
+     // 生成左操作数和右操作数的代码
+    mulexp->codeIR();
+    unary_exp->codeIR();
+
+    // 获取最近使用的两个寄存器编号
+    int r0 = irgen_table.getLastReg();   // 左操作数结果
+    int r1 = irgen_table.getLastReg() - 1; // 右操作数结果
+
+    // 获取新的寄存器编号，用于存储乘法结果
+    RegOperand* r2 = GetNewRegOperand(irgen_table.getNewRegNo());
+
+    // 获取当前基本块
+    LLVMBlock currentBlock = irgen_table.getCurrentBlock();
+
+    // 根据操作数的类型，选择生成浮点数乘法还是整数乘法
+    if (type == Type::FLOAT) {
+        IRgenArithmeticF32(currentBlock, BasicInstruction::FMUL, r0, r1, r2->GetRegNo());
+    } else {
+        IRgenArithmeticI32(currentBlock, BasicInstruction::MUL, r0, r1, r2->GetRegNo());
+    }
+
+    // 更新最后一个寄存器编号
+    irgen_table.setLastReg(r2->GetRegNo());
+}
+
+void MulExp_div::codeIR() { 
+    // 生成左操作数和右操作数的代码
+    mulexp->codeIR();
+    unary_exp->codeIR();
+
+    // 获取最近使用的两个寄存器编号
+    int r0 = irgen_table.getLastReg();   // 左操作数结果
+    int r1 = irgen_table.getLastReg() - 1; // 右操作数结果
+
+    // 获取新的寄存器编号，用于存储除法结果
+    RegOperand* r2 = GetNewRegOperand(irgen_table.getNewRegNo());
+
+    // 获取当前基本块
+    LLVMBlock currentBlock = irgen_table.getCurrentBlock();
+
+    // 根据操作数的类型，选择生成浮点数除法还是整数除法
+    if (type == Type::FLOAT) {
+        IRgenArithmeticF32(currentBlock, BasicInstruction::FDIV, r0, r1, r2->GetRegNo());
+    } else {
+        IRgenArithmeticI32(currentBlock, BasicInstruction::DIV, r0, r1, r2->GetRegNo());
+         }
+
+    // 更新最后一个寄存器编号
+    irgen_table.setLastReg(r2->GetRegNo());
+}
+
+
+void MulExp_mod::codeIR() { 
+     // 生成左操作数和右操作数的代码
+    mulexp->codeIR();
+    unary_exp->codeIR();
+
+    // 获取最近使用的两个寄存器编号
+    int r0 = irgen_table.getLastReg();   // 左操作数结果
+    int r1 = irgen_table.getLastReg() - 1; // 右操作数结果
+
+    // 获取新的寄存器编号，用于存储取模结果
+    RegOperand* r2 = GetNewRegOperand(irgen_table.getNewRegNo());
+
+    // 获取当前基本块
+    LLVMBlock currentBlock = irgen_table.getCurrentBlock();
+
+    // 取模操作仅适用于整数类型
+    if (type == Type::FLOAT) {
+        // 假设不允许浮点数取模，这里可以根据需求处理错误
+        throw std::runtime_error("Modulo operation not allowed on floating point numbers");
+    } else {
+        IRgenArithmeticI32(currentBlock, BasicInstruction::MOD, r0, r1, r2->GetRegNo());
+    }
+
+    // 更新最后一个寄存器编号
+    irgen_table.setLastReg(r2->GetRegNo());
+}
+
+
+
+
+void RelExp_leq::codeIR() {
+    // 生成左操作数和右操作数的代码
+    relexp->codeIR();
+    addexp->codeIR();
+
+    // 获取最近使用的两个寄存器编号
+    int r0 = irgen_table.getLastReg();   // 左操作数结果
+    int r1 = irgen_table.getLastReg() - 1; // 右操作数结果
+
+    // 获取新的寄存器编号，用于存储比较结果
+    RegOperand* r2 = GetNewRegOperand(irgen_table.getNewRegNo());
+
+    // 获取当前基本块
+    LLVMBlock currentBlock = irgen_table.getCurrentBlock();
+
+    // 根据操作数的类型，选择生成浮点数比较还是整数比较
+    if (type == Type::FLOAT) {
+        IRgenFcmp(currentBlock, BasicInstruction::FcmpCond::OLE, r0, r1, r2->GetRegNo()); // 浮点数 <= (Ordered Less or Equal)
+    } else {
+        IRgenIcmp(currentBlock, BasicInstruction::IcmpCond::sle, r0, r1, r2->GetRegNo()); // 整数 <= (signed less or equal)
+    }
+
+    // 更新最后一个寄存器编号
+    irgen_table.setLastReg(r2->GetRegNo());
+}
+
+void RelExp_lt::codeIR() {
+    // 生成左操作数和右操作数的代码
+    relexp->codeIR();
+    addexp->codeIR();
+
+    // 获取最近使用的两个寄存器编号
+    int r0 = irgen_table.getLastReg();   // 左操作数结果
+    int r1 = irgen_table.getLastReg() - 1; // 右操作数结果
+
+    // 获取新的寄存器编号，用于存储比较结果
+    RegOperand* r2 = GetNewRegOperand(irgen_table.getNewRegNo());
+
+    // 获取当前基本块
+    LLVMBlock currentBlock = irgen_table.getCurrentBlock();
+
+    // 根据操作数的类型，选择生成浮点数比较还是整数比较
+    if (type == Type::FLOAT) {
+        IRgenFcmp(currentBlock, BasicInstruction::FcmpCond::OLT, r0, r1, r2->GetRegNo()); // 浮点数 < (Ordered Less Than)
+    } else {
+        IRgenIcmp(currentBlock, BasicInstruction::IcmpCond::slt, r0, r1, r2->GetRegNo()); // 整数 < (signed less than)
+    }
+
+    // 更新最后一个寄存器编号
+    irgen_table.setLastReg(r2->GetRegNo());
+}
+
+void RelExp_geq::codeIR() {
+    // 生成左操作数和右操作数的代码
+    relexp->codeIR();
+    addexp->codeIR();
+
+    // 获取最近使用的两个寄存器编号
+    int r0 = irgen_table.getLastReg();   // 左操作数结果
+    int r1 = irgen_table.getLastReg() - 1; // 右操作数结果
+
+    // 获取新的寄存器编号，用于存储比较结果
+    RegOperand* r2 = GetNewRegOperand(irgen_table.getNewRegNo());
+
+    // 获取当前基本块
+    LLVMBlock currentBlock = irgen_table.getCurrentBlock();
+
+    // 根据操作数的类型，选择生成浮点数比较还是整数比较
+    if (type == Type::FLOAT) {
+        IRgenFcmp(currentBlock, BasicInstruction::FcmpCond::OGE, r0, r1, r2->GetRegNo()); // 浮点数 >= (Ordered Greater or Equal)
+    } else {
+        IRgenIcmp(currentBlock, BasicInstruction::IcmpCond::sge, r0, r1, r2->GetRegNo()); // 整数 >= (signed greater or equal)
+    }
+
+        // 更新最后一个寄存器编号
+    irgen_table.setLastReg(r2->GetRegNo());
+}
+
+void RelExp_gt::codeIR() {
+    // 生成左操作数和右操作数的代码
+    relexp->codeIR();
+    addexp->codeIR();
+
+    // 获取最近使用的两个寄存器编号
+    int r0 = irgen_table.getLastReg();   // 左操作数结果
+    int r1 = irgen_table.getLastReg() - 1; // 右操作数结果
+
+    // 获取新的寄存器编号，用于存储比较结果
+    RegOperand* r2 = GetNewRegOperand(irgen_table.getNewRegNo());
+
+    // 获取当前基本块
+    LLVMBlock currentBlock = irgen_table.getCurrentBlock();
+
+    // 根据操作数的类型，选择生成浮点数比较还是整数比较
+    if (type == Type::FLOAT) {
+        IRgenFcmp(currentBlock, BasicInstruction::FcmpCond::OGT, r0, r1, r2->GetRegNo()); // 浮点数 > (Ordered Greater Than)
+    } else {
+        IRgenIcmp(currentBlock, BasicInstruction::IcmpCond::sgt, r0, r1, r2->GetRegNo()); // 整数 > (signed greater than)
+    }
+
+    // 更新最后一个寄存器编号
+    irgen_table.setLastReg(r2->GetRegNo());
+}
+
+void EqExp_eq::codeIR() {
+    // 生成左操作数和右操作数的代码
+    eqexp->codeIR();
+    relexp->codeIR();
+
+
+    // 获取最近使用的两个寄存器编号
+    int r0 = irgen_table.getLastReg();   // 左操作数结果
+    int r1 = irgen_table.getLastReg() - 1; // 右操作数结果
+
+    // 获取新的寄存器编号，用于存储比较结果
+    RegOperand* r2 = GetNewRegOperand(irgen_table.getNewRegNo());
+
+    // 获取当前基本块
+    LLVMBlock currentBlock = irgen_table.getCurrentBlock();
+
+    // 根据操作数的类型，选择生成浮点数比较还是整数比较
+    if (type == Type::FLOAT) {
+        IRgenFcmp(currentBlock, BasicInstruction::FcmpCond::OEQ, r0, r1, r2->GetRegNo()); // 浮点数 == (Ordered and Equal)
+    } else {
+        IRgenIcmp(currentBlock, BasicInstruction::IcmpCond::eq, r0, r1, r2->GetRegNo()); // 整数 == (equal)
+    }
+
+    // 更新最后一个寄存器编号
+    irgen_table.setLastReg(r2->GetRegNo());
+}
+
+void EqExp_neq::codeIR() {
+    // 生成左操作数和右操作数的代码
+    eqexp->codeIR();
+    relexp->codeIR();
+
+
+    // 获取最近使用的两个寄存器编号
+    int r0 = irgen_table.getLastReg();   // 左操作数结果
+    int r1 = irgen_table.getLastReg() - 1; // 右操作数结果
+
+    // 获取新的寄存器编号，用于存储比较结果
+    RegOperand* r2 = GetNewRegOperand(irgen_table.getNewRegNo());
+
+    // 获取当前基本块
+    LLVMBlock currentBlock = irgen_table.getCurrentBlock();
+
+    // 根据操作数的类型，选择生成浮点数比较还是整数比较
+    if (type == Type::FLOAT) {
+        IRgenFcmp(currentBlock, BasicInstruction::FcmpCond::ONE, r0, r1, r2->GetRegNo()); // 浮点数 != (Ordered and Not Equal)
+    } else {
+        IRgenIcmp(currentBlock, BasicInstruction::IcmpCond::ne, r0, r1, r2->GetRegNo()); // 整数 != (not equal)
+    }
+
+        // 更新最后一个寄存器编号
+    irgen_table.setLastReg(r2->GetRegNo());
+}
+
+
+    
 
 // short circuit &&
-void LAndExp_and::codeIR() { TODO("LAndExpAnd CodeIR"); }
+void LAndExp_and::codeIR() {
+
+    landexp->codeIR();                   
+    eqexp->codeIR();                     
+    int leftResultReg =irgen_table.getLastReg(); 
+    int rightResultReg = irgen_table.getLastReg() - 1; 
+
+    // 3. 执行逻辑与操作，结果存入 leftResultReg
+    IRgenAnd(getCurrentBlock(), leftResultReg, leftResultReg, rightResultReg);
+
+    
+}
 
 // short circuit ||
 void LOrExp_or::codeIR() { TODO("LOrExpOr CodeIR"); }

@@ -1,0 +1,274 @@
+[33mcommit 4a4f0e5032e2de856cecaf6bf2c40a0db95c7d2e[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m)[m
+Author: keqiucheng <2213124@mail.nankai.edu.cn>
+Date:   Thu Nov 7 09:45:06 2024 +0800
+
+    中间代码生成的二元运算部分（考虑浮点数）
+
+[33mcommit c4f10bae7907275a92fad5003bc2d65eb286a30b[m
+Author: wenyuwei <2213125@mail.nankai.edu.cn>
+Date:   Sat Oct 26 12:06:19 2024 +0800
+
+    修正了部分错误
+
+[33mcommit 9fb5466a5ddc1d123fbb034507dc6f9745afbf8c[m
+Author: wenyuwei <2213125@mail.nankai.edu.cn>
+Date:   Fri Oct 25 23:47:22 2024 +0800
+
+    完成了数组的表达式部分并修正了部分错误
+
+[33mcommit 178a73fefd657608befcbe0ec38effbf78afda1f[m
+Author: keqiucheng <2213124@mail.nankai.edu.cn>
+Date:   Fri Oct 25 22:11:11 2024 +0800
+
+    更正部分错误
+
+[33mcommit bbbcf78b873501508c66eb436259e71b2f4d69fb[m
+Author: keqiucheng <2213124@mail.nankai.edu.cn>
+Date:   Fri Oct 25 21:24:15 2024 +0800
+
+    更正部分错误
+
+[33mcommit c28d52ed65bcbe1d6d0f4961ed0a1812e89f3e91[m
+Author: keqiucheng <2213124@mail.nankai.edu.cn>
+Date:   Fri Oct 25 14:41:06 2024 +0800
+
+    更正部分错误
+
+[33mcommit f314ae75ea9fcba2cf8f97cf6790bd736d5445b0[m
+Author: keqiucheng <2213124@mail.nankai.edu.cn>
+Date:   Mon Oct 21 08:53:27 2024 +0800
+
+    完成语法分析的语句和表达式部分
+
+[33mcommit 5f19f73a0d6ab3f5f5787844a3e0b6953106ced8[m
+Author: keqiucheng <2213124@mail.nankai.edu.cn>
+Date:   Mon Oct 21 04:26:28 2024 +0800
+
+    完成语法分析的函数和代码块部分
+
+[33mcommit 6331120a2db7bf636ccd8ec42e5d2a6248c94f80[m
+Author: keqiucheng <2213124@mail.nankai.edu.cn>
+Date:   Mon Oct 21 00:09:11 2024 +0800
+
+    完成语法分析的函数部分
+
+[33mcommit 54792b9fdf7f2cb71e9618d10dbb7d157b6226bf[m
+Author: keqiucheng <2213124@mail.nankai.edu.cn>
+Date:   Sun Oct 20 21:28:32 2024 +0800
+
+    完成语法分析的常量和变量部分
+
+[33mcommit f5edbcd027b453307b4fd72c1f8ee77a0bbcbb77[m
+Author: wenyuwei <2213125@mail.nankai.edu.cn>
+Date:   Sat Oct 12 17:32:27 2024 +0800
+
+    修正了一处错误
+
+[33mcommit e5d66ccda8e12ce57ef63784853145fdde4e272e[m
+Author: wenyuwei <2213125@mail.nankai.edu.cn>
+Date:   Sat Oct 12 17:22:57 2024 +0800
+
+    更新了十进制浮点数的正则表达式
+
+[33mcommit 35b5df283701b442dd2aaef20a1c9bdcd3c785ea[m
+Merge: f1959c3 d888dfc
+Author: wenyuwei <wenyuwei925@gmail.com>
+Date:   Sat Oct 12 10:54:25 2024 +0800
+
+    Merge branch 'main' of https://gitlab.eduxiji.net/nku2024-wk/2024compiler
+
+[33mcommit f1959c33cf5e5131cc843954845aeb4340be2b74[m
+Author: wenyuwei <wenyuwei925@gmail.com>
+Date:   Sat Oct 12 10:37:24 2024 +0800
+
+    更新了未终结注释的情况
+
+[33mcommit d888dfc407885930204c8130e13b759bce9679e5[m
+Author: keqiucheng <2213124@mail.nankai.edu.cn>
+Date:   Sat Oct 12 09:43:45 2024 +0800
+
+    一些测试
+
+[33mcommit 4ae2ec876bc0c6c93e74b6c66f564fe39fe02ee1[m
+Author: keqiucheng <2213124@mail.nankai.edu.cn>
+Date:   Sat Oct 12 07:12:35 2024 +0800
+
+    一些测试
+
+[33mcommit 961d054e25338d34c4066cc81ca9bb38a057ab2a[m
+Author: wenyuwei <wenyuwei925@gmail.com>
+Date:   Fri Oct 11 21:43:01 2024 +0800
+
+    修改了一处地方
+
+[33mcommit 1812d4cb6e6c905ddf1c78f70076cbf4073432d8[m
+Author: wenyuwei <wenyuwei925@gmail.com>
+Date:   Fri Oct 11 16:05:29 2024 +0800
+
+    修正了一处错误
+
+[33mcommit 112de837439f70372e8256221b03e6be4f115ac2[m
+Author: wenyuwei <wenyuwei925@gmail.com>
+Date:   Thu Oct 10 22:18:49 2024 +0800
+
+    添加了部分保留字的词法分析
+
+[33mcommit 0550169d5befb387a9e6f8b551c301a7adcc4fbd[m
+Author: wenyuwei <wenyuwei925@gmail.com>
+Date:   Thu Oct 10 21:44:12 2024 +0800
+
+    修改了一处地方
+
+[33mcommit 1ae4f0df8bc76852096cba889f172df94a39cfea[m
+Author: wenyuwei <wenyuwei925@gmail.com>
+Date:   Thu Oct 10 15:54:54 2024 +0800
+
+    修正了一处错误
+
+[33mcommit 7e91f4c993aa041015f9c3adbf77f52ffeb2a7d8[m
+Merge: 6349e9c ba45c9d
+Author: wenyuwei <wenyuwei925@gmail.com>
+Date:   Thu Oct 10 15:27:20 2024 +0800
+
+    Merge branch 'main' of https://github.com/yuhuifishash/NKU-Compilers2024-RV64GC
+
+[33mcommit ba45c9d4c0b47129e13e5412e93273f2c8eb5f35[m
+Author: yuhui__ <120372236+yuhuifishash@users.noreply.github.com>
+Date:   Thu Oct 10 13:08:20 2024 +0800
+
+    Update lexer_out.cc
+
+[33mcommit dc801e42c11057cf8c1c81eec051b1e15b511e80[m
+Author: yuhui__ <120372236+yuhuifishash@users.noreply.github.com>
+Date:   Wed Oct 9 23:31:09 2024 +0800
+
+    Update ir.h
+
+[33mcommit 6349e9c8cc7b6a939b7ad223cb8bb66ddcf3afd6[m
+Author: wenyuwei <wenyuwei925@gmail.com>
+Date:   Wed Oct 9 22:11:58 2024 +0800
+
+    修改了一处地方
+
+[33mcommit ebe4ae1f0cd64016f3038ff4ba78a6d58a0f88cd[m
+Author: wenyuwei <wenyuwei925@gmail.com>
+Date:   Wed Oct 9 21:59:37 2024 +0800
+
+    完成词法分析的十进制和十六进制浮点数部分
+
+[33mcommit 655e8f8d40f9cb7961abf1bbee8197905c101ad3[m
+Author: wenyuwei <wenyuwei925@gmail.com>
+Date:   Wed Oct 9 20:34:44 2024 +0800
+
+    完成词法分析的注释、行号、列号、十六进制和八进制整型常量的部分。
+
+[33mcommit 4b63d81ffa4233aaa68d38731a3899674da40d14[m
+Author: 2110835-Hua Zhi Yuan <1479750073@qq.com>
+Date:   Wed Oct 9 12:28:16 2024 +0800
+
+    update readme
+
+[33mcommit 49e0bfd2aaa59ed8362baaf1490c62d1e4cd09f4[m
+Author: 2110835-Hua Zhi Yuan <1479750073@qq.com>
+Date:   Tue Oct 8 14:20:00 2024 +0800
+
+    erase useless code
+
+[33mcommit f846b3bb6794ea72948ce0fb71db215ba6d963ab[m
+Author: 2110835-Hua Zhi Yuan <1479750073@qq.com>
+Date:   Tue Oct 8 14:06:25 2024 +0800
+
+    update readme
+
+[33mcommit 2c5308504b8f9b15be58a10afdd0e42ab3772479[m
+Author: 2110835-Hua Zhi Yuan <1479750073@qq.com>
+Date:   Tue Oct 8 13:59:04 2024 +0800
+
+    update readme and main.cc
+
+[33mcommit 4b52a9f85c650f835db8d91d33652cfdc6a0be6f[m
+Author: 2110835-Hua Zhi Yuan <1479750073@qq.com>
+Date:   Sun Oct 6 01:12:00 2024 +0800
+
+    update testcase
+
+[33mcommit 63c1fe0059fde0cc2caae81e40f72bea1b93ad6e[m
+Merge: ba1917c 17e8c8f
+Author: 2110835-Hua Zhi Yuan <1479750073@qq.com>
+Date:   Sat Oct 5 23:09:50 2024 +0800
+
+    Merge branch 'main' of https://github.com/yuhuifishash/NKU-Compilers2024-RV64GC
+
+[33mcommit ba1917cc8d331501840bf8f35f9b1534f2776778[m
+Author: 2110835-Hua Zhi Yuan <1479750073@qq.com>
+Date:   Sat Oct 5 23:08:49 2024 +0800
+
+    update test.py
+
+[33mcommit 17e8c8f01d1720122126f9bd28fa3b6724ffa000[m
+Author: yuhui__ <120372236+yuhuifishash@users.noreply.github.com>
+Date:   Sat Oct 5 15:28:17 2024 +0800
+
+    Update test.py
+
+[33mcommit 5daf8eaff664cbbcdc86c32da2a598242281d932[m
+Author: 2110835-Hua Zhi Yuan <1479750073@qq.com>
+Date:   Thu Oct 3 15:05:35 2024 +0800
+
+    add more comment for asm
+
+[33mcommit afc2752fb6a0d5dcf02189d28ef94d74f22801ca[m
+Author: 2110835-Hua Zhi Yuan <1479750073@qq.com>
+Date:   Sun Sep 22 22:58:10 2024 +0800
+
+    add comment
+
+[33mcommit 4d2b7175c80d271b92555d754a0a2ae4e1419874[m
+Author: 2110835-Hua Zhi Yuan <1479750073@qq.com>
+Date:   Sun Sep 22 13:51:26 2024 +0800
+
+    update comment
+
+[33mcommit fb74533f770e60bd282697eed7bba8a9dfada34d[m
+Author: 2110835-Hua Zhi Yuan <1479750073@qq.com>
+Date:   Sun Sep 22 01:23:40 2024 +0800
+
+    update semant
+
+[33mcommit f1fe075211328afcdc2a4350cbb1a5f90d555b95[m
+Author: 2110835-Hua Zhi Yuan <1479750073@qq.com>
+Date:   Sun Sep 22 01:04:33 2024 +0800
+
+    typeconverse
+
+[33mcommit 182c4eb1d5708fbf101baf24b10631ffe402cf84[m
+Author: 2110835-Hua Zhi Yuan <1479750073@qq.com>
+Date:   Sun Sep 22 00:39:18 2024 +0800
+
+    update instruction
+
+[33mcommit 363377261bbff424936b77d9cd3c95b9b197ac24[m
+Author: 2110835-Hua Zhi Yuan <1479750073@qq.com>
+Date:   Sun Sep 22 00:34:41 2024 +0800
+
+    fix some errors
+
+[33mcommit f72d15d76ff71d2bad202d9d4bb04f939b25de81[m
+Author: 2110835-Hua Zhi Yuan <1479750073@qq.com>
+Date:   Sat Sep 21 23:26:06 2024 +0800
+
+    erase useless code
+
+[33mcommit 5c721746c237273b407eed5aa3af5917d98c9d1d[m
+Author: 2110835-Hua Zhi Yuan <1479750073@qq.com>
+Date:   Fri Sep 20 21:14:37 2024 +0800
+
+    update readme
+
+[33mcommit 61ec7aa260001c9e23f0e27161dbfdaad7d9989f[m
+Author: 2110835-Hua Zhi Yuan <1479750073@qq.com>
+Date:   Fri Sep 20 15:07:59 2024 +0800
+
+    update todo
+
+[33mcommit d9bfe2ebfdedb1e5e57a0901cfa709774a71
