@@ -1,13 +1,7 @@
-22222
 Program Semant
+CompUnitDecl Semant
+ConstDecl Semant
+ConstDef Semant
+ConstInitValExp Semant
 CompUnit_FuncDef Semant
 FuncDef Semant
-BlockItem_Decl Semant
-VarDecl Semant
-VarDef Semant
-VarInitValExp Semant
-UnaryExp_neg
-UnaryExp_plus
-BlockItem_Decl Semant
-AssignStmt Semant
-11111111111111111111111111111111111

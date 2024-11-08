@@ -135,9 +135,7 @@ int main(int argc, char **argv) {
         fout.close();
         return 0;
     }
-    error_msgs.push_back("22222");
     ast_root->TypeCheck();
-    error_msgs.push_back("11111111111111111111111111111111111");
     if (error_msgs.size() > 0) {
         for (auto msg : error_msgs) {
             fout << msg << std::endl;

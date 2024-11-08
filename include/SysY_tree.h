@@ -475,6 +475,7 @@ public:
 class __Def : public tree_node {
 public:
     int scope = -1;    // 在语义分析阶段填入正确的作用域
+    bool isglobal = false;
     Type::ty type_decl;
 };
 typedef __Def *Def;
@@ -520,6 +521,7 @@ public:
 // decl basic_class
 class __Decl : public tree_node {
 public:
+    bool isglobal = false;
 };
 
 // var definition
