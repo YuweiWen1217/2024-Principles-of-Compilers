@@ -32,7 +32,6 @@ int loopdepth = 0;
 bool has_main = false;
 
 // int a[5][4][3] = { { {2,3}, 6,7,5,4,3,2,11,2,4 },7,8,11 };
-// 递归完成数组元素值的初始化的思想参考自SysY相关程序的66～102行。
 void HandleArrayInit(InitVal init, VarAttribute &val, int count, int handled) {
     int beforeadd = (val.type == Type::INT) ? val.IntInitVals.size() : val.FloatInitVals.size();
     for (InitVal iv : *(init->GetList())) {
@@ -57,13 +56,21 @@ void HandleArrayInit(InitVal init, VarAttribute &val, int count, int handled) {
                     h *= d;
             }
             // 如果是多维数组，则递归处理
+            int afteradd = (val.type == Type::INT) ? val.IntInitVals.size() : val.FloatInitVals.size();
+            int realcount = afteradd - beforeadd;
+            if (realcount % (count / h) != 0) {
+                error_msgs.push_back("ERROR: The number of initial values in the array is too small at line " +
+                                     std::to_string(init->GetLineNumber()) + ".");
+                return;
+            }
             HandleArrayInit(iv, val, count, h);
         }
     }
     int afteradd = (val.type == Type::INT) ? val.IntInitVals.size() : val.FloatInitVals.size();
     int realcount = afteradd - beforeadd;
-    if (realcount > count) {
-        error_msgs.push_back("行" + std::to_string(init->GetLineNumber()) + "：数组初始值太多。");
+    if (realcount > count / handled) {
+        error_msgs.push_back("ERROR: The number of initial values in the array is excessive at line " +
+                             std::to_string(init->GetLineNumber()) + ".");
     }
     while (realcount < count / handled) {
         if (val.type == Type::INT) {
@@ -901,6 +908,10 @@ void ConstDef::TypeCheck() {
             totalElements *= dim;    // 计算总元素数
         }
         HandleArrayInit(init, val, totalElements, 1);
+        for (int i = 0; i < val.IntInitVals.size(); i++) {
+            std::cout << val.IntInitVals[i] << " ";
+        }
+        std::cout << std::endl;
         // 确保初始化值的数量匹配
         if (val.IntInitVals.size() != totalElements && val.FloatInitVals.size() != totalElements) {
             error_msgs.push_back("Error: Initialization values count does not match array dimensions at line " +
