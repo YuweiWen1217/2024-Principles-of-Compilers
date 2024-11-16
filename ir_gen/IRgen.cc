@@ -2,7 +2,20 @@
 #include "../include/ir.h"
 #include "semant.h"
 
+extern std::vector<std::string> error_msgs;
+
 extern SemantTable semant_table;    // 也许你会需要一些语义分析的信息
+
+// Type->LLVMType
+// Type：VOID = 0, INT = 1, FLOAT = 2, BOOL = 3, PTR = 4, DOUBLE = 5
+BasicInstruction::LLVMType Type2LLvm[6] = {BasicInstruction::LLVMType::VOID,    BasicInstruction::LLVMType::I32,
+                                           BasicInstruction::LLVMType::FLOAT32, BasicInstruction::LLVMType::I1,
+                                           BasicInstruction::LLVMType::PTR,     BasicInstruction::LLVMType::DOUBLE};
+
+int reg_now = -1;
+int label_now = 0;
+int label_max = -1;
+FuncDefInstruction func_now;
 
 IRgenTable irgen_table;    // 中间代码生成的辅助变量
 LLVMIR llvmIR;             // 我们需要在这个变量中生成中间代码
@@ -29,10 +42,10 @@ void IRgenSitofp(LLVMBlock B, int src, int dst);
 void IRgenZextI1toI32(LLVMBlock B, int src, int dst);
 
 void IRgenGetElementptrIndexI32(LLVMBlock B, BasicInstruction::LLVMType type, int result_reg, Operand ptr,
-                        std::vector<int> dims, std::vector<Operand> indexs);
+                                std::vector<int> dims, std::vector<Operand> indexs);
 
 void IRgenGetElementptrIndexI64(LLVMBlock B, BasicInstruction::LLVMType type, int result_reg, Operand ptr,
-                        std::vector<int> dims, std::vector<Operand> indexs);
+                                std::vector<int> dims, std::vector<Operand> indexs);
 
 void IRgenLoad(LLVMBlock B, BasicInstruction::LLVMType type, int result_reg, Operand ptr);
 void IRgenStore(LLVMBlock B, BasicInstruction::LLVMType type, int value_reg, Operand ptr);
@@ -63,7 +76,7 @@ RegOperand *GetNewRegOperand(int RegNo);
 // eg. you can use fptosi instruction to converse float to int
 // eg. you can use zext instruction to converse bool to int
 void IRgenTypeConverse(LLVMBlock B, Type::ty type_src, Type::ty type_dst, int src, int dst) {
-    TODO("IRgenTypeConverse. Implement it if you need it");
+    error_msgs.push_back("IRgenTypeConverse. Implement it if you need it");
 }
 
 void BasicBlock::InsertInstruction(int pos, Instruction Ins) {
@@ -112,6 +125,7 @@ while语句指令生成的伪代码：
 */
 
 void __Program::codeIR() {
+    error_msgs.push_back("Program CodeIR");
     AddLibFunctionDeclare();
     auto comp_vector = *comp_list;
     for (auto comp : comp_vector) {
@@ -119,107 +133,480 @@ void __Program::codeIR() {
     }
 }
 
-void Exp::codeIR() { addexp->codeIR(); }
+void Exp::codeIR() {
+    error_msgs.push_back("Exp CodeIR");
+    addexp->codeIR();
+}
 
-void AddExp_plus::codeIR() { TODO("BinaryExp CodeIR"); }
+BasicInstruction::LLVMIROpcode opint2float(BasicInstruction::LLVMIROpcode opcode) {
+    switch (opcode) {
+    case BasicInstruction::ADD:
+        return BasicInstruction::FADD;
+    case BasicInstruction::SUB:
+        return BasicInstruction::FSUB;
+    case BasicInstruction::MUL:
+        return BasicInstruction::FMUL;
+    case BasicInstruction::DIV:
+        return BasicInstruction::FDIV;
+    default:
+        assert(false);
+    }
+}
 
-void AddExp_sub::codeIR() { TODO("BinaryExp CodeIR"); }
+void generateArithmeticInstruction(LLVMBlock B, Expression lexp, Expression rexp,
+                                   BasicInstruction::LLVMIROpcode opcode) {
+    bool isInt = lexp->attribute.T.type == Type::INT;
+    // 左常量，右变量
+    if (lexp->attribute.V.ConstTag && !rexp->attribute.V.ConstTag) {
+        rexp->codeIR();
+        int reg = reg_now;
+        if (isInt)
+            IRgenArithmeticI32ImmLeft(B, opcode, lexp->attribute.V.val.IntVal, reg, ++reg_now);
+        else
+            IRgenArithmeticF32ImmLeft(B, opint2float(opcode), lexp->attribute.V.val.FloatVal, reg, ++reg_now);
+    }
+    // 左变量，右常量；左右均变量
+    else {
+        lexp->codeIR();
+        int reg1 = reg_now;
+        rexp->codeIR();
+        int reg2 = reg_now;
+        if (isInt)
+            IRgenArithmeticI32(B, opcode, reg1, reg2, ++reg_now);
+        else
+            IRgenArithmeticF32(B, opint2float(opcode), reg1, reg2, ++reg_now);
+    }
+}
 
-void MulExp_mul::codeIR() { TODO("BinaryExp CodeIR"); }
+void AddExp_plus::codeIR() {
+    error_msgs.push_back("AddExp_plus CodeIR");
+    // 类型检查已保证addexp和mulexp同时为int或同时为float，也保证了ConstTag是正确的
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    if (attribute.V.ConstTag && addexp->attribute.T.type == Type::INT)
+        IRgenArithmeticI32ImmAll(B, BasicInstruction::ADD, addexp->attribute.V.val.IntVal,
+                                 mulexp->attribute.V.val.IntVal, ++reg_now);
+    else if (attribute.V.ConstTag && addexp->attribute.T.type == Type::FLOAT)
+        IRgenArithmeticF32ImmAll(B, BasicInstruction::FADD, addexp->attribute.V.val.FloatVal,
+                                 mulexp->attribute.V.val.FloatVal, ++reg_now);
+    else    // 两数中有变量的情况
+        generateArithmeticInstruction(B, addexp, mulexp, BasicInstruction::ADD);
+}
 
-void MulExp_div::codeIR() { TODO("BinaryExp CodeIR"); }
+void AddExp_sub::codeIR() {
+    error_msgs.push_back("AddExp_sub CodeIR");
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    if (attribute.V.ConstTag && addexp->attribute.T.type == Type::INT)
+        IRgenArithmeticI32ImmAll(B, BasicInstruction::SUB, addexp->attribute.V.val.IntVal,
+                                 mulexp->attribute.V.val.IntVal, ++reg_now);
+    else if (attribute.V.ConstTag && addexp->attribute.T.type == Type::FLOAT)
+        IRgenArithmeticF32ImmAll(B, BasicInstruction::FSUB, addexp->attribute.V.val.FloatVal,
+                                 mulexp->attribute.V.val.FloatVal, ++reg_now);
+    else
+        generateArithmeticInstruction(B, addexp, mulexp, BasicInstruction::SUB);
+}
 
-void MulExp_mod::codeIR() { TODO("BinaryExp CodeIR"); }
+void MulExp_mul::codeIR() {
+    error_msgs.push_back("MulExp_mul CodeIR");
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    if (attribute.V.ConstTag && mulexp->attribute.T.type == Type::INT)
+        IRgenArithmeticI32ImmAll(B, BasicInstruction::MUL, mulexp->attribute.V.val.IntVal,
+                                 unary_exp->attribute.V.val.IntVal, ++reg_now);
+    else if (attribute.V.ConstTag && mulexp->attribute.T.type == Type::FLOAT)
+        IRgenArithmeticF32ImmAll(B, BasicInstruction::FMUL, mulexp->attribute.V.val.FloatVal,
+                                 unary_exp->attribute.V.val.FloatVal, ++reg_now);
+    else
+        generateArithmeticInstruction(B, mulexp, unary_exp, BasicInstruction::MUL);
+}
 
-void RelExp_leq::codeIR() { TODO("BinaryExp CodeIR"); }
+void MulExp_div::codeIR() {
+    error_msgs.push_back("MulExp_div CodeIR");
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    if (attribute.V.ConstTag && mulexp->attribute.T.type == Type::INT)
+        IRgenArithmeticI32ImmAll(B, BasicInstruction::DIV, mulexp->attribute.V.val.IntVal,
+                                 unary_exp->attribute.V.val.IntVal, ++reg_now);
+    else if (attribute.V.ConstTag && mulexp->attribute.T.type == Type::FLOAT)
+        IRgenArithmeticF32ImmAll(B, BasicInstruction::FDIV, mulexp->attribute.V.val.FloatVal,
+                                 unary_exp->attribute.V.val.FloatVal, ++reg_now);
+    else
+        generateArithmeticInstruction(B, mulexp, unary_exp, BasicInstruction::DIV);
+}
 
-void RelExp_lt::codeIR() { TODO("BinaryExp CodeIR"); }
+void MulExp_mod::codeIR() {
+    error_msgs.push_back("MulExp_mod CodeIR");
+    // 类型检查时已保证两数均为int
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    if (attribute.V.ConstTag)
+        IRgenArithmeticI32ImmAll(B, BasicInstruction::MOD, mulexp->attribute.V.val.IntVal,
+                                 unary_exp->attribute.V.val.IntVal, ++reg_now);
+    else
+        generateArithmeticInstruction(B, mulexp, unary_exp, BasicInstruction::MOD);
+}
 
-void RelExp_geq::codeIR() { TODO("BinaryExp CodeIR"); }
+void RelExp_leq::codeIR() {
+    error_msgs.push_back("RelExp_leq CodeIR");
+    // 类型检查后两数依旧均为int或均为float
+    bool isInt = relexp->attribute.T.type == Type::INT;
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    if (addexp->attribute.V.ConstTag) {
+        relexp->codeIR();
+        int reg = reg_now;
+        if (isInt)
+            IRgenIcmpImmRight(B, BasicInstruction::IcmpCond::sle, reg, addexp->attribute.V.val.IntVal, ++reg_now);
+        else
+            IRgenFcmpImmRight(B, BasicInstruction::FcmpCond::OLE, reg, addexp->attribute.V.val.FloatVal, ++reg_now);
 
-void RelExp_gt::codeIR() { TODO("BinaryExp CodeIR"); }
+    } else {
+        relexp->codeIR();
+        int reg1 = reg_now;
+        addexp->codeIR();
+        int reg2 = reg_now;
+        if (isInt)
+            IRgenIcmp(B, BasicInstruction::IcmpCond::sle, reg1, reg2, ++reg_now);
+        else
+            IRgenFcmp(B, BasicInstruction::FcmpCond::OLE, reg1, reg2, ++reg_now);
+    }
+}
 
-void EqExp_eq::codeIR() { TODO("BinaryExp CodeIR"); }
+void RelExp_lt::codeIR() {
+    error_msgs.push_back("RelExp_lt CodeIR");
+    bool isInt = relexp->attribute.T.type == Type::INT;
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    if (addexp->attribute.V.ConstTag) {
+        relexp->codeIR();
+        int reg = reg_now;
+        if (isInt)
+            IRgenIcmpImmRight(B, BasicInstruction::IcmpCond::slt, reg, addexp->attribute.V.val.IntVal, ++reg_now);
+        else
+            IRgenFcmpImmRight(B, BasicInstruction::FcmpCond::OLT, reg, addexp->attribute.V.val.FloatVal, ++reg_now);
 
-void EqExp_neq::codeIR() { TODO("BinaryExp CodeIR"); }
+    } else {
+        relexp->codeIR();
+        int reg1 = reg_now;
+        addexp->codeIR();
+        int reg2 = reg_now;
+        if (isInt)
+            IRgenIcmp(B, BasicInstruction::IcmpCond::slt, reg1, reg2, ++reg_now);
+        else
+            IRgenFcmp(B, BasicInstruction::FcmpCond::OLT, reg1, reg2, ++reg_now);
+    }
+}
+
+void RelExp_geq::codeIR() {
+    error_msgs.push_back("RelExp_geq CodeIR");
+    bool isInt = relexp->attribute.T.type == Type::INT;
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    if (addexp->attribute.V.ConstTag) {
+        relexp->codeIR();
+        int reg = reg_now;
+        if (isInt)
+            IRgenIcmpImmRight(B, BasicInstruction::IcmpCond::sge, reg, addexp->attribute.V.val.IntVal, ++reg_now);
+        else
+            IRgenFcmpImmRight(B, BasicInstruction::FcmpCond::OGE, reg, addexp->attribute.V.val.FloatVal, ++reg_now);
+
+    } else {
+        relexp->codeIR();
+        int reg1 = reg_now;
+        addexp->codeIR();
+        int reg2 = reg_now;
+        if (isInt)
+            IRgenIcmp(B, BasicInstruction::IcmpCond::sge, reg1, reg2, ++reg_now);
+        else
+            IRgenFcmp(B, BasicInstruction::FcmpCond::OGE, reg1, reg2, ++reg_now);
+    }
+}
+
+void RelExp_gt::codeIR() {
+    error_msgs.push_back("RelExp_gt CodeIR");
+    bool isInt = relexp->attribute.T.type == Type::INT;
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    if (addexp->attribute.V.ConstTag) {
+        relexp->codeIR();
+        int reg = reg_now;
+        if (isInt)
+            IRgenIcmpImmRight(B, BasicInstruction::IcmpCond::sgt, reg, addexp->attribute.V.val.IntVal, ++reg_now);
+        else
+            IRgenFcmpImmRight(B, BasicInstruction::FcmpCond::OGT, reg, addexp->attribute.V.val.FloatVal, ++reg_now);
+
+    } else {
+        relexp->codeIR();
+        int reg1 = reg_now;
+        addexp->codeIR();
+        int reg2 = reg_now;
+        if (isInt)
+            IRgenIcmp(B, BasicInstruction::IcmpCond::sgt, reg1, reg2, ++reg_now);
+        else
+            IRgenFcmp(B, BasicInstruction::FcmpCond::OGT, reg1, reg2, ++reg_now);
+    }
+}
+
+void EqExp_eq::codeIR() {
+    error_msgs.push_back("EqExp_eq CodeIR");
+    bool isInt = relexp->attribute.T.type == Type::INT;
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    if (relexp->attribute.V.ConstTag) {
+        eqexp->codeIR();
+        int reg = reg_now;
+        if (isInt)
+            IRgenIcmpImmRight(B, BasicInstruction::IcmpCond::eq, reg, relexp->attribute.V.val.IntVal, ++reg_now);
+        else
+            IRgenFcmpImmRight(B, BasicInstruction::FcmpCond::OEQ, reg, relexp->attribute.V.val.FloatVal, ++reg_now);
+    } else {
+        eqexp->codeIR();
+        int reg1 = reg_now;
+        relexp->codeIR();
+        int reg2 = reg_now;
+        if (isInt)
+            IRgenIcmp(B, BasicInstruction::IcmpCond::eq, reg1, reg2, ++reg_now);
+        else
+            IRgenFcmp(B, BasicInstruction::FcmpCond::OEQ, reg1, reg2, ++reg_now);
+    }
+}
+
+void EqExp_neq::codeIR() {
+    error_msgs.push_back("EqExp_neq CodeIR");
+    bool isInt = relexp->attribute.T.type == Type::INT;
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    if (relexp->attribute.V.ConstTag) {
+        eqexp->codeIR();
+        int reg = reg_now;
+        if (isInt)
+            IRgenIcmpImmRight(B, BasicInstruction::IcmpCond::ne, reg, relexp->attribute.V.val.IntVal, ++reg_now);
+        else
+            IRgenFcmpImmRight(B, BasicInstruction::FcmpCond::ONE, reg, relexp->attribute.V.val.FloatVal, ++reg_now);
+    } else {
+        eqexp->codeIR();
+        int reg1 = reg_now;
+        relexp->codeIR();
+        int reg2 = reg_now;
+        if (isInt)
+            IRgenIcmp(B, BasicInstruction::IcmpCond::ne, reg1, reg2, ++reg_now);
+        else
+            IRgenFcmp(B, BasicInstruction::FcmpCond::ONE, reg1, reg2, ++reg_now);
+    }
+}
 
 // short circuit &&
-void LAndExp_and::codeIR() { TODO("LAndExpAnd CodeIR"); }
+void LAndExp_and::codeIR() {
+    assert((true_label != -1) && (false_label != -1));
 
-// short circuit ||
-void LOrExp_or::codeIR() { TODO("LOrExpOr CodeIR"); }
+    // 新建一个块，左值的判断在当前label下进行，新建块用于左值为真情况（即对右值进行进一步判断）
+    int lefttrue_label = llvmIR.NewBlock(func_now, ++label_max)->block_id;
+    landexp->true_label = lefttrue_label;
+    landexp->false_label = false_label;
+    landexp->codeIR();
+
+    // 现在，reg_now为左边的运算结果（需要将INT/FLOAT->BOOL，类型检查中已保证只能为这两种类型）
+    // false->跳过右边（短路）、true->右边
+    LLVMBlock B1 = llvmIR.GetBlock(func_now, label_now);
+    if (landexp->attribute.T.type == Type::INT) {
+        IRgenIcmpImmRight(B1, BasicInstruction::IcmpCond::ne, reg_now, 0, reg_now);
+    } else if (landexp->attribute.T.type == Type::FLOAT) {
+        IRgenFcmpImmRight(B1, BasicInstruction::FcmpCond::ONE, reg_now, 0, reg_now);
+    }
+    IRgenBrCond(B1, reg_now, landexp->true_label, landexp->false_label);    // 进行跳转，当前块的使命结束！
+
+    // 切换到新创建的块，往其中添加指令
+    label_now = lefttrue_label;
+    eqexp->true_label = true_label;
+    eqexp->false_label = false_label;
+    eqexp->codeIR();
+    LLVMBlock B2 = llvmIR.GetBlock(func_now, label_now);
+    if (eqexp->attribute.T.type == Type::INT) {
+        IRgenIcmpImmRight(B2, BasicInstruction::IcmpCond::ne, reg_now, 0, reg_now);
+    } else if (eqexp->attribute.T.type == Type::FLOAT) {
+        IRgenFcmpImmRight(B2, BasicInstruction::FcmpCond::ONE, reg_now, 0, reg_now);
+    }
+    // TODO：：：这里需不需要跳转？
+}
+
+// short circuit  lorexp || landexp
+void LOrExp_or::codeIR() {
+    error_msgs.push_back("LOrExpOr CodeIR");
+    // 新建一个块，左值的判断在当前label下进行，新建块用于左值为假情况（即对右值进行进一步判断）
+    int leftfalse_label = llvmIR.NewBlock(func_now, ++label_max)->block_id;
+    lorexp->true_label = true_label;
+    lorexp->false_label = leftfalse_label;
+    lorexp->codeIR();
+
+    // 现在，reg_now为左边的运算结果（需要将INT/FLOAT->BOOL，类型检查中已保证只能为这两种类型）
+    // false->跳过右边（短路）、true->右边
+    LLVMBlock B1 = llvmIR.GetBlock(func_now, label_now);
+    if (landexp->attribute.T.type == Type::INT) {
+        IRgenIcmpImmRight(B1, BasicInstruction::IcmpCond::ne, reg_now, 0, reg_now);
+    } else if (landexp->attribute.T.type == Type::FLOAT) {
+        IRgenFcmpImmRight(B1, BasicInstruction::FcmpCond::ONE, reg_now, 0, reg_now);
+    }
+    IRgenBrCond(B1, reg_now, landexp->true_label, landexp->false_label);    // 进行跳转，当前块的使命结束！
+
+    // 切换到新创建的块，往其中添加指令
+    label_now = leftfalse_label;
+    landexp->true_label = true_label;
+    landexp->false_label = false_label;
+    landexp->codeIR();
+    LLVMBlock B2 = llvmIR.GetBlock(func_now, label_now);
+    if (landexp->attribute.T.type == Type::INT) {
+        IRgenIcmpImmRight(B2, BasicInstruction::IcmpCond::ne, reg_now, 0, reg_now);
+    } else if (landexp->attribute.T.type == Type::FLOAT) {
+        IRgenFcmpImmRight(B2, BasicInstruction::FcmpCond::ONE, reg_now, 0, reg_now);
+    }
+    // TODO：：：这里需不需要跳转？
+}
 
 void ConstExp::codeIR() { addexp->codeIR(); }
 
-void Lval::codeIR() { TODO("Lval CodeIR"); }
+void Lval::codeIR() { error_msgs.push_back("Lval CodeIR"); }
 
-void FuncRParams::codeIR() { TODO("FuncRParams CodeIR"); }
+void FuncRParams::codeIR() { error_msgs.push_back("FuncRParams CodeIR"); }
 
-void Func_call::codeIR() { TODO("FunctionCall CodeIR"); }
+void Func_call::codeIR() { error_msgs.push_back("FunctionCall CodeIR"); }
 
-void UnaryExp_plus::codeIR() { TODO("UnaryExpPlus CodeIR"); }
+void UnaryExp_plus::codeIR() { error_msgs.push_back("UnaryExpPlus CodeIR"); }
 
-void UnaryExp_neg::codeIR() { TODO("UnaryExpNeg CodeIR"); }
+void UnaryExp_neg::codeIR() { error_msgs.push_back("UnaryExpNeg CodeIR"); }
 
-void UnaryExp_not::codeIR() { TODO("UnaryExpNot CodeIR"); }
+void UnaryExp_not::codeIR() { error_msgs.push_back("UnaryExpNot CodeIR"); }
 
-void IntConst::codeIR() { TODO("IntConst CodeIR"); }
+void IntConst::codeIR() { error_msgs.push_back("IntConst CodeIR"); }
 
-void FloatConst::codeIR() { TODO("FloatConst CodeIR"); }
+void FloatConst::codeIR() { error_msgs.push_back("FloatConst CodeIR"); }
 
-void StringConst::codeIR() { TODO("StringConst CodeIR"); }
+void StringConst::codeIR() { error_msgs.push_back("StringConst CodeIR"); }
 
 void PrimaryExp_branch::codeIR() { exp->codeIR(); }
 
-void assign_stmt::codeIR() { TODO("AssignStmt CodeIR"); }
+void assign_stmt::codeIR() { error_msgs.push_back("AssignStmt CodeIR"); }
 
 void expr_stmt::codeIR() { exp->codeIR(); }
 
-void block_stmt::codeIR() { TODO("BlockStmt CodeIR"); }
+void block_stmt::codeIR() { error_msgs.push_back("BlockStmt CodeIR"); }
 
-void ifelse_stmt::codeIR() { TODO("IfElseStmt CodeIR"); }
+void ifelse_stmt::codeIR() { error_msgs.push_back("IfElseStmt CodeIR"); }
 
-void if_stmt::codeIR() { TODO("IfStmt CodeIR"); }
+void if_stmt::codeIR() { error_msgs.push_back("IfStmt CodeIR"); }
 
-void while_stmt::codeIR() { TODO("WhileStmt CodeIR"); }
+void while_stmt::codeIR() { error_msgs.push_back("WhileStmt CodeIR"); }
 
-void continue_stmt::codeIR() { TODO("ContinueStmt CodeIR"); }
+void continue_stmt::codeIR() { error_msgs.push_back("ContinueStmt CodeIR"); }
 
-void break_stmt::codeIR() { TODO("BreakStmt CodeIR"); }
+void break_stmt::codeIR() { error_msgs.push_back("BreakStmt CodeIR"); }
 
-void return_stmt::codeIR() { TODO("ReturnStmt CodeIR"); }
+void return_stmt::codeIR() { error_msgs.push_back("ReturnStmt CodeIR"); }
 
-void return_stmt_void::codeIR() { TODO("ReturnStmtVoid CodeIR"); }
+void return_stmt_void::codeIR() { error_msgs.push_back("ReturnStmtVoid CodeIR"); }
 
-void ConstInitVal::codeIR() { TODO("ConstInitVal CodeIR"); }
+void ConstInitVal::codeIR() { error_msgs.push_back("ConstInitVal CodeIR"); }
 
-void ConstInitVal_exp::codeIR() { TODO("ConstInitValWithExp CodeIR"); }
+void ConstInitVal_exp::codeIR() { error_msgs.push_back("ConstInitValWithExp CodeIR"); }
 
-void VarInitVal::codeIR() { TODO("VarInitVal CodeIR"); }
+void VarInitVal::codeIR() { error_msgs.push_back("VarInitVal CodeIR"); }
 
-void VarInitVal_exp::codeIR() { TODO("VarInitValWithExp CodeIR"); }
+void VarInitVal_exp::codeIR() { error_msgs.push_back("VarInitValWithExp CodeIR"); }
 
-void VarDef_no_init::codeIR() { TODO("VarDefNoInit CodeIR"); }
+void VarDef_no_init::codeIR() { error_msgs.push_back("VarDefNoInit CodeIR"); }
 
-void VarDef::codeIR() { TODO("VarDef CodeIR"); }
+void VarDef::codeIR() { error_msgs.push_back("VarDef CodeIR"); }
 
-void ConstDef::codeIR() { TODO("ConstDef CodeIR"); }
+void ConstDef::codeIR() { error_msgs.push_back("ConstDef CodeIR"); }
 
-void VarDecl::codeIR() { TODO("VarDecl CodeIR"); }
+void VarDecl::codeIR() { error_msgs.push_back("VarDecl CodeIR"); }
 
-void ConstDecl::codeIR() { TODO("ConstDecl CodeIR"); }
+void ConstDecl::codeIR() { error_msgs.push_back("ConstDecl CodeIR"); }
 
-void BlockItem_Decl::codeIR() { TODO("BlockItemDecl CodeIR"); }
+void BlockItem_Decl::codeIR() { error_msgs.push_back("BlockItemDecl CodeIR"); }
 
-void BlockItem_Stmt::codeIR() { TODO("BlockItemStmt CodeIR"); }
+void BlockItem_Stmt::codeIR() { error_msgs.push_back("BlockItemStmt CodeIR"); }
 
-void __Block::codeIR() { TODO("Block CodeIR"); }
+void __Block::codeIR() { error_msgs.push_back("Block CodeIR"); }
 
-void __FuncFParam::codeIR() { TODO("FunctionFParam CodeIR"); }
+void __FuncFParam::codeIR() { error_msgs.push_back("FunctionFParam CodeIR"); }
 
-void __FuncDef::codeIR() { TODO("FunctionDef CodeIR"); }
+void __FuncDef::codeIR() {
+    error_msgs.push_back("FunctionDef CodeIR");
 
-void CompUnit_Decl::codeIR() { TODO("CompUnitDecl CodeIR"); }
+    // 符号表进入新的作用域
+    irgen_table.symbol_table.enter_scope();
+
+    // 函数定义的IR指令
+    FuncDefInstruction FuncDefIns = new FunctionDefineInstruction(Type2LLvm[return_type], name->get_string());
+
+    // Step 3: Initialize function-level metadata
+    // 初始化寄存器和符号表的相关数据结构，用于管理函数内的变量和临时值。
+    max_reg = -1;                            // 用于跟踪当前函数中分配的最大寄存器编号。
+    irgen_table.RegTable.clear();            // 清空寄存器表以准备存储新的变量信息。
+    irgen_table.FormalArrayTable.clear();    // 用于存储数组参数的信息。
+
+    now_label = 0;                        // 当前基本块的标签。
+    max_label = -1;                       // 当前函数分配的最大标签编号。
+    function_now = FuncDefIns;            // 当前正在生成代码的函数。
+    function_returntype = return_type;    // 函数返回类型。
+
+    // Step 4: Register the function in the IR generator
+    // 创建一个新的函数并将其注册到 IR 生成器中。
+    llvmIR.NewFunction(function_now);
+    LLVMBlock B = llvmIR.NewBlock(function_now, max_label);    // 为函数创建入口基本块。
+
+    // Step 5: Process the function's formal parameters
+    // 遍历函数参数列表，生成相应的 IR 指令并记录参数信息。
+    auto formal_vector = *formals;         // 获取函数参数的列表。
+    max_reg = formal_vector.size() - 1;    // 初始化寄存器计数器。
+
+    for (int i = 0; i < formal_vector.size(); ++i) {
+        auto formal = formal_vector[i];
+        VarAttribute val;    // 用于存储变量的属性（类型、数组维度等）。
+        val.type = formal->type_decl;
+        LLVMType lltype = Type2LLvm[formal->type_decl];    // 获取 LLVM 对应的类型。
+
+        if (formal->dims != nullptr) {    // Step 5.1: If the parameter is an array
+            // 对于数组参数，不需要为地址分配内存，只需记录其地址类型即可。
+            FuncDefIns->InsertFormal(LLVMType::PTR);    // 插入数组指针作为参数类型。
+
+            for (int i = 1; i < formal->dims->size(); ++i) {
+                // 忽略数组的第一个维度，因为它在 SysY 中是隐式传递的。
+                auto d = formal->dims->at(i);
+                val.dims.push_back(d->attribute.V.val.IntVal);    // 存储数组的后续维度信息。
+            }
+
+            // 更新符号表和寄存器表，以记录数组的相关信息。
+            irgen_table.FormalArrayTable[i] = 1;    // 标记当前参数为数组。
+            irgen_table.symbol_table.add_Symbol(formal->name, i);
+            irgen_table.RegTable[i] = val;
+        } else {    // Step 5.2: If the parameter is not an array
+            // 普通参数需要分配空间，并生成 Alloca 和 Store 指令。
+            FuncDefIns->InsertFormal(lltype);                                         // 插入普通类型的参数。
+            IRgenAlloca(B, lltype, ++max_reg);                                        // 为参数分配内存。
+            IRgenStore(B, lltype, GetNewRegOperand(i), GetNewRegOperand(max_reg));    // 将参数存入分配的寄存器。
+
+            // 更新符号表和寄存器表。
+            irgen_table.symbol_table.add_Symbol(formal->name, max_reg);
+            irgen_table.RegTable[max_reg] = val;
+        }
+    }
+
+    // Step 6: Add an unconditional branch to the next block
+    // 生成一个无条件跳转到函数体的基本块。
+    IRgenBRUnCond(B, 1);
+
+    // Step 7: Generate IR for the function body
+    // 为函数创建一个新的基本块，并生成函数体的 IR 代码。
+    B = llvmIR.NewBlock(function_now, max_label);
+    now_label = max_label;    // 更新当前基本块标签。
+    block->codeIR();          // 调用函数体的 `codeIR` 方法，生成其 IR 指令。
+
+    // Step 8: Handle no-return blocks
+    // 如果函数未明确返回值，需要补充一个默认的返回基本块。
+    AddNoReturnBlock();
+
+    // Step 9: Record the maximum register and label for this function
+    // 记录当前函数的最大寄存器编号和标签编号，用于后续分析和优化。
+    max_reg_map[FuncDefIns] = max_reg;
+    max_label_map[FuncDefIns] = max_label;
+
+    // Step 10: Exit the function's scope
+    // 离开当前函数的作用域，清除局部变量信息。
+    irgen_table.symbol_table.exit_scope();
+}
+
+void CompUnit_Decl::codeIR() { error_msgs.push_back("CompUnitDecl CodeIR"); }
 
 void CompUnit_FuncDef::codeIR() { func_def->codeIR(); }
 

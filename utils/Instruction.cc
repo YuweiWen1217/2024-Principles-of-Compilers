@@ -40,6 +40,7 @@ GlobalOperand *GetNewGlobalOperand(std::string name) {
     }
 }
 
+// 算术
 void IRgenArithmeticI32(LLVMBlock B, BasicInstruction::LLVMIROpcode opcode, int reg1, int reg2, int result_reg) {
     B->InsertInstruction(1, new ArithmeticInstruction(opcode, BasicInstruction::LLVMType::I32, GetNewRegOperand(reg1),
                                                       GetNewRegOperand(reg2), GetNewRegOperand(result_reg)));
@@ -75,6 +76,7 @@ void IRgenArithmeticF32ImmAll(LLVMBlock B, BasicInstruction::LLVMIROpcode opcode
                                                    new ImmF32Operand(val2), GetNewRegOperand(result_reg)));
 }
 
+// 比较
 void IRgenIcmp(LLVMBlock B, BasicInstruction::IcmpCond cmp_op, int reg1, int reg2, int result_reg) {
     B->InsertInstruction(1, new IcmpInstruction(BasicInstruction::LLVMType::I32, GetNewRegOperand(reg1),
                                                 GetNewRegOperand(reg2), cmp_op, GetNewRegOperand(result_reg)));
@@ -95,6 +97,7 @@ void IRgenFcmpImmRight(LLVMBlock B, BasicInstruction::FcmpCond cmp_op, int reg1,
                                                 new ImmF32Operand(val2), cmp_op, GetNewRegOperand(result_reg)));
 }
 
+// 转换 
 void IRgenFptosi(LLVMBlock B, int src, int dst) {
     B->InsertInstruction(1, new FptosiInstruction(GetNewRegOperand(dst), GetNewRegOperand(src)));
 }
@@ -108,16 +111,20 @@ void IRgenZextI1toI32(LLVMBlock B, int src, int dst) {
                                                 BasicInstruction::LLVMType::I1, GetNewRegOperand(src)));
 }
 
+// 访问数组？似乎是(目前没用到)
 void IRgenGetElementptrIndexI32(LLVMBlock B, BasicInstruction::LLVMType type, int result_reg, Operand ptr,
-                        std::vector<int> dims, std::vector<Operand> indexs) {
-    B->InsertInstruction(1, new GetElementptrInstruction(type, GetNewRegOperand(result_reg), ptr, dims, indexs, BasicInstruction::I32));
+                                std::vector<int> dims, std::vector<Operand> indexs) {
+    B->InsertInstruction(
+    1, new GetElementptrInstruction(type, GetNewRegOperand(result_reg), ptr, dims, indexs, BasicInstruction::I32));
 }
 
 void IRgenGetElementptrIndexI64(LLVMBlock B, BasicInstruction::LLVMType type, int result_reg, Operand ptr,
-                        std::vector<int> dims, std::vector<Operand> indexs) {
-    B->InsertInstruction(1, new GetElementptrInstruction(type, GetNewRegOperand(result_reg), ptr, dims, indexs, BasicInstruction::I64));
+                                std::vector<int> dims, std::vector<Operand> indexs) {
+    B->InsertInstruction(
+    1, new GetElementptrInstruction(type, GetNewRegOperand(result_reg), ptr, dims, indexs, BasicInstruction::I64));
 }
 
+// 加载和储存(目前没用到)
 void IRgenLoad(LLVMBlock B, BasicInstruction::LLVMType type, int result_reg, Operand ptr) {
     B->InsertInstruction(1, new LoadInstruction(type, ptr, GetNewRegOperand(result_reg)));
 }
@@ -130,6 +137,7 @@ void IRgenStore(LLVMBlock B, BasicInstruction::LLVMType type, Operand value, Ope
     B->InsertInstruction(1, new StoreInstruction(type, ptr, value));
 }
 
+// 函数调用(目前没用到)
 void IRgenCall(LLVMBlock B, BasicInstruction::LLVMType type, int result_reg,
                std::vector<std::pair<enum BasicInstruction::LLVMType, Operand>> args, std::string name) {
     B->InsertInstruction(1, new CallInstruction(type, GetNewRegOperand(result_reg), name, args));
@@ -148,6 +156,7 @@ void IRgenCallVoidNoArgs(LLVMBlock B, BasicInstruction::LLVMType type, std::stri
     B->InsertInstruction(1, new CallInstruction(type, GetNewRegOperand(-1), name));
 }
 
+// 返回某数值(目前没用到)
 void IRgenRetReg(LLVMBlock B, BasicInstruction::LLVMType type, int reg) {
     B->InsertInstruction(1, new RetInstruction(type, GetNewRegOperand(reg)));
 }
@@ -164,6 +173,7 @@ void IRgenRetVoid(LLVMBlock B) {
     B->InsertInstruction(1, new RetInstruction(BasicInstruction::LLVMType::VOID, nullptr));
 }
 
+// 跳转(目前没用到)
 void IRgenBRUnCond(LLVMBlock B, int dst_label) {
     B->InsertInstruction(1, new BrUncondInstruction(GetNewLabelOperand(dst_label)));
 }
@@ -173,10 +183,12 @@ void IRgenBrCond(LLVMBlock B, int cond_reg, int true_label, int false_label) {
                                                   GetNewLabelOperand(false_label)));
 }
 
+// 生成栈分配指令，为指定寄存器分配一个变量的内存(目前没用到)
 void IRgenAlloca(LLVMBlock B, BasicInstruction::LLVMType type, int reg) {
     B->InsertInstruction(0, new AllocaInstruction(type, GetNewRegOperand(reg)));
 }
 
+// 生成数组栈分配指令，为指定寄存器分配数组的内存(目前没用到)
 void IRgenAllocaArray(LLVMBlock B, BasicInstruction::LLVMType type, int reg, std::vector<int> dims) {
     B->InsertInstruction(0, new AllocaInstruction(type, dims, GetNewRegOperand(reg)));
 }

@@ -76,7 +76,6 @@
     } while (0)
 #endif
 
-
 // TODO(): 加入更多你需要的成员变量和函数
 // TODO(): 加入更多你需要的指令类
 
@@ -86,7 +85,7 @@
 // 我们规定，对于GlobalOperand, LabelOperand, RegOperand, 只要操作数相同, 地址也相同
 // 所以这些Operand的构造函数是private, 使用GetNew***Operand函数来获取新的操作数变量
 
-// 对于不同位置的指令，即使内容完全相同，也不推荐使用相同的地址, 
+// 对于不同位置的指令，即使内容完全相同，也不推荐使用相同的地址,
 // 当你向基本块中插入指令时，推荐先new一个，不要使用之前已经插入过的指令，你需要保证地址不同，
 // 否则在代码优化阶段你会需要调试一些奇怪的bug。(例如你修改了一处指令的操作数，却发现好几条指令的操作数都被修改了)
 
@@ -98,7 +97,7 @@
 
 // 请注意代码中的typedef，为了方便书写，将一些类的指针进行了重命名, 如果不习惯该种风格，可以自行修改
 
-
+// 操作数类
 class BasicOperand;
 typedef BasicOperand *Operand;
 // @operands in instruction
@@ -114,6 +113,8 @@ public:
     operand_type GetOperandType() { return operandType; }
     virtual std::string GetFullName() = 0;
 };
+
+// 以RegOperand为例，我们需要通过GetNewRegOperand(regNo)来创建一个新的RegOperand；在RegOperand类中，GetNewRegOperand被声明为了友元函数，因此它可以私有构造函数，同时保证了RegNo的唯一性。
 
 // @register operand;%r+register No
 class RegOperand : public BasicOperand {
@@ -215,6 +216,7 @@ typedef BasicInstruction *Instruction;
 
 // @instruction
 class BasicInstruction {
+    // 指令类型、数据类型、整数比较条件和浮点比较条件
 public:
     // @Instriction types
     enum LLVMIROpcode {
@@ -285,7 +287,6 @@ public:
     };
 
 private:
-
 protected:
     LLVMIROpcode opcode;
 
@@ -346,6 +347,7 @@ public:
 //<result>=mul <ty> <op1>,<op2>
 //<result>=div <ty> <op1>,<op2>
 //<result>=xor <ty> <op1>,<op2>
+// 算术指令
 class ArithmeticInstruction : public BasicInstruction {
     enum LLVMType type;
     Operand op1;
@@ -638,7 +640,7 @@ private:
     Operand ptrval;
 
     enum LLVMType type;
-    std::vector<int> dims; // example: i32, [4 x i32], [3 x [4 x float]]
+    std::vector<int> dims;    // example: i32, [4 x i32], [3 x [4 x float]]
 
     std::vector<Operand> indexes;
 

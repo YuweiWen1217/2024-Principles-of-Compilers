@@ -4,109 +4,14 @@ FuncDef Semant
 BlockItem_Decl Semant
 ConstDecl Semant
 ConstDef Semant
-ConstInitVal Semant
-ConstInitVal Semant
-ConstInitVal Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ERROR: The number of initial values in the array is excessive at line 3.
-BlockItem_Decl Semant
-ConstDecl Semant
-ConstDef Semant
-ConstInitVal Semant
-ConstInitVal Semant
-ConstInitVal Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ERROR: The number of initial values in the array is excessive at line 4.
-ERROR: The number of initial values in the array is excessive at line 4.
-BlockItem_Decl Semant
-ConstDecl Semant
-ConstDef Semant
-ConstInitVal Semant
-ConstInitVal Semant
-ConstInitVal Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
 ConstInitValExp Semant
 BlockItem_Decl Semant
-ConstDecl Semant
-ConstDef Semant
-ConstInitVal Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitVal Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitVal Semant
-ConstInitValExp Semant
-ConstInitVal Semant
-ConstInitValExp Semant
-ConstInitVal Semant
-ConstInitValExp Semant
-ERROR: The number of initial values in the array is excessive at line 6.
-Error: Initialization values count does not match array dimensions at line 6.
-BlockItem_Decl Semant
-ConstDecl Semant
-ConstDef Semant
-ConstInitVal Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitVal Semant
-ConstInitValExp Semant
-ConstInitVal Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitVal Semant
-ConstInitValExp Semant
-ConstInitValExp Semant
-ConstInitVal Semant
-ConstInitValExp Semant
-ERROR: The number of initial values in the array is too small at line 7.
-Error: Initialization values count does not match array dimensions at line 7.
+VarDecl Semant
+VarDef Semant
+VarInitValExp Semant
+
+
+
+开始中间代码生成了。
+
+FunctionDef CodeIR

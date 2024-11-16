@@ -16,6 +16,8 @@
 // exp basic_class
 class __Expression : public tree_node {
 public:
+    int true_label = -1;
+    int false_label = -1;
 };
 typedef __Expression *Expression;
 
@@ -405,7 +407,6 @@ public:
 };
 class __Decl;
 typedef __Decl *Decl;
-
 
 // 初始值类中的新增的相关函数（IsExp、IsConst、GetList、GetExp）参考自SysY相关部分。
 class __InitVal : public tree_node {
