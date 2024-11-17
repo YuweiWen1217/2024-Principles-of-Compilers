@@ -111,7 +111,7 @@ void IRgenZextI1toI32(LLVMBlock B, int src, int dst) {
                                                 BasicInstruction::LLVMType::I1, GetNewRegOperand(src)));
 }
 
-// 访问数组？似乎是(目前没用到)
+// 访问从ptr开始的一个数组，数组的维度为dim，索引的维度储存在indexs中。
 void IRgenGetElementptrIndexI32(LLVMBlock B, BasicInstruction::LLVMType type, int result_reg, Operand ptr,
                                 std::vector<int> dims, std::vector<Operand> indexs) {
     B->InsertInstruction(
@@ -173,7 +173,7 @@ void IRgenRetVoid(LLVMBlock B) {
     B->InsertInstruction(1, new RetInstruction(BasicInstruction::LLVMType::VOID, nullptr));
 }
 
-// 跳转(目前没用到)
+// 跳转
 void IRgenBRUnCond(LLVMBlock B, int dst_label) {
     B->InsertInstruction(1, new BrUncondInstruction(GetNewLabelOperand(dst_label)));
 }
@@ -183,7 +183,7 @@ void IRgenBrCond(LLVMBlock B, int cond_reg, int true_label, int false_label) {
                                                   GetNewLabelOperand(false_label)));
 }
 
-// 生成栈分配指令，为指定寄存器分配一个变量的内存(目前没用到)
+// 生成栈分配指令，为指定寄存器分配一个变量的内存
 void IRgenAlloca(LLVMBlock B, BasicInstruction::LLVMType type, int reg) {
     B->InsertInstruction(0, new AllocaInstruction(type, GetNewRegOperand(reg)));
 }

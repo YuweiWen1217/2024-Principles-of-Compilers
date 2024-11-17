@@ -123,7 +123,7 @@ void __Program::TypeCheck() {
     }
     // 检查是否存在main函数
     if (!has_main) {
-        error_msgs.push_back("Error: 'main' function is not defined.");
+        error_msgs.push_back("ERROR: 'main' function is not defined.");
     }
 }
 
@@ -276,7 +276,7 @@ void RelExp_leq::TypeCheck() {
         if (attribute.V.ConstTag)
             attribute.V.val.BoolVal = relexp->attribute.V.val.FloatVal <= addexp->attribute.V.val.FloatVal;
     } else {
-        error_msgs.push_back("Error: Type mismatch in '<=' expression at line " + std::to_string(line_number) + ".");
+        error_msgs.push_back("ERROR: Type mismatch in '<=' expression at line " + std::to_string(line_number) + ".");
     }
 }
 
@@ -297,7 +297,7 @@ void RelExp_lt::TypeCheck() {
         if (attribute.V.ConstTag)
             attribute.V.val.BoolVal = relexp->attribute.V.val.FloatVal < addexp->attribute.V.val.FloatVal;
     } else {
-        error_msgs.push_back("Error: Type mismatch in '<' expression at line " + std::to_string(line_number) + ".");
+        error_msgs.push_back("ERROR: Type mismatch in '<' expression at line " + std::to_string(line_number) + ".");
     }
 }
 
@@ -318,7 +318,7 @@ void RelExp_geq::TypeCheck() {
         if (attribute.V.ConstTag)
             attribute.V.val.BoolVal = relexp->attribute.V.val.FloatVal >= addexp->attribute.V.val.FloatVal;
     } else {
-        error_msgs.push_back("Error: Type mismatch in '>=' expression at line " + std::to_string(line_number) + ".");
+        error_msgs.push_back("ERROR: Type mismatch in '>=' expression at line " + std::to_string(line_number) + ".");
     }
 }
 
@@ -339,7 +339,7 @@ void RelExp_gt::TypeCheck() {
         if (attribute.V.ConstTag)
             attribute.V.val.BoolVal = relexp->attribute.V.val.FloatVal > addexp->attribute.V.val.FloatVal;
     } else {
-        error_msgs.push_back("Error: Type mismatch in '>' expression at line " + std::to_string(line_number) + ".");
+        error_msgs.push_back("ERROR: Type mismatch in '>' expression at line " + std::to_string(line_number) + ".");
     }
 }
 
@@ -360,7 +360,7 @@ void EqExp_eq::TypeCheck() {
         if (attribute.V.ConstTag)
             attribute.V.val.BoolVal = relexp->attribute.V.val.FloatVal == eqexp->attribute.V.val.FloatVal;
     } else {
-        error_msgs.push_back("Error: Type mismatch in '==' expression at line " + std::to_string(line_number) + ".");
+        error_msgs.push_back("ERROR: Type mismatch in '==' expression at line " + std::to_string(line_number) + ".");
     }
 }
 
@@ -381,7 +381,7 @@ void EqExp_neq::TypeCheck() {
         if (attribute.V.ConstTag)
             attribute.V.val.BoolVal = relexp->attribute.V.val.FloatVal != eqexp->attribute.V.val.FloatVal;
     } else {
-        error_msgs.push_back("Error: Type mismatch in '!=' expression at line " + std::to_string(line_number) + ".");
+        error_msgs.push_back("ERROR: Type mismatch in '!=' expression at line " + std::to_string(line_number) + ".");
     }
 }
 
@@ -402,7 +402,7 @@ void LAndExp_and::TypeCheck() {
         if (attribute.V.ConstTag)
             attribute.V.val.BoolVal = landexp->attribute.V.val.FloatVal && eqexp->attribute.V.val.FloatVal;
     } else {
-        error_msgs.push_back("Error: Type mismatch in '&&' expression at line " + std::to_string(line_number) + ".");
+        error_msgs.push_back("ERROR: Type mismatch in '&&' expression at line " + std::to_string(line_number) + ".");
     }
 }
 
@@ -423,7 +423,7 @@ void LOrExp_or::TypeCheck() {
         if (attribute.V.ConstTag)
             attribute.V.val.BoolVal = landexp->attribute.V.val.FloatVal || lorexp->attribute.V.val.FloatVal;
     } else {
-        error_msgs.push_back("Error: Type mismatch in '||' expression at line " + std::to_string(line_number) + ".");
+        error_msgs.push_back("ERROR: Type mismatch in '||' expression at line " + std::to_string(line_number) + ".");
     }
 }
 
@@ -446,7 +446,7 @@ void Lval::TypeCheck() {
             varAttr = semant_table.GlobalTable[name];
             scope = 0;
         } else
-            error_msgs.push_back("Error: Undefined variable at line " + std::to_string(line_number) + ".");
+            error_msgs.push_back("ERROR: Undefined variable at line " + std::to_string(line_number) + ".");
     } else {
         varAttr = semant_table.symbol_table.lookup_val(name);
     }
@@ -455,22 +455,39 @@ void Lval::TypeCheck() {
     // 如果符号表中查找到的变量的dims不为空，进行数组下标的检查(维度数量，以及每个维度的类型、大小)
     if (varAttr.dims.size() != 0) {
         // 检查维度数量
-        if (dims->size() > varAttr.dims.size()) {
-            error_msgs.push_back("Error: Array dimension mismatch for variable. Expected " +
-                                 std::to_string(varAttr.dims.size()) + ", but got " + std::to_string(dims->size()) +
-                                 " at line " + std::to_string(line_number) + ".");
-        } else if (dims->size() < varAttr.dims.size()) {
+        if (dims == nullptr || dims->size() < varAttr.dims.size()) {
+            if (dims != nullptr) {
+                for (size_t i = 0; i < dims->size(); ++i) {
+                    auto &dim = (*dims)[i];
+                    dim->TypeCheck();
+                    if (dim->attribute.T.type != Type::INT) {
+                        error_msgs.push_back("ERROR: Array index must be of type int at line " +
+                                             std::to_string(line_number) + ".");
+                    }
+                    int indexValue = dim->attribute.V.val.IntVal;
+                    int arraySize = varAttr.dims[i];
+                    if (indexValue >= arraySize) {
+                        error_msgs.push_back("ERROR: Array index " + std::to_string(indexValue) +
+                                             " out of bounds for variable  with size " + std::to_string(arraySize) +
+                                             " at line " + std::to_string(line_number) + ".");
+                    }
+                }
+            }
             attribute.V.ConstTag = false;
             attribute.T.type = Type::PTR;
             ptrtype = varAttr.type == Type::INT ? Type::INT : Type::FLOAT;
             return;
+        } else if (dims->size() > varAttr.dims.size()) {
+            error_msgs.push_back("ERROR: Array dimension mismatch for variable. Expected " +
+                                 std::to_string(varAttr.dims.size()) + ", but got " + std::to_string(dims->size()) +
+                                 " at line " + std::to_string(line_number) + ".");
         } else {
             // 检查每个维度的类型
             for (size_t i = 0; i < dims->size(); ++i) {
                 auto &dim = (*dims)[i];
                 dim->TypeCheck();
                 if (dim->attribute.T.type != Type::INT) {
-                    error_msgs.push_back("Error: Array index must be of type int at line " +
+                    error_msgs.push_back("ERROR: Array index must be of type int at line " +
                                          std::to_string(line_number) + ".");
                 }
 
@@ -481,7 +498,7 @@ void Lval::TypeCheck() {
                 int indexValue = dim->attribute.V.val.IntVal;
                 int arraySize = varAttr.dims[i];
                 if (indexValue >= arraySize) {
-                    error_msgs.push_back("Error: Array index " + std::to_string(indexValue) +
+                    error_msgs.push_back("ERROR: Array index " + std::to_string(indexValue) +
                                          " out of bounds for variable  with size " + std::to_string(arraySize) +
                                          " at line " + std::to_string(line_number) + ".");
                 }
@@ -537,7 +554,8 @@ void Func_call::TypeCheck() {
     // 检查函数是否存在
     auto funcIt = semant_table.FunctionTable.find(name);
     if (funcIt == semant_table.FunctionTable.end()) {
-        error_msgs.push_back("Error: Function '" + name->get_string() + "' is not defined.");
+        error_msgs.push_back("ERROR: Function '" + name->get_string() + "' is not defined at line " +
+                             std::to_string(line_number) + ".");
         return;
     }
 
@@ -550,7 +568,7 @@ void Func_call::TypeCheck() {
     // 检查参数数量
     if ((funcRParams == nullptr && funcAttr->formals->size() > 0) ||
         (funcRParams != nullptr && funcRParams->params->size() != funcAttr->formals->size())) {
-        error_msgs.push_back("Error: Function parameter count mismatch for function '" + name->get_string() +
+        error_msgs.push_back("ERROR: Function parameter count mismatch for function '" + name->get_string() +
                              "' at line " + std::to_string(line_number) + ".");
         return;
     } else if (funcRParams != nullptr) {
@@ -566,18 +584,18 @@ void Func_call::TypeCheck() {
                 if (lvalParam) {
                     // 1. 检查维度是否匹配
                     if (lvalParam->dims->size() != (*funcAttr->formals)[i]->dims->size()) {
-                        error_msgs.push_back("Error: Array dimension mismatch for parameter " + std::to_string(i + 1) +
+                        error_msgs.push_back("ERROR: Array dimension mismatch for parameter " + std::to_string(i + 1) +
                                              " in function '" + name->get_string() + "' at line " +
                                              std::to_string(line_number) + ".");
                     }
                     // 2. 检查数组的基本类型是否匹配
                     if (lvalParam->ptrtype != (*funcAttr->formals)[i]->type_decl) {
-                        error_msgs.push_back("Error: Array base type mismatch for parameter " + std::to_string(i + 1) +
+                        error_msgs.push_back("ERROR: Array base type mismatch for parameter " + std::to_string(i + 1) +
                                              " in function '" + name->get_string() + "' at line " +
                                              std::to_string(line_number) + ".");
                     }
                 } else {
-                    error_msgs.push_back("Error: Expected array argument for parameter " + std::to_string(i + 1) +
+                    error_msgs.push_back("ERROR: Expected array argument for parameter " + std::to_string(i + 1) +
                                          " in function '" + name->get_string() + "' at line " +
                                          std::to_string(line_number) + ".");
                 }
@@ -591,7 +609,7 @@ void Func_call::TypeCheck() {
                 inttofloat((*funcRParams->params)[i]);
             }
             if ((*funcRParams->params)[i]->attribute.T.type != (*funcAttr->formals)[i]->type_decl) {
-                error_msgs.push_back("Error: Parameter type mismatch for parameter " + std::to_string(i + 1) +
+                error_msgs.push_back("ERROR: Parameter type mismatch for parameter " + std::to_string(i + 1) +
                                      " in function '" + name->get_string() + "' at line " +
                                      std::to_string(line_number) + ".");
             }
@@ -627,7 +645,7 @@ void UnaryExp_neg::TypeCheck() {
         } else if (unary_exp->attribute.T.type == Type::FLOAT) {
             attribute.V.val.FloatVal = -unary_exp->attribute.V.val.FloatVal;
         } else {
-            error_msgs.push_back("Error: Unary '-' operator requires an integer or float.");
+            error_msgs.push_back("ERROR: Unary '-' operator requires an integer or float.");
         }
     }
 }
@@ -635,14 +653,18 @@ void UnaryExp_neg::TypeCheck() {
 void UnaryExp_not::TypeCheck() {
     error_msgs.push_back("UnaryExp_not");
     unary_exp->TypeCheck();
+    attribute.V.ConstTag = unary_exp->attribute.V.ConstTag;
     if (unary_exp->attribute.T.type == Type::BOOL) {
         attribute.T.type = Type::BOOL;
-        attribute.V.val.BoolVal = !unary_exp->attribute.V.val.BoolVal;
+        if (attribute.V.ConstTag)
+            attribute.V.val.BoolVal = !unary_exp->attribute.V.val.BoolVal;
     } else if (unary_exp->attribute.T.type == Type::INT || unary_exp->attribute.T.type == Type::FLOAT) {
         attribute.T.type = Type::BOOL;
-        attribute.V.val.BoolVal = (unary_exp->attribute.V.val.IntVal != 0 || unary_exp->attribute.V.val.FloatVal != 0);
+        if (attribute.V.ConstTag)
+            attribute.V.val.BoolVal =
+            (unary_exp->attribute.V.val.IntVal != 0 || unary_exp->attribute.V.val.FloatVal != 0);
     } else {
-        error_msgs.push_back("Error: Unary '!' operator requires a bool, int, or float.");
+        error_msgs.push_back("ERROR: Unary '!' operator requires a bool, int, or float.");
     }
 }
 
@@ -677,7 +699,7 @@ void assign_stmt::TypeCheck() {
         inttofloat(exp);
     }
     if (lval->attribute.T.type != exp->attribute.T.type) {
-        error_msgs.push_back("Error: Type mismatch in assignment at line " + std::to_string(line_number) + ".");
+        error_msgs.push_back("ERROR: Type mismatch in assignment at line " + std::to_string(line_number) + ".");
     }
 }
 
@@ -710,7 +732,7 @@ void while_stmt::TypeCheck() {
     loopdepth++;    // 进入while循环时，增加嵌套深度
     Cond->TypeCheck();
     if (Cond->attribute.T.type == Type::VOID) {
-        error_msgs.push_back("Error: While condition is invalid at line " + std::to_string(line_number) + ".");
+        error_msgs.push_back("ERROR: While condition is invalid at line " + std::to_string(line_number) + ".");
     }
     body->TypeCheck();
     loopdepth--;    // 离开while循环时，减少嵌套深度
@@ -719,14 +741,14 @@ void while_stmt::TypeCheck() {
 void continue_stmt::TypeCheck() {
     error_msgs.push_back("ContinueStmt Semant");
     if (loopdepth == 0) {
-        error_msgs.push_back("Error: Break can only be used inside a loop.");
+        error_msgs.push_back("ERROR: Break can only be used inside a loop.");
     }
 }
 
 void break_stmt::TypeCheck() {
     error_msgs.push_back("BreakStmt Semant");
     if (loopdepth == 0) {
-        error_msgs.push_back("Error: Break can only be used inside a loop.");
+        error_msgs.push_back("ERROR: Break can only be used inside a loop.");
     }
 }
 
@@ -768,12 +790,19 @@ void VarInitVal_exp::TypeCheck() {
 
 void VarDef_no_init::TypeCheck() {
     error_msgs.push_back("VarDefNoInit Semant");
-    error_msgs.push_back("VarDef Semant");
-    // 检查同名(同一作用域下)
-    if (semant_table.symbol_table.lookup_scope(name) == semant_table.symbol_table.get_current_scope()) {
-        error_msgs.push_back("Variable " + name->get_string() + " is redefined at line " + std::to_string(line_number) +
-                             "\n");
+    if (isglobal) {
+        if (semant_table.GlobalTable.find(name) != semant_table.GlobalTable.end()) {
+            error_msgs.push_back("ERROR: multilpe definitions of vars at line " + std::to_string(line_number) + ".");
+        }
+        scope = 0;
+    } else {
+        if (semant_table.symbol_table.lookup_scope(name) == semant_table.symbol_table.get_current_scope()) {
+            error_msgs.push_back("ERROR: Variable " + name->get_string() + " is redefined at line " +
+                                 std::to_string(line_number) + ".");
+        }
+        scope = semant_table.symbol_table.get_current_scope();
     }
+
     VarAttribute val;
     val.ConstTag = false;
     val.type = type_decl;
@@ -786,36 +815,40 @@ void VarDef_no_init::TypeCheck() {
         for (auto dim : *dims) {
             dim->TypeCheck();
             if (!dim->attribute.V.ConstTag) {
-                error_msgs.push_back("Array Dim must be const expression in line " + std::to_string(line_number) +
+                error_msgs.push_back("ERROR: Array Dim must be const expression in line " + std::to_string(line_number) +
                                      "\n");
             }
-            if (dim->attribute.T.type == Type::FLOAT) {
-                error_msgs.push_back("Array Dim can not be float in line " + std::to_string(line_number) + "\n");
+            booltoint(dim);
+            if (dim->attribute.T.type != Type::INT) {
+                error_msgs.push_back("ERROR: Array Dim must be int at line " + std::to_string(line_number) + ".");
             }
             val.dims.push_back(dim->attribute.V.val.IntVal);
         }
     }
     if (isglobal)
-        semant_table.symbol_table.add_Symbol(name, val);
-    else
         semant_table.GlobalTable[name] = val;
+    else
+        semant_table.symbol_table.add_Symbol(name, val);
 }
 
 void VarDef::TypeCheck() {
     error_msgs.push_back("VarDef Semant");
-    // 检查同名(同一作用域下)
-    if (semant_table.symbol_table.lookup_scope(name) == semant_table.symbol_table.get_current_scope()) {
-        error_msgs.push_back("Variable " + name->get_string() + " is redefined at line " + std::to_string(line_number) +
-                             "\n");
+    // 检查同名
+    if (isglobal) {
+        if (semant_table.GlobalTable.find(name) != semant_table.GlobalTable.end()) {
+            error_msgs.push_back("ERROR: multilpe definitions of vars at line " + std::to_string(line_number) + ".");
+        }
+        scope = 0;
+    } else {
+        if (semant_table.symbol_table.lookup_scope(name) == semant_table.symbol_table.get_current_scope()) {
+            error_msgs.push_back("ERROR: Variable " + name->get_string() + " is redefined at line " +
+                                 std::to_string(line_number) + ".");
+        }
+        scope = semant_table.symbol_table.get_current_scope();
     }
     VarAttribute val;
     val.ConstTag = false;
     val.type = type_decl;
-    if (isglobal)
-        scope = 0;
-    else
-        scope = semant_table.symbol_table.get_current_scope();
-
     init->TypeCheck();
 
     // 数组检查
@@ -823,10 +856,11 @@ void VarDef::TypeCheck() {
         for (auto dim : *dims) {
             dim->TypeCheck();
             if (!dim->attribute.V.ConstTag) {
-                error_msgs.push_back("Array Dim must be const expression in line " + std::to_string(line_number) + ".");
+                error_msgs.push_back("ERROR: Array Dim must be const expression in line " + std::to_string(line_number) + ".");
             }
-            if (dim->attribute.T.type == Type::FLOAT) {
-                error_msgs.push_back("Array Dim can not be float in line " + std::to_string(line_number) + ".");
+            booltoint(dim);
+            if (dim->attribute.T.type != Type::INT) {
+                error_msgs.push_back("ERROR: Array Dim must be int at line " + std::to_string(line_number) + ".");
             }
             val.dims.push_back(dim->attribute.V.val.IntVal);
         }
@@ -836,9 +870,12 @@ void VarDef::TypeCheck() {
             totalElements *= dim;    // 计算总元素数
         }
         HandleArrayInit(init, val, totalElements, 1);
+        // 中间代码生成时不用再次初始化数组值了
+        IntInitVals = val.IntInitVals;
+        FloatInitVals = val.FloatInitVals;
         // 确保初始化值的数量匹配
         if (val.IntInitVals.size() != totalElements && val.FloatInitVals.size() != totalElements) {
-            error_msgs.push_back("Error: Initialization values count does not match array dimensions at line " +
+            error_msgs.push_back("ERROR: Initialization values count does not match array dimensions at line " +
                                  std::to_string(line_number) + ".");
         }
         // std::cout << val.IntInitVals.size() << "1111111111111" << std::endl;
@@ -846,14 +883,18 @@ void VarDef::TypeCheck() {
     // 非数组检查
     else {
         if (init->attribute.T.type != val.type) {
+            if (init->attribute.T.type == Type::BOOL) {
+                init->attribute.V.val.IntVal = static_cast<int>(init->attribute.V.val.BoolVal);
+                init->attribute.T.type = Type::INT;
+            }
             if (val.type == Type::INT && init->attribute.T.type == Type::FLOAT) {
-                error_msgs.push_back("Warning: Implicit conversion from float to int at line " +
-                                     std::to_string(line_number) + ". Fractional part will be discarded.");
-                attribute.V.val.IntVal = static_cast<int>(init->attribute.V.val.FloatVal);
+                init->attribute.V.val.IntVal = static_cast<int>(init->attribute.V.val.FloatVal);
+                init->attribute.T.type = Type::INT;
+                attribute.V.val.IntVal = init->attribute.V.val.IntVal;
             } else if (val.type == Type::FLOAT && init->attribute.T.type == Type::INT) {
-                error_msgs.push_back("Warning: Implicit conversion from int to float at line " +
-                                     std::to_string(line_number) + ". Fractional part will be discarded.");
-                attribute.V.val.FloatVal = static_cast<float>(init->attribute.V.val.IntVal);
+                init->attribute.V.val.FloatVal = static_cast<float>(init->attribute.V.val.IntVal);
+                init->attribute.T.type = Type::FLOAT;
+                attribute.V.val.FloatVal = init->attribute.V.val.FloatVal;
             } else {
                 error_msgs.push_back("Type mismatch in initialization at line " + std::to_string(line_number) +
                                      ". Cannot convert from " + type_status[init->attribute.T.type] + " to " +
@@ -868,25 +909,29 @@ void VarDef::TypeCheck() {
     }
     attribute.V.val = init->attribute.V.val;
     if (isglobal)
-        semant_table.symbol_table.add_Symbol(name, val);
-    else
         semant_table.GlobalTable[name] = val;
+    else
+        semant_table.symbol_table.add_Symbol(name, val);
 }
 
 void ConstDef::TypeCheck() {
     error_msgs.push_back("ConstDef Semant");
     // 检查同名
-    if (semant_table.symbol_table.lookup_scope(name) == semant_table.symbol_table.get_current_scope()) {
-        error_msgs.push_back("Variable " + name->get_string() + " is redefined at line " + std::to_string(line_number) +
-                             ".");
+    if (isglobal) {
+        if (semant_table.GlobalTable.find(name) != semant_table.GlobalTable.end()) {
+            error_msgs.push_back("ERROR: multilpe definitions of vars in line " + std::to_string(line_number) + ".");
+        }
+        scope = 0;
+    } else {
+        if (semant_table.symbol_table.lookup_scope(name) == semant_table.symbol_table.get_current_scope()) {
+            error_msgs.push_back("ERROR: Variable " + name->get_string() + " is redefined at line " +
+                                 std::to_string(line_number) + ".");
+        }
+        scope = semant_table.symbol_table.get_current_scope();
     }
     VarAttribute val;
     val.ConstTag = true;
     val.type = type_decl;
-    if (isglobal)
-        scope = 0;
-    else
-        scope = semant_table.symbol_table.get_current_scope();
 
     init->TypeCheck();
     // 数组检查
@@ -908,13 +953,17 @@ void ConstDef::TypeCheck() {
             totalElements *= dim;    // 计算总元素数
         }
         HandleArrayInit(init, val, totalElements, 1);
-        for (int i = 0; i < val.IntInitVals.size(); i++) {
-            std::cout << val.IntInitVals[i] << " ";
-        }
+        // 中间代码生成时不用再次初始化数组值了
+        IntInitVals = val.IntInitVals;
+        FloatInitVals = val.FloatInitVals;
+        
+        // for (int i = 0; i < val.IntInitVals.size(); i++) {
+        //     std::cout << val.IntInitVals[i] << " ";
+        // }
         std::cout << std::endl;
         // 确保初始化值的数量匹配
         if (val.IntInitVals.size() != totalElements && val.FloatInitVals.size() != totalElements) {
-            error_msgs.push_back("Error: Initialization values count does not match array dimensions at line " +
+            error_msgs.push_back("ERROR: Initialization values count does not match array dimensions at line " +
                                  std::to_string(line_number) + ".");
         }
         // std::cout << val.IntInitVals.size() << "1111111111111" << std::endl;
@@ -944,9 +993,9 @@ void ConstDef::TypeCheck() {
     }
     attribute.V.val = init->attribute.V.val;
     if (isglobal)
-        semant_table.symbol_table.add_Symbol(name, val);
-    else
         semant_table.GlobalTable[name] = val;
+    else
+        semant_table.symbol_table.add_Symbol(name, val);
 }
 
 void VarDecl::TypeCheck() {
@@ -1057,11 +1106,11 @@ void __FuncDef::TypeCheck() {
     if (name->get_string() == "main") {
         has_main = true;
         if (return_type != Type::INT) {
-            error_msgs.push_back("Error: 'main' function must return an integer.");
+            error_msgs.push_back("ERROR: 'main' function must return an integer.");
         }
         // 检查main函数的参数是否符合规范
         if (formals->size() != 0 && formals->size() != 2) {
-            error_msgs.push_back("Error: 'main' function must have 0 or 2 parameters.");
+            error_msgs.push_back("ERROR: 'main' function must have 0 or 2 parameters.");
         }
     }
     semant_table.FunctionTable[name] = this;

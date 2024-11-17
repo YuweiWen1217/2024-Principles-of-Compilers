@@ -1,17 +1,34 @@
 Program Semant
-CompUnit_FuncDef Semant
-FuncDef Semant
-BlockItem_Decl Semant
+CompUnitDecl Semant
+VarDecl Semant
+VarDefNoInit Semant
+CompUnitDecl Semant
+VarDecl Semant
+VarDef Semant
+ERROR: multilpe definitions of vars at line 2.
+VarInitValExp Semant
+CompUnitDecl Semant
 ConstDecl Semant
 ConstDef Semant
 ConstInitValExp Semant
+CompUnit_FuncDef Semant
+FuncDef Semant
 BlockItem_Decl Semant
 VarDecl Semant
-VarDef Semant
-VarInitValExp Semant
+VarDefNoInit Semant
+UnaryExp_not
 
 
 
 开始中间代码生成了。
 
+Program CodeIR
+CompUnitDecl CodeIR
+VarDecl CodeIR
+VarDefNoInit CodeIR
+CompUnitDecl CodeIR
+VarDecl CodeIR
+VarDef CodeIR
+CompUnitDecl CodeIR
+ConstDecl CodeIR
 FunctionDef CodeIR

@@ -502,15 +502,223 @@ void VarInitVal::codeIR() { error_msgs.push_back("VarInitVal CodeIR"); }
 
 void VarInitVal_exp::codeIR() { error_msgs.push_back("VarInitValWithExp CodeIR"); }
 
-void VarDef_no_init::codeIR() { error_msgs.push_back("VarDefNoInit CodeIR"); }
+void VarDef_no_init::codeIR() {
+    error_msgs.push_back("VarDefNoInit CodeIR");
+    if (!isglobal) {
+        // 声明语句在0号块（分配大小）、初始值语句在当前块
+        LLVMBlock B0 = llvmIR.GetBlock(func_now, 0);
+        LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
 
-void VarDef::codeIR() { error_msgs.push_back("VarDef CodeIR"); }
+        // 1、符号表：name->reg
+        irgen_table.symbol_table.add_Symbol(name, ++reg_now);
 
-void ConstDef::codeIR() { error_msgs.push_back("ConstDef CodeIR"); }
+        // 2、寄存器表：reg->VarAttribute
+        VarAttribute val;
+        val.ConstTag = false;
+        val.type = type_decl;
+        if (dims == nullptr) {
+            irgen_table.reg_table[reg_now];
+            //  3、分配->默认值->储存
+            IRgenAlloca(B0, Type2LLvm[type_decl], reg_now);
+            int reg_alloc = reg_now;
+            if (type_decl == Type::INT)
+                IRgenArithmeticI32ImmAll(B, BasicInstruction::ADD, 0, 0, ++reg_now);
+            else if (type_decl == Type::FLOAT)
+                IRgenArithmeticF32ImmAll(B, BasicInstruction::FADD, 0, 0, ++reg_now);
+            IRgenStore(B, Type2LLvm[type_decl], GetNewRegOperand(reg_now), GetNewRegOperand(reg_alloc));
+            return;
+        }
+        // 剩下的就是数组了
+        int size = 1;
+        for (auto dim : *dims) {
+            val.dims.push_back(dim->attribute.V.val.IntVal);
+            size *= dim->attribute.V.val.IntVal;
+        }
+        irgen_table.reg_table[reg_now] = val;
+        //  3、分配->memset函数初始化值
+        // void *memset(起始地址, 每字节初始化的值, 字节数, 对齐方式);
+        IRgenAllocaArray(B0, Type2LLvm[type_decl], reg_now, val.dims);
+        CallInstruction *memsetCall =
+        new CallInstruction(BasicInstruction::VOID, nullptr, std::string("llvm.memset.p0.i32"));
+        memsetCall->push_back_Parameter(BasicInstruction::PTR, GetNewRegOperand(reg_now));
+        memsetCall->push_back_Parameter(BasicInstruction::I8, new ImmI32Operand(0x3f));
+        memsetCall->push_back_Parameter(BasicInstruction::I32, new ImmI32Operand(size * sizeof(int)));
+        memsetCall->push_back_Parameter(BasicInstruction::I1, new ImmI32Operand(0));
+        B->InsertInstruction(1, memsetCall);
+        return;
+    }
+    // isglobal
+    VarAttribute val = semant_table.GlobalTable[name];
+    BasicInstruction::LLVMType lltype = Type2LLvm[type_decl];
+    Instruction globalDecl;
+    if (dims != nullptr)
+        globalDecl = new GlobalVarDefineInstruction(name->get_string(), lltype, val);
+    else
+        globalDecl = new GlobalVarDefineInstruction(name->get_string(), lltype, nullptr);
+    llvmIR.global_def.push_back(globalDecl);
+}
 
-void VarDecl::codeIR() { error_msgs.push_back("VarDecl CodeIR"); }
+void VarDef::codeIR() {
+    error_msgs.push_back("VarDef CodeIR");
+    if (!isglobal) {
+        // 声明语句在0号块（分配大小）、初始值语句在当前块
+        LLVMBlock B0 = llvmIR.GetBlock(func_now, 0);
+        LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
 
-void ConstDecl::codeIR() { error_msgs.push_back("ConstDecl CodeIR"); }
+        // 1、符号表：name->reg
+        irgen_table.symbol_table.add_Symbol(name, ++reg_now);
+
+        // 2、寄存器表：reg->VarAttribute
+        VarAttribute val;
+        val.ConstTag = false;
+        val.type = type_decl;
+        if (dims == nullptr) {
+            irgen_table.reg_table[reg_now];
+            //  3、分配->声明值->储存
+            IRgenAlloca(B0, Type2LLvm[type_decl], reg_now);
+            int reg_alloc = reg_now;
+            init->codeIR();    // 执行后，regnow储存初始化值
+            IRgenStore(B, Type2LLvm[type_decl], GetNewRegOperand(reg_now), GetNewRegOperand(reg_alloc));
+            return;
+        }
+        // 剩下的就是数组了
+        int size = 1;
+        for (auto dim : *dims) {
+            val.dims.push_back(dim->attribute.V.val.IntVal);
+            size *= dim->attribute.V.val.IntVal;
+        }
+        irgen_table.reg_table[reg_now] = val;
+        int reg_array = reg_now;    // 存放数组首地址
+        //  3、分配->声明值->储存
+        // 元素已经储存在了std::vector<int> IntInitVals或 std::vector<float> FloatInitVals中，大小已经确保和size匹配
+        for (int i = 0; i < size; ++i) {
+            // i -> 索引
+            // arrayindexs储存地址
+            // int a[3][2][2]
+            // i = 10 -> arrayindexs:{2,1,0}
+            std::vector<Operand> arrayindexs;
+            int remainder = i;
+            for (int d = val.dims.size() - 1; d >= 0; --d) {
+                int idx = remainder % val.dims[d];
+                remainder /= val.dims[d];
+                arrayindexs.insert(arrayindexs.begin(), new ImmI32Operand(idx));
+            }
+            // 计算应当赋值的地址
+            IRgenGetElementptrIndexI32(B, Type2LLvm[val.type], ++reg_now, GetNewRegOperand(reg_array), val.dims,
+                                       arrayindexs);
+            int reg_adr = reg_now;    // 存放应当赋值的地址
+            // 获取初始化值
+            if (val.type == Type::INT) {
+                IRgenArithmeticI32ImmAll(B, BasicInstruction::ADD, IntInitVals[i], 0, ++reg_now);
+            } else if (val.type == Type::FLOAT) {
+                IRgenArithmeticF32ImmAll(B, BasicInstruction::FADD, FloatInitVals[i], 0, ++reg_now);
+            }
+            // 此时reg_now存放的是获取的数值
+            IRgenStore(B, Type2LLvm[val.type], GetNewRegOperand(reg_now), GetNewRegOperand(reg_adr));
+        }
+        return;
+    }
+    // isglobal
+    VarAttribute val = semant_table.GlobalTable[name];
+    BasicInstruction::LLVMType lltype = Type2LLvm[type_decl];
+    Instruction globalDecl;
+    if (dims != nullptr)
+        globalDecl = new GlobalVarDefineInstruction(name->get_string(), lltype, val);
+    else if (type_decl == Type::INT)
+        globalDecl = new GlobalVarDefineInstruction(name->get_string(), lltype, new ImmI32Operand(val.IntInitVals[0]));
+    else if (type_decl == Type::FLOAT)
+        globalDecl =
+        new GlobalVarDefineInstruction(name->get_string(), lltype, new ImmF32Operand(val.FloatInitVals[0]));
+    llvmIR.global_def.push_back(globalDecl);
+}
+
+void ConstDef::codeIR() {
+    error_msgs.push_back("ConstDef CodeIR");
+    if (!isglobal) {
+        // 声明语句在0号块（分配大小）、初始值语句在当前块
+        LLVMBlock B0 = llvmIR.GetBlock(func_now, 0);
+        LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+
+        // 1、符号表：name->reg
+        irgen_table.symbol_table.add_Symbol(name, ++reg_now);
+
+        // 2、寄存器表：reg->VarAttribute
+        VarAttribute val;
+        val.ConstTag = true;
+        val.type = type_decl;
+        if (dims == nullptr) {
+            irgen_table.reg_table[reg_now];
+            //  3、分配->声明值->储存
+            IRgenAlloca(B0, Type2LLvm[type_decl], reg_now);
+            int reg_alloc = reg_now;
+            init->codeIR();    // 执行后，regnow储存初始化值
+            IRgenStore(B, Type2LLvm[type_decl], GetNewRegOperand(reg_now), GetNewRegOperand(reg_alloc));
+            return;
+        }
+        // 剩下的就是数组了
+        int size = 1;
+        for (auto dim : *dims) {
+            val.dims.push_back(dim->attribute.V.val.IntVal);
+            size *= dim->attribute.V.val.IntVal;
+        }
+        irgen_table.reg_table[reg_now] = val;
+        int reg_array = reg_now;    // 存放数组首地址
+        //  3、分配->声明值->储存
+        // 元素已经储存在了std::vector<int> IntInitVals或 std::vector<float> FloatInitVals中，大小已经确保和size匹配
+        for (int i = 0; i < size; ++i) {
+            // i -> 索引
+            // arrayindexs储存地址
+            // int a[3][2][2]
+            // i = 10 -> arrayindexs:{2,1,0}
+            std::vector<Operand> arrayindexs;
+            int remainder = i;
+            for (int d = val.dims.size() - 1; d >= 0; --d) {
+                int idx = remainder % val.dims[d];
+                remainder /= val.dims[d];
+                arrayindexs.insert(arrayindexs.begin(), new ImmI32Operand(idx));
+            }
+            // 计算应当赋值的地址
+            IRgenGetElementptrIndexI32(B, Type2LLvm[val.type], ++reg_now, GetNewRegOperand(reg_array), val.dims,
+                                       arrayindexs);
+            int reg_adr = reg_now;    // 存放应当赋值的地址
+            // 获取初始化值
+            if (val.type == Type::INT) {
+                IRgenArithmeticI32ImmAll(B, BasicInstruction::ADD, IntInitVals[i], 0, ++reg_now);
+            } else if (val.type == Type::FLOAT) {
+                IRgenArithmeticF32ImmAll(B, BasicInstruction::FADD, FloatInitVals[i], 0, ++reg_now);
+            }
+            // 此时reg_now存放的是获取的数值
+            IRgenStore(B, Type2LLvm[val.type], GetNewRegOperand(reg_now), GetNewRegOperand(reg_adr));
+        }
+        return;
+    }
+    // isglobal
+    VarAttribute val = semant_table.GlobalTable[name];
+    BasicInstruction::LLVMType lltype = Type2LLvm[type_decl];
+    Instruction globalDecl;
+    if (dims != nullptr)
+        globalDecl = new GlobalVarDefineInstruction(name->get_string(), lltype, val);
+    else if (type_decl == Type::INT)
+        globalDecl = new GlobalVarDefineInstruction(name->get_string(), lltype, new ImmI32Operand(val.IntInitVals[0]));
+    else if (type_decl == Type::FLOAT)
+        globalDecl =
+        new GlobalVarDefineInstruction(name->get_string(), lltype, new ImmF32Operand(val.FloatInitVals[0]));
+    llvmIR.global_def.push_back(globalDecl);
+}
+
+void VarDecl::codeIR() {
+    error_msgs.push_back("VarDecl CodeIR");
+    for (auto &var_def : *var_def_list) {
+        var_def->codeIR();
+    }
+}
+
+void ConstDecl::codeIR() {
+    error_msgs.push_back("ConstDecl CodeIR");
+    for (auto &var_def : *var_def_list) {
+        var_def->TypeCheck();
+    }
+}
 
 void BlockItem_Decl::codeIR() { error_msgs.push_back("BlockItemDecl CodeIR"); }
 
@@ -522,91 +730,96 @@ void __FuncFParam::codeIR() { error_msgs.push_back("FunctionFParam CodeIR"); }
 
 void __FuncDef::codeIR() {
     error_msgs.push_back("FunctionDef CodeIR");
+    /*
+        // 符号表进入新的作用域
+        irgen_table.symbol_table.enter_scope();
 
-    // 符号表进入新的作用域
-    irgen_table.symbol_table.enter_scope();
+        // 函数定义的IR指令
+        FuncDefInstruction FuncDefIns = new FunctionDefineInstruction(Type2LLvm[return_type], name->get_string());
 
-    // 函数定义的IR指令
-    FuncDefInstruction FuncDefIns = new FunctionDefineInstruction(Type2LLvm[return_type], name->get_string());
+        // Step 3: Initialize function-level metadata
+        // 初始化寄存器和符号表的相关数据结构，用于管理函数内的变量和临时值。
+        max_reg = -1;                            // 用于跟踪当前函数中分配的最大寄存器编号。
+        irgen_table.RegTable.clear();            // 清空寄存器表以准备存储新的变量信息。
+        irgen_table.FormalArrayTable.clear();    // 用于存储数组参数的信息。
 
-    // Step 3: Initialize function-level metadata
-    // 初始化寄存器和符号表的相关数据结构，用于管理函数内的变量和临时值。
-    max_reg = -1;                            // 用于跟踪当前函数中分配的最大寄存器编号。
-    irgen_table.RegTable.clear();            // 清空寄存器表以准备存储新的变量信息。
-    irgen_table.FormalArrayTable.clear();    // 用于存储数组参数的信息。
+        now_label = 0;                        // 当前基本块的标签。
+        max_label = -1;                       // 当前函数分配的最大标签编号。
+        function_now = FuncDefIns;            // 当前正在生成代码的函数。
+        function_returntype = return_type;    // 函数返回类型。
 
-    now_label = 0;                        // 当前基本块的标签。
-    max_label = -1;                       // 当前函数分配的最大标签编号。
-    function_now = FuncDefIns;            // 当前正在生成代码的函数。
-    function_returntype = return_type;    // 函数返回类型。
+        // Step 4: Register the function in the IR generator
+        // 创建一个新的函数并将其注册到 IR 生成器中。
+        llvmIR.NewFunction(function_now);
+        LLVMBlock B = llvmIR.NewBlock(function_now, max_label);    // 为函数创建入口基本块。
 
-    // Step 4: Register the function in the IR generator
-    // 创建一个新的函数并将其注册到 IR 生成器中。
-    llvmIR.NewFunction(function_now);
-    LLVMBlock B = llvmIR.NewBlock(function_now, max_label);    // 为函数创建入口基本块。
+        // Step 5: Process the function's formal parameters
+        // 遍历函数参数列表，生成相应的 IR 指令并记录参数信息。
+        auto formal_vector = *formals;         // 获取函数参数的列表。
+        max_reg = formal_vector.size() - 1;    // 初始化寄存器计数器。
 
-    // Step 5: Process the function's formal parameters
-    // 遍历函数参数列表，生成相应的 IR 指令并记录参数信息。
-    auto formal_vector = *formals;         // 获取函数参数的列表。
-    max_reg = formal_vector.size() - 1;    // 初始化寄存器计数器。
+        for (int i = 0; i < formal_vector.size(); ++i) {
+            auto formal = formal_vector[i];
+            VarAttribute val;    // 用于存储变量的属性（类型、数组维度等）。
+            val.type = formal->type_decl;
+            LLVMType lltype = Type2LLvm[formal->type_decl];    // 获取 LLVM 对应的类型。
 
-    for (int i = 0; i < formal_vector.size(); ++i) {
-        auto formal = formal_vector[i];
-        VarAttribute val;    // 用于存储变量的属性（类型、数组维度等）。
-        val.type = formal->type_decl;
-        LLVMType lltype = Type2LLvm[formal->type_decl];    // 获取 LLVM 对应的类型。
+            if (formal->dims != nullptr) {    // Step 5.1: If the parameter is an array
+                // 对于数组参数，不需要为地址分配内存，只需记录其地址类型即可。
+                FuncDefIns->InsertFormal(LLVMType::PTR);    // 插入数组指针作为参数类型。
 
-        if (formal->dims != nullptr) {    // Step 5.1: If the parameter is an array
-            // 对于数组参数，不需要为地址分配内存，只需记录其地址类型即可。
-            FuncDefIns->InsertFormal(LLVMType::PTR);    // 插入数组指针作为参数类型。
+                for (int i = 1; i < formal->dims->size(); ++i) {
+                    // 忽略数组的第一个维度，因为它在 SysY 中是隐式传递的。
+                    auto d = formal->dims->at(i);
+                    val.dims.push_back(d->attribute.V.val.IntVal);    // 存储数组的后续维度信息。
+                }
 
-            for (int i = 1; i < formal->dims->size(); ++i) {
-                // 忽略数组的第一个维度，因为它在 SysY 中是隐式传递的。
-                auto d = formal->dims->at(i);
-                val.dims.push_back(d->attribute.V.val.IntVal);    // 存储数组的后续维度信息。
+                // 更新符号表和寄存器表，以记录数组的相关信息。
+                irgen_table.FormalArrayTable[i] = 1;    // 标记当前参数为数组。
+                irgen_table.symbol_table.add_Symbol(formal->name, i);
+                irgen_table.RegTable[i] = val;
+            } else {    // Step 5.2: If the parameter is not an array
+                // 普通参数需要分配空间，并生成 Alloca 和 Store 指令。
+                FuncDefIns->InsertFormal(lltype);                                         // 插入普通类型的参数。
+                IRgenAlloca(B, lltype, ++max_reg);                                        // 为参数分配内存。
+                IRgenStore(B, lltype, GetNewRegOperand(i), GetNewRegOperand(max_reg));    // 将参数存入分配的寄存器。
+
+                // 更新符号表和寄存器表。
+                irgen_table.symbol_table.add_Symbol(formal->name, max_reg);
+                irgen_table.RegTable[max_reg] = val;
             }
-
-            // 更新符号表和寄存器表，以记录数组的相关信息。
-            irgen_table.FormalArrayTable[i] = 1;    // 标记当前参数为数组。
-            irgen_table.symbol_table.add_Symbol(formal->name, i);
-            irgen_table.RegTable[i] = val;
-        } else {    // Step 5.2: If the parameter is not an array
-            // 普通参数需要分配空间，并生成 Alloca 和 Store 指令。
-            FuncDefIns->InsertFormal(lltype);                                         // 插入普通类型的参数。
-            IRgenAlloca(B, lltype, ++max_reg);                                        // 为参数分配内存。
-            IRgenStore(B, lltype, GetNewRegOperand(i), GetNewRegOperand(max_reg));    // 将参数存入分配的寄存器。
-
-            // 更新符号表和寄存器表。
-            irgen_table.symbol_table.add_Symbol(formal->name, max_reg);
-            irgen_table.RegTable[max_reg] = val;
         }
-    }
 
-    // Step 6: Add an unconditional branch to the next block
-    // 生成一个无条件跳转到函数体的基本块。
-    IRgenBRUnCond(B, 1);
+        // Step 6: Add an unconditional branch to the next block
+        // 生成一个无条件跳转到函数体的基本块。
+        IRgenBRUnCond(B, 1);
 
-    // Step 7: Generate IR for the function body
-    // 为函数创建一个新的基本块，并生成函数体的 IR 代码。
-    B = llvmIR.NewBlock(function_now, max_label);
-    now_label = max_label;    // 更新当前基本块标签。
-    block->codeIR();          // 调用函数体的 `codeIR` 方法，生成其 IR 指令。
+        // Step 7: Generate IR for the function body
+        // 为函数创建一个新的基本块，并生成函数体的 IR 代码。
+        B = llvmIR.NewBlock(function_now, max_label);
+        now_label = max_label;    // 更新当前基本块标签。
+        block->codeIR();          // 调用函数体的 `codeIR` 方法，生成其 IR 指令。
 
-    // Step 8: Handle no-return blocks
-    // 如果函数未明确返回值，需要补充一个默认的返回基本块。
-    AddNoReturnBlock();
+        // Step 8: Handle no-return blocks
+        // 如果函数未明确返回值，需要补充一个默认的返回基本块。
+        AddNoReturnBlock();
 
-    // Step 9: Record the maximum register and label for this function
-    // 记录当前函数的最大寄存器编号和标签编号，用于后续分析和优化。
-    max_reg_map[FuncDefIns] = max_reg;
-    max_label_map[FuncDefIns] = max_label;
+        // Step 9: Record the maximum register and label for this function
+        // 记录当前函数的最大寄存器编号和标签编号，用于后续分析和优化。
+        max_reg_map[FuncDefIns] = max_reg;
+        max_label_map[FuncDefIns] = max_label;
 
-    // Step 10: Exit the function's scope
-    // 离开当前函数的作用域，清除局部变量信息。
-    irgen_table.symbol_table.exit_scope();
+        // Step 10: Exit the function's scope
+        // 离开当前函数的作用域，清除局部变量信息。
+        irgen_table.symbol_table.exit_scope();
+        */
 }
 
-void CompUnit_Decl::codeIR() { error_msgs.push_back("CompUnitDecl CodeIR"); }
+void CompUnit_Decl::codeIR() {
+    error_msgs.push_back("CompUnitDecl CodeIR");
+    // 通过decl、def的isglobal变量区分全局和局部，已在类型检查部分正确设置该变量
+    decl->codeIR();
+}
 
 void CompUnit_FuncDef::codeIR() { func_def->codeIR(); }
 

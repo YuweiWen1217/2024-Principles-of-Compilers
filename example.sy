@@ -1,5 +1,7 @@
+int a;
+int a = 1;
+const int b = 2;
 int main()
 {
-	const int a = 5;
-    int a = 6;
+    int c[1][!0];
 }

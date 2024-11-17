@@ -501,6 +501,8 @@ public:
     InitVal init;
     VarDef(Symbol n, std::vector<Expression> *d, InitVal i) : name(n), dims(d), init(i) {}
 
+    std::vector<int> IntInitVals{};
+    std::vector<float> FloatInitVals{};
     void codeIR();
     void TypeCheck();
     void printAST(std::ostream &s, int pad);
@@ -514,6 +516,8 @@ public:
     InitVal init;
     ConstDef(Symbol n, std::vector<Expression> *d, InitVal i) : name(n), dims(d), init(i) {}
 
+    std::vector<int> IntInitVals{};
+    std::vector<float> FloatInitVals{};
     void codeIR();
     void TypeCheck();
     void printAST(std::ostream &s, int pad);
