@@ -452,31 +452,120 @@ void LOrExp_or::codeIR() {
     // TODO：：：这里需不需要跳转？
 }
 
-void ConstExp::codeIR() { addexp->codeIR(); }
+void ConstExp::codeIR() {
+    error_msgs.push_back("ConstExp CodeIR");
+    addexp->codeIR();
+}
 
-void Lval::codeIR() { error_msgs.push_back("Lval CodeIR"); }
+void Lval::codeIR() {
+    error_msgs.push_back("Lval CodeIR");
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    VarAttribute val;
+    bool isarray = false;
+
+    // 获取变量对应的寄存器编号，对于数组，ptr是首地址
+    int alloca_reg = irgen_table.symbol_table.lookup(name);
+    if (alloca_reg != -1) {
+        ptr = GetNewRegOperand(alloca_reg);
+        val = irgen_table.reg_table[alloca_reg];
+    } else {
+        ptr = GetNewGlobalOperand(name->get_string());
+        val = semant_table.GlobalTable[name];
+    }
+
+    std::vector<Operand> arrayindexs;
+    if (dims != nullptr) {
+        for (int i = 0; i < dims->size(); i++) {
+            auto &dim = (*dims)[i];
+            dim->codeIR();
+            arrayindexs.push_back(GetNewRegOperand(reg_now));
+        }
+    }
+    // int a[][5]   dim: {5}
+    // a[2][5] -> index {2，5}
+    // -----------------------
+    // int a[3][5]  dim: {3, 5}
+    // a[2] -> indexs {0, 2}
+    // a[1][2] -> indexs {0,1,2}
+    if (arrayindexs.size() != 0 || attribute.T.type == Type::PTR) {
+        if (val.isFormalArray) {
+            IRgenGetElementptrIndexI32(B, Type2LLvm[val.type], ++reg_now, ptr, val.dims, arrayindexs);
+        } else {
+            arrayindexs.insert(arrayindexs.begin(), new ImmI32Operand(0));
+            IRgenGetElementptrIndexI32(B, Type2LLvm[val.type], ++reg_now, ptr, val.dims, arrayindexs);
+        }
+        ptr = GetNewRegOperand(reg_now);
+    }
+
+    // 左值只需要获取ptr就完成了，其他普通Lval还需要得到ptr里的值
+    if (is_left == false && attribute.T.type != Type::PTR) {
+        IRgenLoad(B, Type2LLvm[val.type], ++reg_now, ptr);
+    }
+}
 
 void FuncRParams::codeIR() { error_msgs.push_back("FuncRParams CodeIR"); }
 
 void Func_call::codeIR() { error_msgs.push_back("FunctionCall CodeIR"); }
 
-void UnaryExp_plus::codeIR() { error_msgs.push_back("UnaryExpPlus CodeIR"); }
+// +/- 已保证unary_exp以及结点本身为int或float
+void UnaryExp_plus::codeIR() {
+    error_msgs.push_back("UnaryExpPlus CodeIR");
+    unary_exp->codeIR();
+}
 
-void UnaryExp_neg::codeIR() { error_msgs.push_back("UnaryExpNeg CodeIR"); }
+void UnaryExp_neg::codeIR() {
+    error_msgs.push_back("UnaryExpNeg CodeIR");
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    unary_exp->codeIR();
+    if (attribute.T.type == Type::INT)
+        IRgenArithmeticI32ImmLeft(B, BasicInstruction::SUB, 0, reg_now, ++reg_now);
+    else
+        IRgenArithmeticF32ImmLeft(B, BasicInstruction::FSUB, 0, reg_now, ++reg_now);
+}
 
-void UnaryExp_not::codeIR() { error_msgs.push_back("UnaryExpNot CodeIR"); }
+// ! 已保证unary_exp为int或float、结点本身为bool
+void UnaryExp_not::codeIR() {
+    error_msgs.push_back("UnaryExpNot CodeIR");
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    unary_exp->codeIR();
+    if (unary_exp->attribute.T.type == Type::INT)
+        IRgenIcmpImmRight(B, BasicInstruction::eq, reg_now, 0, ++reg_now);
+    else
+        IRgenFcmpImmRight(B, BasicInstruction::OEQ, reg_now, 0, ++reg_now);
+}
 
-void IntConst::codeIR() { error_msgs.push_back("IntConst CodeIR"); }
+void IntConst::codeIR() {
+    error_msgs.push_back("IntConst CodeIR");
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    IRgenArithmeticI32ImmAll(B, BasicInstruction::ADD, val, 0, ++reg_now);
+}
 
-void FloatConst::codeIR() { error_msgs.push_back("FloatConst CodeIR"); }
+void FloatConst::codeIR() {
+    error_msgs.push_back("FloatConst CodeIR");
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    IRgenArithmeticF32ImmAll(B, BasicInstruction::FADD, val, 0, ++reg_now);
+}
 
-void StringConst::codeIR() { error_msgs.push_back("StringConst CodeIR"); }
+void StringConst::codeIR() { error_msgs.push_back("StringConst CodeIR"); }    // 未实现string。
 
-void PrimaryExp_branch::codeIR() { exp->codeIR(); }
+void PrimaryExp_branch::codeIR() {
+    error_msgs.push_back("PrimaryExp_branch CodeIR");
+    exp->codeIR();
+}
 
-void assign_stmt::codeIR() { error_msgs.push_back("AssignStmt CodeIR"); }
+// lval = exp， 已保证exp的类型和lval相同
+void assign_stmt::codeIR() {
+    error_msgs.push_back("AssignStmt CodeIR");
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    lval->codeIR();
+    exp->codeIR();
+    // IRgenStore(B, Type2LLvm[lval->attribute.T.type], reg_now, ((Lval *)lval)->ptr);
+}
 
-void expr_stmt::codeIR() { exp->codeIR(); }
+void expr_stmt::codeIR() {
+    error_msgs.push_back("expr_stmt CodeIR");
+    exp->codeIR();
+}
 
 void block_stmt::codeIR() { error_msgs.push_back("BlockStmt CodeIR"); }
 
@@ -494,13 +583,19 @@ void return_stmt::codeIR() { error_msgs.push_back("ReturnStmt CodeIR"); }
 
 void return_stmt_void::codeIR() { error_msgs.push_back("ReturnStmtVoid CodeIR"); }
 
-void ConstInitVal::codeIR() { error_msgs.push_back("ConstInitVal CodeIR"); }
+void ConstInitVal::codeIR() { error_msgs.push_back("ConstInitVal CodeIR"); }    // 不会出现这种情况了
 
-void ConstInitVal_exp::codeIR() { error_msgs.push_back("ConstInitValWithExp CodeIR"); }
+void ConstInitVal_exp::codeIR() {
+    error_msgs.push_back("ConstInitValWithExp CodeIR");
+    exp->codeIR();
+}
 
-void VarInitVal::codeIR() { error_msgs.push_back("VarInitVal CodeIR"); }
+void VarInitVal::codeIR() { error_msgs.push_back("VarInitVal CodeIR"); }    // 不会出现这种情况了
 
-void VarInitVal_exp::codeIR() { error_msgs.push_back("VarInitValWithExp CodeIR"); }
+void VarInitVal_exp::codeIR() {
+    error_msgs.push_back("VarInitValWithExp CodeIR");
+    exp->codeIR();
+}
 
 void VarDef_no_init::codeIR() {
     error_msgs.push_back("VarDefNoInit CodeIR");
@@ -595,7 +690,7 @@ void VarDef::codeIR() {
             // i -> 索引
             // arrayindexs储存地址
             // int a[3][2][2]
-            // i = 10 -> arrayindexs:{2,1,0}
+            // i = 10 -> a[2][1][0] -> arrayindexs:{0,2,1,0}
             std::vector<Operand> arrayindexs;
             int remainder = i;
             for (int d = val.dims.size() - 1; d >= 0; --d) {
@@ -603,6 +698,7 @@ void VarDef::codeIR() {
                 remainder /= val.dims[d];
                 arrayindexs.insert(arrayindexs.begin(), new ImmI32Operand(idx));
             }
+            arrayindexs.insert(arrayindexs.begin(), new ImmI32Operand(0));
             // 计算应当赋值的地址
             IRgenGetElementptrIndexI32(B, Type2LLvm[val.type], ++reg_now, GetNewRegOperand(reg_array), val.dims,
                                        arrayindexs);
@@ -716,13 +812,19 @@ void VarDecl::codeIR() {
 void ConstDecl::codeIR() {
     error_msgs.push_back("ConstDecl CodeIR");
     for (auto &var_def : *var_def_list) {
-        var_def->TypeCheck();
+        var_def->codeIR();
     }
 }
 
-void BlockItem_Decl::codeIR() { error_msgs.push_back("BlockItemDecl CodeIR"); }
+void BlockItem_Decl::codeIR() {
+    error_msgs.push_back("BlockItemDecl CodeIR");
+    decl->codeIR();
+}
 
-void BlockItem_Stmt::codeIR() { error_msgs.push_back("BlockItemStmt CodeIR"); }
+void BlockItem_Stmt::codeIR() {
+    error_msgs.push_back("BlockItemStmt CodeIR");
+    stmt->codeIR();
+}
 
 void __Block::codeIR() { error_msgs.push_back("Block CodeIR"); }
 

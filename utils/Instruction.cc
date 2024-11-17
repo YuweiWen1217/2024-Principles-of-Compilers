@@ -111,7 +111,7 @@ void IRgenZextI1toI32(LLVMBlock B, int src, int dst) {
                                                 BasicInstruction::LLVMType::I1, GetNewRegOperand(src)));
 }
 
-// 访问从ptr开始的一个数组，数组的维度为dim，索引的维度储存在indexs中。
+// 访问从ptr开始的一个数组，数组的维度为dim，索引的维度储存在indexs（其中第一个索引为跳过整个数组的值）中。
 void IRgenGetElementptrIndexI32(LLVMBlock B, BasicInstruction::LLVMType type, int result_reg, Operand ptr,
                                 std::vector<int> dims, std::vector<Operand> indexs) {
     B->InsertInstruction(

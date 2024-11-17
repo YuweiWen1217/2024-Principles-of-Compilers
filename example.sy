@@ -1,7 +1,6 @@
 int a;
-int a = 1;
+int c = 1;
 const int b = 2;
 int main()
 {
-    int c[1][!0];
 }

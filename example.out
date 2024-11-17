@@ -5,7 +5,6 @@ VarDefNoInit Semant
 CompUnitDecl Semant
 VarDecl Semant
 VarDef Semant
-ERROR: multilpe definitions of vars at line 2.
 VarInitValExp Semant
 CompUnitDecl Semant
 ConstDecl Semant
@@ -13,10 +12,6 @@ ConstDef Semant
 ConstInitValExp Semant
 CompUnit_FuncDef Semant
 FuncDef Semant
-BlockItem_Decl Semant
-VarDecl Semant
-VarDefNoInit Semant
-UnaryExp_not
 
 
 
@@ -31,4 +26,5 @@ VarDecl CodeIR
 VarDef CodeIR
 CompUnitDecl CodeIR
 ConstDecl CodeIR
+ConstDef CodeIR
 FunctionDef CodeIR

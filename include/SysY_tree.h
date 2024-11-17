@@ -18,6 +18,7 @@ class __Expression : public tree_node {
 public:
     int true_label = -1;
     int false_label = -1;
+    bool is_left = false;
 };
 typedef __Expression *Expression;
 
@@ -192,6 +193,8 @@ public:
     Symbol name;
     std::vector<Expression> *dims;
     // 如果dims为nullptr, 表示该变量不含数组下标, 你也可以通过其他方式判断，但需要修改SysY_parser.y已有的代码
+
+    Operand ptr;
 
     int scope = -1;    // 在语义分析阶段填入正确的作用域
 

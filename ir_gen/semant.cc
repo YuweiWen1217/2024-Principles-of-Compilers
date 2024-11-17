@@ -460,6 +460,7 @@ void Lval::TypeCheck() {
                 for (size_t i = 0; i < dims->size(); ++i) {
                     auto &dim = (*dims)[i];
                     dim->TypeCheck();
+                    booltoint(dim);
                     if (dim->attribute.T.type != Type::INT) {
                         error_msgs.push_back("ERROR: Array index must be of type int at line " +
                                              std::to_string(line_number) + ".");
@@ -485,6 +486,7 @@ void Lval::TypeCheck() {
             // 检查每个维度的类型
             for (size_t i = 0; i < dims->size(); ++i) {
                 auto &dim = (*dims)[i];
+                booltoint(dim);
                 dim->TypeCheck();
                 if (dim->attribute.T.type != Type::INT) {
                     error_msgs.push_back("ERROR: Array index must be of type int at line " +
@@ -623,6 +625,9 @@ void Func_call::TypeCheck() {
 void UnaryExp_plus::TypeCheck() {
     error_msgs.push_back("UnaryExp_plus");
     unary_exp->TypeCheck();
+    booltoint(unary_exp);
+    if (unary_exp->attribute.T.type != Type::INT && unary_exp->attribute.T.type != Type::FLOAT)
+        error_msgs.push_back("ERROR: Unary '+' operator requires an integer or float.");
     attribute.T.type = unary_exp->attribute.T.type;
     attribute.V.ConstTag = unary_exp->attribute.V.ConstTag;
     if (attribute.V.ConstTag) {
@@ -632,8 +637,8 @@ void UnaryExp_plus::TypeCheck() {
 
 void UnaryExp_neg::TypeCheck() {
     error_msgs.push_back("UnaryExp_neg");
-    error_msgs.push_back("UnaryExp_plus");
     unary_exp->TypeCheck();
+    booltoint(unary_exp);
     attribute.T.type = unary_exp->attribute.T.type;
     attribute.V.ConstTag = unary_exp->attribute.V.ConstTag;
     if (attribute.V.ConstTag) {
@@ -650,15 +655,13 @@ void UnaryExp_neg::TypeCheck() {
     }
 }
 
+// 为了便于中间代码生成部分，即使unary_exp已经是bool，也先转换为int
 void UnaryExp_not::TypeCheck() {
     error_msgs.push_back("UnaryExp_not");
     unary_exp->TypeCheck();
     attribute.V.ConstTag = unary_exp->attribute.V.ConstTag;
-    if (unary_exp->attribute.T.type == Type::BOOL) {
-        attribute.T.type = Type::BOOL;
-        if (attribute.V.ConstTag)
-            attribute.V.val.BoolVal = !unary_exp->attribute.V.val.BoolVal;
-    } else if (unary_exp->attribute.T.type == Type::INT || unary_exp->attribute.T.type == Type::FLOAT) {
+    booltoint(unary_exp);
+    if (unary_exp->attribute.T.type == Type::INT || unary_exp->attribute.T.type == Type::FLOAT) {
         attribute.T.type = Type::BOOL;
         if (attribute.V.ConstTag)
             attribute.V.val.BoolVal =
@@ -690,6 +693,7 @@ void PrimaryExp_branch::TypeCheck() {
 void assign_stmt::TypeCheck() {
     error_msgs.push_back("AssignStmt Semant");
     lval->TypeCheck();
+    lval->is_left = true;
     exp->TypeCheck();
     if (lval->attribute.T.type == Type::INT) {
         floattoint(exp);
@@ -700,6 +704,9 @@ void assign_stmt::TypeCheck() {
     }
     if (lval->attribute.T.type != exp->attribute.T.type) {
         error_msgs.push_back("ERROR: Type mismatch in assignment at line " + std::to_string(line_number) + ".");
+    }
+    if (lval->attribute.V.ConstTag) {
+        error_msgs.push_back("ERROR: The lvalue is not a variable at line " + std::to_string(line_number) + ".");
     }
 }
 
@@ -815,8 +822,8 @@ void VarDef_no_init::TypeCheck() {
         for (auto dim : *dims) {
             dim->TypeCheck();
             if (!dim->attribute.V.ConstTag) {
-                error_msgs.push_back("ERROR: Array Dim must be const expression in line " + std::to_string(line_number) +
-                                     "\n");
+                error_msgs.push_back("ERROR: Array Dim must be const expression in line " +
+                                     std::to_string(line_number) + "\n");
             }
             booltoint(dim);
             if (dim->attribute.T.type != Type::INT) {
@@ -856,7 +863,8 @@ void VarDef::TypeCheck() {
         for (auto dim : *dims) {
             dim->TypeCheck();
             if (!dim->attribute.V.ConstTag) {
-                error_msgs.push_back("ERROR: Array Dim must be const expression in line " + std::to_string(line_number) + ".");
+                error_msgs.push_back("ERROR: Array Dim must be const expression in line " +
+                                     std::to_string(line_number) + ".");
             }
             booltoint(dim);
             if (dim->attribute.T.type != Type::INT) {
@@ -956,7 +964,7 @@ void ConstDef::TypeCheck() {
         // 中间代码生成时不用再次初始化数组值了
         IntInitVals = val.IntInitVals;
         FloatInitVals = val.FloatInitVals;
-        
+
         // for (int i = 0; i < val.IntInitVals.size(); i++) {
         //     std::cout << val.IntInitVals[i] << " ";
         // }
