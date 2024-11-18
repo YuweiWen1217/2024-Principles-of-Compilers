@@ -559,7 +559,7 @@ void assign_stmt::codeIR() {
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     lval->codeIR();
     exp->codeIR();
-    // IRgenStore(B, Type2LLvm[lval->attribute.T.type], reg_now, ((Lval *)lval)->ptr);
+    IRgenStore(B, Type2LLvm[lval->attribute.T.type], reg_now, ((Lval *)lval)->ptr);
 }
 
 void expr_stmt::codeIR() {
@@ -567,21 +567,155 @@ void expr_stmt::codeIR() {
     exp->codeIR();
 }
 
-void block_stmt::codeIR() { error_msgs.push_back("BlockStmt CodeIR"); }
+void block_stmt::codeIR() {
+    error_msgs.push_back("BlockStmt CodeIR");
+    irgen_table.symbol_table.enter_scope();
+    b->codeIR();
+    irgen_table.symbol_table.exit_scope();
+}
+// if{
+//     if_label
+// }
+// else{
+//     else_label
+// }
+// end_label
+void ifelse_stmt::codeIR() {
+    error_msgs.push_back("IfElseStmt CodeIR");
+    int if_label = llvmIR.NewBlock(func_now, ++label_max)->block_id;
+    int else_label = llvmIR.NewBlock(func_now, ++label_max)->block_id;
+    int end_label = llvmIR.NewBlock(func_now, ++label_max)->block_id;
 
-void ifelse_stmt::codeIR() { error_msgs.push_back("IfElseStmt CodeIR"); }
+    Cond->true_label = if_label;
+    Cond->false_label = else_label;
+    Cond->codeIR();
 
-void if_stmt::codeIR() { error_msgs.push_back("IfStmt CodeIR"); }
+    // 此时，reg_now已经存了cond结果
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    if (Cond->attribute.T.type == Type::INT)
+        IRgenIcmpImmRight(B, BasicInstruction::IcmpCond::ne, reg_now, 0, reg_now);
+    else if (Cond->attribute.T.type == Type::FLOAT)
+        IRgenFcmpImmRight(B, BasicInstruction::FcmpCond::ONE, reg_now, 0, reg_now);
+    IRgenBrCond(B, reg_now, Cond->true_label, Cond->false_label);    // 该块使命结束！
 
-void while_stmt::codeIR() { error_msgs.push_back("WhileStmt CodeIR"); }
+    // 切换到if内部语句块
+    label_now = if_label;
+    ifstmt->codeIR();
+    LLVMBlock B1 = llvmIR.GetBlock(func_now, label_now);
+    IRgenBRUnCond(B1, end_label);
 
-void continue_stmt::codeIR() { error_msgs.push_back("ContinueStmt CodeIR"); }
+    // 切换至else块
+    label_now = else_label;
+    elsestmt->codeIR();
+    LLVMBlock B2 = llvmIR.GetBlock(func_now, label_now);
+    IRgenBRUnCond(B2, end_label);
 
-void break_stmt::codeIR() { error_msgs.push_back("BreakStmt CodeIR"); }
+    label_now = end_label;
+}
 
-void return_stmt::codeIR() { error_msgs.push_back("ReturnStmt CodeIR"); }
+// if{
+//     if_label
+// }
+// end_label
+void if_stmt::codeIR() {
+    error_msgs.push_back("IfStmt CodeIR");
+    int if_label = llvmIR.NewBlock(func_now, ++label_max)->block_id;
+    int end_label = llvmIR.NewBlock(func_now, ++label_max)->block_id;
 
-void return_stmt_void::codeIR() { error_msgs.push_back("ReturnStmtVoid CodeIR"); }
+    Cond->true_label = if_label;
+    Cond->false_label = end_label;
+    Cond->codeIR();
+
+    // 此时，reg_now已经存了cond结果
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    if (Cond->attribute.T.type == Type::INT)
+        IRgenIcmpImmRight(B, BasicInstruction::IcmpCond::ne, reg_now, 0, reg_now);
+    else if (Cond->attribute.T.type == Type::FLOAT)
+        IRgenFcmpImmRight(B, BasicInstruction::FcmpCond::ONE, reg_now, 0, reg_now);
+    IRgenBrCond(B, reg_now, Cond->true_label, Cond->false_label);    // 该块使命结束！
+
+    // 切换到if内部语句块
+    label_now = if_label;
+    ifstmt->codeIR();
+
+    // 结束，切换至end_label块.
+    LLVMBlock B1 = llvmIR.GetBlock(func_now, label_now);
+    IRgenBRUnCond(B1, end_label);
+    label_now = end_label;
+}
+
+int now_cond_label = -1;
+int now_end_label = -1;
+
+// while(cond_label)
+//     while_label
+// }
+// end_label
+void while_stmt::codeIR() {
+    error_msgs.push_back("WhileStmt CodeIR");
+    int cond_label = llvmIR.NewBlock(func_now, ++label_max)->block_id;
+    int while_label = llvmIR.NewBlock(func_now, ++label_max)->block_id;
+    int end_label = llvmIR.NewBlock(func_now, ++label_max)->block_id;
+
+    // 状态保存
+    int pre_cond_label = now_cond_label;
+    int pre_end_label = now_end_label;
+    now_cond_label = cond_label;
+    now_end_label = end_label;
+
+    Cond->true_label = while_label;
+    Cond->false_label = end_label;
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    IRgenBRUnCond(B, cond_label);
+
+    label_now = cond_label;
+    Cond->codeIR();
+    LLVMBlock B1 = llvmIR.GetBlock(func_now, label_now);
+    if (Cond->attribute.T.type == Type::INT)
+        IRgenIcmpImmRight(B1, BasicInstruction::IcmpCond::ne, reg_now, 0, reg_now);
+    else if (Cond->attribute.T.type == Type::FLOAT)
+        IRgenFcmpImmRight(B1, BasicInstruction::FcmpCond::ONE, reg_now, 0, reg_now);
+    IRgenBrCond(B1, reg_now, Cond->true_label, Cond->false_label);
+    // 以上均为cond块的内容
+
+    label_now = while_label;
+    body->codeIR();
+    LLVMBlock B1 = llvmIR.GetBlock(func_now, label_now);
+    IRgenBRUnCond(B1, cond_label);
+
+    label_now = end_label;
+    now_cond_label = pre_cond_label;
+    now_end_label = pre_end_label;
+}
+
+void continue_stmt::codeIR() {
+    error_msgs.push_back("ContinueStmt CodeIR");
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    IRgenBRUnCond(B, now_cond_label);
+    // continue应当处于一个块的最后，接下来的指令应当在一个新的块中添加
+    label_now = llvmIR.NewBlock(func_now, ++label_max)->block_id;
+}
+
+void break_stmt::codeIR() {
+    error_msgs.push_back("BreakStmt CodeIR");
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    IRgenBRUnCond(B, now_end_label);
+    label_now = llvmIR.NewBlock(func_now, ++label_max)->block_id;
+}
+
+// 类型检查时已保证返回值与函数声明的返回值一致。
+void return_stmt::codeIR() {
+    error_msgs.push_back("ReturnStmt CodeIR");
+    return_exp->codeIR();
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    IRgenRetReg(B, Type2LLvm[return_exp->attribute.T.type], reg_now);
+}
+
+void return_stmt_void::codeIR() {
+    error_msgs.push_back("ReturnStmtVoid CodeIR");
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    IRgenRetVoid(B);
+}
 
 void ConstInitVal::codeIR() { error_msgs.push_back("ConstInitVal CodeIR"); }    // 不会出现这种情况了
 

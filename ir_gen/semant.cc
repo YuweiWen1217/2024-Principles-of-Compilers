@@ -31,6 +31,8 @@ std::vector<std::string> error_msgs{};    // 将语义错误信息保存到该�
 int loopdepth = 0;
 bool has_main = false;
 
+Type::ty now_func_return_type;
+
 // int a[5][4][3] = { { {2,3}, 6,7,5,4,3,2,11,2,4 },7,8,11 };
 void HandleArrayInit(InitVal init, VarAttribute &val, int count, int handled) {
     int beforeadd = (val.type == Type::INT) ? val.IntInitVals.size() : val.FloatInitVals.size();
@@ -762,9 +764,24 @@ void break_stmt::TypeCheck() {
 void return_stmt::TypeCheck() {
     error_msgs.push_back("return_stmt Semant");
     return_exp->TypeCheck();
+    booltoint(return_exp);
+    if (return_exp->attribute.T.type == now_func_return_type)
+        return;
+    if (now_func_return_type == Type::VOID)
+        error_msgs.push_back("ERROR: Function declared with return type 'void' cannot return a value at line " +
+                             std::to_string(line_number) + ".");
+    else if (now_func_return_type == Type::INT)
+        floattoint(return_exp);
+    else if (now_func_return_type == Type::FLOAT)
+        inttofloat(return_exp);
+    if (return_exp->attribute.T.type != now_func_return_type)
+        error_msgs.push_back("ERROR: Return type mismatchat at line " + std::to_string(line_number) + ".");
 }
 
-void return_stmt_void::TypeCheck() {}
+void return_stmt_void::TypeCheck() {
+    if (now_func_return_type != Type::VOID)
+        error_msgs.push_back("ERROR: Return type mismatch at line " + std::to_string(line_number) + ".");
+}
 
 void ConstInitVal::TypeCheck() {
     error_msgs.push_back("ConstInitVal Semant");
@@ -1106,6 +1123,7 @@ void __FuncFParam::TypeCheck() {
 void __FuncDef::TypeCheck() {
     error_msgs.push_back("FuncDef Semant");
     semant_table.symbol_table.enter_scope();
+    now_func_return_type = return_type;
     // 函数表是直接通过函数名进行储存的，不支持函数重载，需要检查函数是否重复声明
     if (semant_table.FunctionTable.find(name) != semant_table.FunctionTable.end()) {
         error_msgs.push_back("Function " + name->get_string() + " is redefined at line " + std::to_string(line_number) +
