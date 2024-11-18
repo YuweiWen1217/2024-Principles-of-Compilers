@@ -1017,12 +1017,12 @@ void __FuncDef::codeIR() {
     llvmIR.NewFunction(FuncDefIns);
 
     func_now = FuncDefIns;
-    LLVMBlock B = llvmIR.NewBlock(func_now, ++label_max);    // 创建0号块
+    LLVMBlock B0 = llvmIR.NewBlock(func_now, ++label_max);    // 创建0号块
 
     // 本身label_now已经是0号块，不用再label_now = label_max赋值了。
 
     auto formal_vector = *formals;
-    // reg_now = formal_vector.size() - 1;
+    reg_now = formal_vector.size() - 1;
 
     // 遍历形参
     for (int i = 0; i < formal_vector.size(); i++) {
@@ -1035,8 +1035,8 @@ void __FuncDef::codeIR() {
             // 保存传入值
             FuncDefIns->InsertFormal(Type2LLvm[formal->type_decl]);
             // 分配寄存器作为函数内的执行者，并初始化其值为传入值
-            IRgenAlloca(B, Type2LLvm[formal->type_decl], ++reg_now);
-            IRgenStore(B, Type2LLvm[formal->type_decl], GetNewRegOperand(i), GetNewRegOperand(reg_now));
+            IRgenAlloca(B0, Type2LLvm[formal->type_decl], ++reg_now);
+            IRgenStore(B0, Type2LLvm[formal->type_decl], GetNewRegOperand(i), GetNewRegOperand(reg_now));
             // 保存到符号表
             irgen_table.symbol_table.add_Symbol(formal->name, reg_now);
             irgen_table.reg_table[reg_now] = val;
@@ -1059,13 +1059,30 @@ void __FuncDef::codeIR() {
     }
 
     // 0号块使命结束，进入1号块
-    B = llvmIR.NewBlock(func_now, ++label_max);
+    LLVMBlock B1 = llvmIR.NewBlock(func_now, ++label_max);
     label_now = label_max; // =1
-    IRgenBRUnCond(B, label_now);
+    IRgenBRUnCond(B0, label_now);
     
     // 让下面的慢慢生成吧
     block->codeIR();
 
+    // <FuncDefIns, { <0, block>, <1, block>, ···} >
+    // 块末没有跳转或返回，一律返回默认值
+    for (auto block : llvmIR.function_block_map[func_now]) {
+        LLVMBlock B = block.second;
+        int opcode = -1;
+        if (!B->Instruction_list.empty())
+            opcode = B->Instruction_list.back()->GetOpcode();
+        if (B->Instruction_list.empty() || (opcode != BasicInstruction::BR_COND &&
+                                            opcode != BasicInstruction::BR_UNCOND && opcode != BasicInstruction::RET)) {
+            if (return_type == Type::VOID)
+                IRgenRetVoid(B);
+            else if (return_type == Type::INT)
+                IRgenRetImmInt(B, BasicInstruction::LLVMType::I32, 0);
+            else if (return_type == Type::FLOAT)
+                IRgenRetImmFloat(B, BasicInstruction::LLVMType::FLOAT32, 0);
+        }
+    }
     irgen_table.symbol_table.exit_scope();
 }
 
