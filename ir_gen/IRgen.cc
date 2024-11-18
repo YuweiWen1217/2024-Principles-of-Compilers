@@ -2,7 +2,7 @@
 #include "../include/ir.h"
 #include "semant.h"
 
-extern std::vector<std::string> error_msgs;
+extern std::vector<std::string> debug_msgs;
 
 extern SemantTable semant_table;    // 也许你会需要一些语义分析的信息
 
@@ -76,7 +76,7 @@ RegOperand *GetNewRegOperand(int RegNo);
 // eg. you can use fptosi instruction to converse float to int
 // eg. you can use zext instruction to converse bool to int
 void IRgenTypeConverse(LLVMBlock B, Type::ty type_src, Type::ty type_dst, int src, int dst) {
-    error_msgs.push_back("IRgenTypeConverse. Implement it if you need it");
+    debug_msgs.push_back("IRgenTypeConverse. Implement it if you need it");
 }
 
 void BasicBlock::InsertInstruction(int pos, Instruction Ins) {
@@ -125,7 +125,7 @@ while语句指令生成的伪代码：
 */
 
 void __Program::codeIR() {
-    error_msgs.push_back("Program CodeIR");
+    debug_msgs.push_back("Program CodeIR");
     AddLibFunctionDeclare();
     auto comp_vector = *comp_list;
     for (auto comp : comp_vector) {
@@ -134,7 +134,7 @@ void __Program::codeIR() {
 }
 
 void Exp::codeIR() {
-    error_msgs.push_back("Exp CodeIR");
+    debug_msgs.push_back("Exp CodeIR");
     addexp->codeIR();
 }
 
@@ -179,8 +179,8 @@ void generateArithmeticInstruction(LLVMBlock B, Expression lexp, Expression rexp
 }
 
 void AddExp_plus::codeIR() {
-    error_msgs.push_back("AddExp_plus CodeIR");
-    // 类型检查已保证addexp和mulexp同时为int或同时为float，也保证了ConstTag是正确的
+    debug_msgs.push_back("AddExp_plus CodeIR");
+    //  类型检查已保证addexp和mulexp同时为int或同时为float，也保证了ConstTag是正确的
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     if (attribute.V.ConstTag && addexp->attribute.T.type == Type::INT)
         IRgenArithmeticI32ImmAll(B, BasicInstruction::ADD, addexp->attribute.V.val.IntVal,
@@ -193,7 +193,7 @@ void AddExp_plus::codeIR() {
 }
 
 void AddExp_sub::codeIR() {
-    error_msgs.push_back("AddExp_sub CodeIR");
+    debug_msgs.push_back("AddExp_sub CodeIR");
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     if (attribute.V.ConstTag && addexp->attribute.T.type == Type::INT)
         IRgenArithmeticI32ImmAll(B, BasicInstruction::SUB, addexp->attribute.V.val.IntVal,
@@ -206,7 +206,7 @@ void AddExp_sub::codeIR() {
 }
 
 void MulExp_mul::codeIR() {
-    error_msgs.push_back("MulExp_mul CodeIR");
+    debug_msgs.push_back("MulExp_mul CodeIR");
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     if (attribute.V.ConstTag && mulexp->attribute.T.type == Type::INT)
         IRgenArithmeticI32ImmAll(B, BasicInstruction::MUL, mulexp->attribute.V.val.IntVal,
@@ -219,7 +219,7 @@ void MulExp_mul::codeIR() {
 }
 
 void MulExp_div::codeIR() {
-    error_msgs.push_back("MulExp_div CodeIR");
+    debug_msgs.push_back("MulExp_div CodeIR");
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     if (attribute.V.ConstTag && mulexp->attribute.T.type == Type::INT)
         IRgenArithmeticI32ImmAll(B, BasicInstruction::DIV, mulexp->attribute.V.val.IntVal,
@@ -232,8 +232,8 @@ void MulExp_div::codeIR() {
 }
 
 void MulExp_mod::codeIR() {
-    error_msgs.push_back("MulExp_mod CodeIR");
-    // 类型检查时已保证两数均为int
+    debug_msgs.push_back("MulExp_mod CodeIR");
+    //  类型检查时已保证两数均为int
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     if (attribute.V.ConstTag)
         IRgenArithmeticI32ImmAll(B, BasicInstruction::MOD, mulexp->attribute.V.val.IntVal,
@@ -243,8 +243,8 @@ void MulExp_mod::codeIR() {
 }
 
 void RelExp_leq::codeIR() {
-    error_msgs.push_back("RelExp_leq CodeIR");
-    // 类型检查后两数依旧均为int或均为float
+    debug_msgs.push_back("RelExp_leq CodeIR");
+    //  类型检查后两数依旧均为int或均为float
     bool isInt = relexp->attribute.T.type == Type::INT;
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     if (addexp->attribute.V.ConstTag) {
@@ -268,7 +268,7 @@ void RelExp_leq::codeIR() {
 }
 
 void RelExp_lt::codeIR() {
-    error_msgs.push_back("RelExp_lt CodeIR");
+    debug_msgs.push_back("RelExp_lt CodeIR");
     bool isInt = relexp->attribute.T.type == Type::INT;
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     if (addexp->attribute.V.ConstTag) {
@@ -292,7 +292,7 @@ void RelExp_lt::codeIR() {
 }
 
 void RelExp_geq::codeIR() {
-    error_msgs.push_back("RelExp_geq CodeIR");
+    debug_msgs.push_back("RelExp_geq CodeIR");
     bool isInt = relexp->attribute.T.type == Type::INT;
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     if (addexp->attribute.V.ConstTag) {
@@ -316,7 +316,7 @@ void RelExp_geq::codeIR() {
 }
 
 void RelExp_gt::codeIR() {
-    error_msgs.push_back("RelExp_gt CodeIR");
+    debug_msgs.push_back("RelExp_gt CodeIR");
     bool isInt = relexp->attribute.T.type == Type::INT;
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     if (addexp->attribute.V.ConstTag) {
@@ -340,7 +340,7 @@ void RelExp_gt::codeIR() {
 }
 
 void EqExp_eq::codeIR() {
-    error_msgs.push_back("EqExp_eq CodeIR");
+    debug_msgs.push_back("EqExp_eq CodeIR");
     bool isInt = relexp->attribute.T.type == Type::INT;
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     if (relexp->attribute.V.ConstTag) {
@@ -363,7 +363,7 @@ void EqExp_eq::codeIR() {
 }
 
 void EqExp_neq::codeIR() {
-    error_msgs.push_back("EqExp_neq CodeIR");
+    debug_msgs.push_back("EqExp_neq CodeIR");
     bool isInt = relexp->attribute.T.type == Type::INT;
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     if (relexp->attribute.V.ConstTag) {
@@ -421,8 +421,8 @@ void LAndExp_and::codeIR() {
 
 // short circuit  lorexp || landexp
 void LOrExp_or::codeIR() {
-    error_msgs.push_back("LOrExpOr CodeIR");
-    // 新建一个块，左值的判断在当前label下进行，新建块用于左值为假情况（即对右值进行进一步判断）
+    debug_msgs.push_back("LOrExpOr CodeIR");
+    //  新建一个块，左值的判断在当前label下进行，新建块用于左值为假情况（即对右值进行进一步判断）
     int leftfalse_label = llvmIR.NewBlock(func_now, ++label_max)->block_id;
     lorexp->true_label = true_label;
     lorexp->false_label = leftfalse_label;
@@ -453,12 +453,12 @@ void LOrExp_or::codeIR() {
 }
 
 void ConstExp::codeIR() {
-    error_msgs.push_back("ConstExp CodeIR");
+    debug_msgs.push_back("ConstExp CodeIR");
     addexp->codeIR();
 }
 
 void Lval::codeIR() {
-    error_msgs.push_back("Lval CodeIR");
+    debug_msgs.push_back("Lval CodeIR");
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     VarAttribute val;
     bool isarray = false;
@@ -499,63 +499,92 @@ void Lval::codeIR() {
 
     // 左值只需要获取ptr就完成了，其他普通Lval还需要得到ptr里的值
     if (is_left == false && attribute.T.type != Type::PTR) {
-        IRgenLoad(B, Type2LLvm[val.type], ++reg_now, ptr);
+        debug_msgs.push_back("111" + std::to_string(attribute.T.type));
+        IRgenLoad(B, Type2LLvm[attribute.T.type], ++reg_now, ptr);
     }
 }
 
-void FuncRParams::codeIR() { error_msgs.push_back("FuncRParams CodeIR"); }
+void FuncRParams::codeIR() { debug_msgs.push_back("FuncRParams CodeIR"); }    // 没有用到，直接在Func_call中进行了生成
 
-void Func_call::codeIR() { error_msgs.push_back("FunctionCall CodeIR"); }
+// 类型检查已保证：1、对应实参和形参类型匹配；2、数组维度匹配
+void Func_call::codeIR() {
+    debug_msgs.push_back("FunctionCall CodeIR");
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    if (funcr_params != nullptr) {
+        // 跟typecheck里一样，不再调用funcRParams->codeIR，直接在此处转换为
+        // FuncRParams后，对每个exp进行codeir，然后放到args里
+        auto funcRParams = dynamic_cast<FuncRParams *>(funcr_params);
+        std::vector<std::pair<BasicInstruction::LLVMType, Operand>> args;
+        // 遍历每个参数
+        for (int i = 0; i < funcRParams->params->size(); i++) {
+            (*funcRParams->params)[i]->codeIR();
+            args.push_back({Type2LLvm[(*funcRParams->params)[i]->attribute.T.type], GetNewRegOperand(reg_now)});
+        }
+        if (attribute.T.type == Type::VOID)
+            IRgenCallVoid(B, BasicInstruction::VOID, args, name->get_string());
+        else
+            IRgenCall(B, Type2LLvm[attribute.T.type], ++reg_now, args, name->get_string());
+    }
+    // 无参数的函数
+    else {
+        if (attribute.T.type == Type::VOID)
+            IRgenCallVoidNoArgs(B, BasicInstruction::VOID, name->get_string());
+        else
+            IRgenCallNoArgs(B, Type2LLvm[attribute.T.type], ++reg_now, name->get_string());
+    }
+}
 
 // +/- 已保证unary_exp以及结点本身为int或float
 void UnaryExp_plus::codeIR() {
-    error_msgs.push_back("UnaryExpPlus CodeIR");
+    debug_msgs.push_back("UnaryExpPlus CodeIR");
     unary_exp->codeIR();
 }
 
 void UnaryExp_neg::codeIR() {
-    error_msgs.push_back("UnaryExpNeg CodeIR");
+    debug_msgs.push_back("UnaryExpNeg CodeIR");
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     unary_exp->codeIR();
+    int ori_reg = reg_now;
     if (attribute.T.type == Type::INT)
-        IRgenArithmeticI32ImmLeft(B, BasicInstruction::SUB, 0, reg_now, ++reg_now);
+        IRgenArithmeticI32ImmLeft(B, BasicInstruction::SUB, 0, ori_reg, ++reg_now);
     else
-        IRgenArithmeticF32ImmLeft(B, BasicInstruction::FSUB, 0, reg_now, ++reg_now);
+        IRgenArithmeticF32ImmLeft(B, BasicInstruction::FSUB, 0, ori_reg, ++reg_now);
 }
 
 // ! 已保证unary_exp为int或float、结点本身为bool
 void UnaryExp_not::codeIR() {
-    error_msgs.push_back("UnaryExpNot CodeIR");
+    debug_msgs.push_back("UnaryExpNot CodeIR");
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     unary_exp->codeIR();
+    int ori_reg = reg_now;
     if (unary_exp->attribute.T.type == Type::INT)
-        IRgenIcmpImmRight(B, BasicInstruction::eq, reg_now, 0, ++reg_now);
+        IRgenIcmpImmRight(B, BasicInstruction::eq, ori_reg, 0, ++reg_now);
     else
-        IRgenFcmpImmRight(B, BasicInstruction::OEQ, reg_now, 0, ++reg_now);
+        IRgenFcmpImmRight(B, BasicInstruction::OEQ, ori_reg, 0, ++reg_now);
 }
 
 void IntConst::codeIR() {
-    error_msgs.push_back("IntConst CodeIR");
+    debug_msgs.push_back("IntConst CodeIR");
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     IRgenArithmeticI32ImmAll(B, BasicInstruction::ADD, val, 0, ++reg_now);
 }
 
 void FloatConst::codeIR() {
-    error_msgs.push_back("FloatConst CodeIR");
+    debug_msgs.push_back("FloatConst CodeIR");
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     IRgenArithmeticF32ImmAll(B, BasicInstruction::FADD, val, 0, ++reg_now);
 }
 
-void StringConst::codeIR() { error_msgs.push_back("StringConst CodeIR"); }    // 未实现string。
+void StringConst::codeIR() { debug_msgs.push_back("StringConst CodeIR"); }    // 未实现string。
 
 void PrimaryExp_branch::codeIR() {
-    error_msgs.push_back("PrimaryExp_branch CodeIR");
+    debug_msgs.push_back("PrimaryExp_branch CodeIR");
     exp->codeIR();
 }
 
 // lval = exp， 已保证exp的类型和lval相同
 void assign_stmt::codeIR() {
-    error_msgs.push_back("AssignStmt CodeIR");
+    debug_msgs.push_back("AssignStmt CodeIR");
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     lval->codeIR();
     exp->codeIR();
@@ -563,12 +592,12 @@ void assign_stmt::codeIR() {
 }
 
 void expr_stmt::codeIR() {
-    error_msgs.push_back("expr_stmt CodeIR");
+    debug_msgs.push_back("expr_stmt CodeIR");
     exp->codeIR();
 }
 
 void block_stmt::codeIR() {
-    error_msgs.push_back("BlockStmt CodeIR");
+    debug_msgs.push_back("BlockStmt CodeIR");
     irgen_table.symbol_table.enter_scope();
     b->codeIR();
     irgen_table.symbol_table.exit_scope();
@@ -581,7 +610,7 @@ void block_stmt::codeIR() {
 // }
 // end_label
 void ifelse_stmt::codeIR() {
-    error_msgs.push_back("IfElseStmt CodeIR");
+    debug_msgs.push_back("IfElseStmt CodeIR");
     int if_label = llvmIR.NewBlock(func_now, ++label_max)->block_id;
     int else_label = llvmIR.NewBlock(func_now, ++label_max)->block_id;
     int end_label = llvmIR.NewBlock(func_now, ++label_max)->block_id;
@@ -618,7 +647,7 @@ void ifelse_stmt::codeIR() {
 // }
 // end_label
 void if_stmt::codeIR() {
-    error_msgs.push_back("IfStmt CodeIR");
+    debug_msgs.push_back("IfStmt CodeIR");
     int if_label = llvmIR.NewBlock(func_now, ++label_max)->block_id;
     int end_label = llvmIR.NewBlock(func_now, ++label_max)->block_id;
 
@@ -652,7 +681,7 @@ int now_end_label = -1;
 // }
 // end_label
 void while_stmt::codeIR() {
-    error_msgs.push_back("WhileStmt CodeIR");
+    debug_msgs.push_back("WhileStmt CodeIR");
     int cond_label = llvmIR.NewBlock(func_now, ++label_max)->block_id;
     int while_label = llvmIR.NewBlock(func_now, ++label_max)->block_id;
     int end_label = llvmIR.NewBlock(func_now, ++label_max)->block_id;
@@ -680,8 +709,8 @@ void while_stmt::codeIR() {
 
     label_now = while_label;
     body->codeIR();
-    LLVMBlock B1 = llvmIR.GetBlock(func_now, label_now);
-    IRgenBRUnCond(B1, cond_label);
+    LLVMBlock B2 = llvmIR.GetBlock(func_now, label_now);
+    IRgenBRUnCond(B2, cond_label);
 
     label_now = end_label;
     now_cond_label = pre_cond_label;
@@ -689,7 +718,7 @@ void while_stmt::codeIR() {
 }
 
 void continue_stmt::codeIR() {
-    error_msgs.push_back("ContinueStmt CodeIR");
+    debug_msgs.push_back("ContinueStmt CodeIR");
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     IRgenBRUnCond(B, now_cond_label);
     // continue应当处于一个块的最后，接下来的指令应当在一个新的块中添加
@@ -697,7 +726,7 @@ void continue_stmt::codeIR() {
 }
 
 void break_stmt::codeIR() {
-    error_msgs.push_back("BreakStmt CodeIR");
+    debug_msgs.push_back("BreakStmt CodeIR");
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     IRgenBRUnCond(B, now_end_label);
     label_now = llvmIR.NewBlock(func_now, ++label_max)->block_id;
@@ -705,34 +734,34 @@ void break_stmt::codeIR() {
 
 // 类型检查时已保证返回值与函数声明的返回值一致。
 void return_stmt::codeIR() {
-    error_msgs.push_back("ReturnStmt CodeIR");
+    debug_msgs.push_back("ReturnStmt CodeIR");
     return_exp->codeIR();
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     IRgenRetReg(B, Type2LLvm[return_exp->attribute.T.type], reg_now);
 }
 
 void return_stmt_void::codeIR() {
-    error_msgs.push_back("ReturnStmtVoid CodeIR");
+    debug_msgs.push_back("ReturnStmtVoid CodeIR");
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     IRgenRetVoid(B);
 }
 
-void ConstInitVal::codeIR() { error_msgs.push_back("ConstInitVal CodeIR"); }    // 不会出现这种情况了
+void ConstInitVal::codeIR() { debug_msgs.push_back("ConstInitVal CodeIR"); }    // 不会出现这种情况了
 
 void ConstInitVal_exp::codeIR() {
-    error_msgs.push_back("ConstInitValWithExp CodeIR");
+    debug_msgs.push_back("ConstInitValWithExp CodeIR");
     exp->codeIR();
 }
 
-void VarInitVal::codeIR() { error_msgs.push_back("VarInitVal CodeIR"); }    // 不会出现这种情况了
+void VarInitVal::codeIR() { debug_msgs.push_back("VarInitVal CodeIR"); }    // 不会出现这种情况了
 
 void VarInitVal_exp::codeIR() {
-    error_msgs.push_back("VarInitValWithExp CodeIR");
+    debug_msgs.push_back("VarInitValWithExp CodeIR");
     exp->codeIR();
 }
 
 void VarDef_no_init::codeIR() {
-    error_msgs.push_back("VarDefNoInit CodeIR");
+    debug_msgs.push_back("VarDefNoInit CodeIR");
     if (!isglobal) {
         // 声明语句在0号块（分配大小）、初始值语句在当前块
         LLVMBlock B0 = llvmIR.GetBlock(func_now, 0);
@@ -788,7 +817,7 @@ void VarDef_no_init::codeIR() {
 }
 
 void VarDef::codeIR() {
-    error_msgs.push_back("VarDef CodeIR");
+    debug_msgs.push_back("VarDef CodeIR");
     if (!isglobal) {
         // 声明语句在0号块（分配大小）、初始值语句在当前块
         LLVMBlock B0 = llvmIR.GetBlock(func_now, 0);
@@ -863,7 +892,7 @@ void VarDef::codeIR() {
 }
 
 void ConstDef::codeIR() {
-    error_msgs.push_back("ConstDef CodeIR");
+    debug_msgs.push_back("ConstDef CodeIR");
     if (!isglobal) {
         // 声明语句在0号块（分配大小）、初始值语句在当前块
         LLVMBlock B0 = llvmIR.GetBlock(func_now, 0);
@@ -937,122 +966,111 @@ void ConstDef::codeIR() {
 }
 
 void VarDecl::codeIR() {
-    error_msgs.push_back("VarDecl CodeIR");
+    debug_msgs.push_back("VarDecl CodeIR");
     for (auto &var_def : *var_def_list) {
         var_def->codeIR();
     }
 }
 
 void ConstDecl::codeIR() {
-    error_msgs.push_back("ConstDecl CodeIR");
+    debug_msgs.push_back("ConstDecl CodeIR");
     for (auto &var_def : *var_def_list) {
         var_def->codeIR();
     }
 }
 
 void BlockItem_Decl::codeIR() {
-    error_msgs.push_back("BlockItemDecl CodeIR");
+    debug_msgs.push_back("BlockItemDecl CodeIR");
     decl->codeIR();
 }
 
 void BlockItem_Stmt::codeIR() {
-    error_msgs.push_back("BlockItemStmt CodeIR");
+    debug_msgs.push_back("BlockItemStmt CodeIR");
     stmt->codeIR();
 }
 
-void __Block::codeIR() { error_msgs.push_back("Block CodeIR"); }
+void __Block::codeIR() {
+    debug_msgs.push_back("Block CodeIR");
 
-void __FuncFParam::codeIR() { error_msgs.push_back("FunctionFParam CodeIR"); }
+    irgen_table.symbol_table.enter_scope();
+    auto item_vector = *item_list;
+    for (auto item : item_vector)
+        item->codeIR();
+    irgen_table.symbol_table.exit_scope();
+}
+
+void __FuncFParam::codeIR() { debug_msgs.push_back("FunctionFParam CodeIR"); }
 
 void __FuncDef::codeIR() {
-    error_msgs.push_back("FunctionDef CodeIR");
-    /*
-        // 符号表进入新的作用域
-        irgen_table.symbol_table.enter_scope();
+    debug_msgs.push_back("FunctionDef CodeIR");
 
-        // 函数定义的IR指令
-        FuncDefInstruction FuncDefIns = new FunctionDefineInstruction(Type2LLvm[return_type], name->get_string());
+    irgen_table.symbol_table.enter_scope();
+    // 从头开始
+    reg_now = -1;
+    irgen_table.reg_table.clear();
+    label_now = 0;
+    label_max = -1;
 
-        // Step 3: Initialize function-level metadata
-        // 初始化寄存器和符号表的相关数据结构，用于管理函数内的变量和临时值。
-        max_reg = -1;                            // 用于跟踪当前函数中分配的最大寄存器编号。
-        irgen_table.RegTable.clear();            // 清空寄存器表以准备存储新的变量信息。
-        irgen_table.FormalArrayTable.clear();    // 用于存储数组参数的信息。
+    // 创建函数定义指令，作为一个函数的标识符
+    // <FuncDefIns, { <id, block>, <id, block>, ···} >
+    FuncDefInstruction FuncDefIns = new FunctionDefineInstruction(Type2LLvm[return_type], name->get_string());
+    llvmIR.NewFunction(FuncDefIns);
 
-        now_label = 0;                        // 当前基本块的标签。
-        max_label = -1;                       // 当前函数分配的最大标签编号。
-        function_now = FuncDefIns;            // 当前正在生成代码的函数。
-        function_returntype = return_type;    // 函数返回类型。
+    func_now = FuncDefIns;
+    LLVMBlock B = llvmIR.NewBlock(func_now, ++label_max);    // 创建0号块
 
-        // Step 4: Register the function in the IR generator
-        // 创建一个新的函数并将其注册到 IR 生成器中。
-        llvmIR.NewFunction(function_now);
-        LLVMBlock B = llvmIR.NewBlock(function_now, max_label);    // 为函数创建入口基本块。
+    // 本身label_now已经是0号块，不用再label_now = label_max赋值了。
 
-        // Step 5: Process the function's formal parameters
-        // 遍历函数参数列表，生成相应的 IR 指令并记录参数信息。
-        auto formal_vector = *formals;         // 获取函数参数的列表。
-        max_reg = formal_vector.size() - 1;    // 初始化寄存器计数器。
+    auto formal_vector = *formals;
+    // reg_now = formal_vector.size() - 1;
 
-        for (int i = 0; i < formal_vector.size(); ++i) {
-            auto formal = formal_vector[i];
-            VarAttribute val;    // 用于存储变量的属性（类型、数组维度等）。
-            val.type = formal->type_decl;
-            LLVMType lltype = Type2LLvm[formal->type_decl];    // 获取 LLVM 对应的类型。
+    // 遍历形参
+    for (int i = 0; i < formal_vector.size(); i++) {
+        auto formal = formal_vector[i];
+        VarAttribute val;
+        val.ConstTag = false;
+        val.type = formal->type_decl;
 
-            if (formal->dims != nullptr) {    // Step 5.1: If the parameter is an array
-                // 对于数组参数，不需要为地址分配内存，只需记录其地址类型即可。
-                FuncDefIns->InsertFormal(LLVMType::PTR);    // 插入数组指针作为参数类型。
-
-                for (int i = 1; i < formal->dims->size(); ++i) {
-                    // 忽略数组的第一个维度，因为它在 SysY 中是隐式传递的。
-                    auto d = formal->dims->at(i);
-                    val.dims.push_back(d->attribute.V.val.IntVal);    // 存储数组的后续维度信息。
-                }
-
-                // 更新符号表和寄存器表，以记录数组的相关信息。
-                irgen_table.FormalArrayTable[i] = 1;    // 标记当前参数为数组。
-                irgen_table.symbol_table.add_Symbol(formal->name, i);
-                irgen_table.RegTable[i] = val;
-            } else {    // Step 5.2: If the parameter is not an array
-                // 普通参数需要分配空间，并生成 Alloca 和 Store 指令。
-                FuncDefIns->InsertFormal(lltype);                                         // 插入普通类型的参数。
-                IRgenAlloca(B, lltype, ++max_reg);                                        // 为参数分配内存。
-                IRgenStore(B, lltype, GetNewRegOperand(i), GetNewRegOperand(max_reg));    // 将参数存入分配的寄存器。
-
-                // 更新符号表和寄存器表。
-                irgen_table.symbol_table.add_Symbol(formal->name, max_reg);
-                irgen_table.RegTable[max_reg] = val;
-            }
+        if (formal->dims == nullptr) {
+            // 保存传入值
+            FuncDefIns->InsertFormal(Type2LLvm[formal->type_decl]);
+            // 分配寄存器作为函数内的执行者，并初始化其值为传入值
+            IRgenAlloca(B, Type2LLvm[formal->type_decl], ++reg_now);
+            IRgenStore(B, Type2LLvm[formal->type_decl], GetNewRegOperand(i), GetNewRegOperand(reg_now));
+            // 保存到符号表
+            irgen_table.symbol_table.add_Symbol(formal->name, reg_now);
+            irgen_table.reg_table[reg_now] = val;
         }
+        // 数组
+        else if (formal->dims != nullptr) {
+            // 保存传入值
+            FuncDefIns->InsertFormal(BasicInstruction::LLVMType::PTR);
+            // 按照IRgenGetElementptrIndexI32的用法，作为参数的数组，第一维度为空不用放入dims中，传入indexs时，第一维的含义是跳过整个数组的大小
+            // a[]    dim:{}
+            // a[][3] dim:{3}
+            for (int j = 1; j < formal->dims->size(); j++) {
+                auto d = (*formal->dims)[j];
+                val.dims.push_back(d->attribute.V.val.IntVal);
+            }
+            val.isFormalArray = true; //这是一个作为参数的数组
+            irgen_table.symbol_table.add_Symbol(formal->name, i);
+            irgen_table.reg_table[i] = val;
+        }
+    }
 
-        // Step 6: Add an unconditional branch to the next block
-        // 生成一个无条件跳转到函数体的基本块。
-        IRgenBRUnCond(B, 1);
+    // 0号块使命结束，进入1号块
+    B = llvmIR.NewBlock(func_now, ++label_max);
+    label_now = label_max; // =1
+    IRgenBRUnCond(B, label_now);
+    
+    // 让下面的慢慢生成吧
+    block->codeIR();
 
-        // Step 7: Generate IR for the function body
-        // 为函数创建一个新的基本块，并生成函数体的 IR 代码。
-        B = llvmIR.NewBlock(function_now, max_label);
-        now_label = max_label;    // 更新当前基本块标签。
-        block->codeIR();          // 调用函数体的 `codeIR` 方法，生成其 IR 指令。
-
-        // Step 8: Handle no-return blocks
-        // 如果函数未明确返回值，需要补充一个默认的返回基本块。
-        AddNoReturnBlock();
-
-        // Step 9: Record the maximum register and label for this function
-        // 记录当前函数的最大寄存器编号和标签编号，用于后续分析和优化。
-        max_reg_map[FuncDefIns] = max_reg;
-        max_label_map[FuncDefIns] = max_label;
-
-        // Step 10: Exit the function's scope
-        // 离开当前函数的作用域，清除局部变量信息。
-        irgen_table.symbol_table.exit_scope();
-        */
+    irgen_table.symbol_table.exit_scope();
 }
 
 void CompUnit_Decl::codeIR() {
-    error_msgs.push_back("CompUnitDecl CodeIR");
+    debug_msgs.push_back("CompUnitDecl CodeIR");
     // 通过decl、def的isglobal变量区分全局和局部，已在类型检查部分正确设置该变量
     decl->codeIR();
 }

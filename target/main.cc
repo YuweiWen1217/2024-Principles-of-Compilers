@@ -43,6 +43,7 @@ extern int yylex();
 extern YYSTYPE yylval;
 extern char *yytext;
 extern std::vector<std::string> error_msgs;
+extern std::vector<std::string> debug_msgs;
 void PrintLexerResult(std::ostream &s, char *yytext, YYSTYPE yylval, int token);
 
 /* 框架目前并没有对内存泄漏问题进行处理(例如没有编写语法树的析构函数)
@@ -135,19 +136,28 @@ int main(int argc, char **argv) {
         fout.close();
         return 0;
     }
-    
+
     ast_root->TypeCheck();
+
+    if (error_msgs.size() > 0) {
+        for (auto msg : error_msgs) {
+            fout << msg << std::endl;
+        }
+        fout.close();
+        return 0;
+    }
 
     if (strcmp(argv[step_tag], "-semant") == 0) {
         ast_root->printAST(fout, 0);
         return 0;
     }
 
-    error_msgs.push_back("\n\n\n开始中间代码生成了。\n");
+    debug_msgs.push_back("\n\n开始中间代码生成了。\n");
+
     ast_root->codeIR();
 
-    if (error_msgs.size() > 0) {
-        for (auto msg : error_msgs) {
+    if (debug_msgs.size() > 0 && strcmp(argv[step_tag], "-p") == 0) {
+        for (auto msg : debug_msgs) {
             fout << msg << std::endl;
         }
         fout.close();

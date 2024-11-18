@@ -24,7 +24,7 @@ Type::ty SymbolTable::lookup_type(Symbol C) {
 }
 
 int SymbolTable::lookup_scope(Symbol C) {
-    std::cout << C->get_string() << "  current_scope:" << current_scope << std::endl;
+    //std::cout << C->get_string() << "  current_scope:" << current_scope << std::endl;
     for (int i = current_scope; i >= 0; --i) {
         auto it = symbol_table[i].find(C);
         if (it != symbol_table[i].end()) {

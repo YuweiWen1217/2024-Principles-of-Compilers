@@ -27,6 +27,7 @@ extern std::string type_status[5];
 
 SemantTable semant_table;
 std::vector<std::string> error_msgs{};    // 将语义错误信息保存到该变量中
+std::vector<std::string> debug_msgs{};
 
 int loopdepth = 0;
 bool has_main = false;
@@ -116,7 +117,7 @@ void unifyTypes(Expression &exp1, Expression &exp2) {
 }
 
 void __Program::TypeCheck() {
-    error_msgs.push_back("Program Semant");
+    debug_msgs.push_back("Program Semant");
     // 进入一个新的作用域
     semant_table.symbol_table.enter_scope();
     auto comp_vector = *comp_list;
@@ -130,13 +131,13 @@ void __Program::TypeCheck() {
 }
 
 void Exp::TypeCheck() {
-    error_msgs.push_back("Exp Semant");
+    debug_msgs.push_back("Exp Semant");
     addexp->TypeCheck();
     attribute = addexp->attribute;
 }
 
 void AddExp_plus::TypeCheck() {
-    error_msgs.push_back("AddExp_plus Semant");
+    debug_msgs.push_back("AddExp_plus Semant");
     addexp->TypeCheck();
     mulexp->TypeCheck();
 
@@ -159,7 +160,7 @@ void AddExp_plus::TypeCheck() {
 }
 
 void AddExp_sub::TypeCheck() {
-    error_msgs.push_back("AddExp_sub Semant");
+    debug_msgs.push_back("AddExp_sub Semant");
     addexp->TypeCheck();
     mulexp->TypeCheck();
 
@@ -182,7 +183,7 @@ void AddExp_sub::TypeCheck() {
 }
 
 void MulExp_mul::TypeCheck() {
-    error_msgs.push_back("MulExp_mul Semant");
+    debug_msgs.push_back("MulExp_mul Semant");
     mulexp->TypeCheck();
     unary_exp->TypeCheck();
 
@@ -205,7 +206,7 @@ void MulExp_mul::TypeCheck() {
 }
 
 void MulExp_div::TypeCheck() {
-    error_msgs.push_back("MulExp_div Semant");
+    debug_msgs.push_back("MulExp_div Semant");
     mulexp->TypeCheck();
     unary_exp->TypeCheck();
 
@@ -231,14 +232,14 @@ void MulExp_div::TypeCheck() {
         if (attribute.V.ConstTag)
             attribute.V.val.IntVal = mulexp->attribute.V.val.FloatVal / unary_exp->attribute.V.val.FloatVal;
     } else {
-        error_msgs.push_back("Type " + type_status[mulexp->attribute.T.type] + " and " +
+        error_msgs.push_back("ERROR: Type " + type_status[mulexp->attribute.T.type] + " and " +
                              type_status[unary_exp->attribute.T.type] + " mismatch in MulExp_div at line " +
                              std::to_string(line_number) + ".");
     }
 }
 
 void MulExp_mod::TypeCheck() {
-    error_msgs.push_back("MulExp_mod Semant");
+    debug_msgs.push_back("MulExp_mod Semant");
     mulexp->TypeCheck();
     unary_exp->TypeCheck();
 
@@ -262,7 +263,7 @@ void MulExp_mod::TypeCheck() {
 }
 
 void RelExp_leq::TypeCheck() {
-    error_msgs.push_back("<= Semant");
+    debug_msgs.push_back("<= Semant");
     relexp->TypeCheck();
     addexp->TypeCheck();
 
@@ -283,7 +284,7 @@ void RelExp_leq::TypeCheck() {
 }
 
 void RelExp_lt::TypeCheck() {
-    error_msgs.push_back("< Semant");
+    debug_msgs.push_back("< Semant");
     relexp->TypeCheck();
     addexp->TypeCheck();
 
@@ -304,7 +305,7 @@ void RelExp_lt::TypeCheck() {
 }
 
 void RelExp_geq::TypeCheck() {
-    error_msgs.push_back(">= Semant");
+    debug_msgs.push_back(">= Semant");
     relexp->TypeCheck();
     addexp->TypeCheck();
 
@@ -325,7 +326,7 @@ void RelExp_geq::TypeCheck() {
 }
 
 void RelExp_gt::TypeCheck() {
-    error_msgs.push_back("> Semant");
+    debug_msgs.push_back("> Semant");
     relexp->TypeCheck();
     addexp->TypeCheck();
 
@@ -346,7 +347,7 @@ void RelExp_gt::TypeCheck() {
 }
 
 void EqExp_eq::TypeCheck() {
-    error_msgs.push_back("== Semant");
+    debug_msgs.push_back("== Semant");
     eqexp->TypeCheck();
     relexp->TypeCheck();
 
@@ -367,7 +368,7 @@ void EqExp_eq::TypeCheck() {
 }
 
 void EqExp_neq::TypeCheck() {
-    error_msgs.push_back("!= Semant");
+    debug_msgs.push_back("!= Semant");
     eqexp->TypeCheck();
     relexp->TypeCheck();
 
@@ -388,7 +389,7 @@ void EqExp_neq::TypeCheck() {
 }
 
 void LAndExp_and::TypeCheck() {
-    error_msgs.push_back("&& Semant");
+    debug_msgs.push_back("&& Semant");
     landexp->TypeCheck();
     eqexp->TypeCheck();
 
@@ -409,7 +410,7 @@ void LAndExp_and::TypeCheck() {
 }
 
 void LOrExp_or::TypeCheck() {
-    error_msgs.push_back("|| Semant");
+    debug_msgs.push_back("|| Semant");
     lorexp->TypeCheck();
     landexp->TypeCheck();
 
@@ -433,12 +434,12 @@ void ConstExp::TypeCheck() {
     addexp->TypeCheck();
     attribute = addexp->attribute;
     if (!attribute.V.ConstTag) {    // addexp is not const
-        error_msgs.push_back("Expression is not const " + std::to_string(line_number) + "\n");
+        error_msgs.push_back("ERROR: Expression is not const " + std::to_string(line_number) + "\n");
     }
 }
 
 void Lval::TypeCheck() {
-    error_msgs.push_back("Lval Semant");
+    debug_msgs.push_back("Lval Semant");
 
     // 检查符号是否在符号表中定义
     scope = semant_table.symbol_table.lookup_scope(name);
@@ -535,7 +536,8 @@ void Lval::TypeCheck() {
                 index += (*dims)[i]->attribute.V.val.IntVal * offset;
             }
             if (index >= total) {
-                error_msgs.push_back("The array index is out of range at line " + std::to_string(line_number) + ".");
+                error_msgs.push_back("ERROR: The array index is out of range at line " + std::to_string(line_number) +
+                                     ".");
                 return;
             }
             if (varAttr.type == Type::INT) {
@@ -545,15 +547,16 @@ void Lval::TypeCheck() {
             }
         }
     }
+    debug_msgs.push_back(std::to_string(attribute.T.type));
 }
 
 void FuncRParams::TypeCheck() {
     // 由于需要用到父节点的相关成员变量，因此该函数内容直接在Func_call中实现。
-    error_msgs.push_back("FuncRParams Semant");
+    debug_msgs.push_back("FuncRParams Semant");
 }
 
 void Func_call::TypeCheck() {
-    error_msgs.push_back("FunctionCall Semant");
+    debug_msgs.push_back("FunctionCall Semant");
 
     // 检查函数是否存在
     auto funcIt = semant_table.FunctionTable.find(name);
@@ -579,8 +582,8 @@ void Func_call::TypeCheck() {
         funcr_params->TypeCheck();    // 此行仅作标记，没有实际内容，可略
         for (int i = 0; i < funcRParams->params->size(); ++i) {
             (*funcRParams->params)[i]->TypeCheck();
-            error_msgs.push_back(type_status[(*funcRParams->params)[i]->attribute.T.type]);
-            error_msgs.push_back(type_status[(*funcAttr->formals)[i]->type_decl]);
+            // error_msgs.push_back(type_status[(*funcRParams->params)[i]->attribute.T.type]);
+            // error_msgs.push_back(type_status[(*funcAttr->formals)[i]->type_decl]);
 
             // 检查是否为指针类型ptr，意味着传入数组
             if ((*funcRParams->params)[i]->attribute.T.type == Type::PTR) {
@@ -625,7 +628,7 @@ void Func_call::TypeCheck() {
 }
 
 void UnaryExp_plus::TypeCheck() {
-    error_msgs.push_back("UnaryExp_plus");
+    debug_msgs.push_back("UnaryExp_plus");
     unary_exp->TypeCheck();
     booltoint(unary_exp);
     if (unary_exp->attribute.T.type != Type::INT && unary_exp->attribute.T.type != Type::FLOAT)
@@ -638,7 +641,7 @@ void UnaryExp_plus::TypeCheck() {
 }
 
 void UnaryExp_neg::TypeCheck() {
-    error_msgs.push_back("UnaryExp_neg");
+    debug_msgs.push_back("UnaryExp_neg");
     unary_exp->TypeCheck();
     booltoint(unary_exp);
     attribute.T.type = unary_exp->attribute.T.type;
@@ -659,7 +662,7 @@ void UnaryExp_neg::TypeCheck() {
 
 // 为了便于中间代码生成部分，即使unary_exp已经是bool，也先转换为int
 void UnaryExp_not::TypeCheck() {
-    error_msgs.push_back("UnaryExp_not");
+    debug_msgs.push_back("UnaryExp_not");
     unary_exp->TypeCheck();
     attribute.V.ConstTag = unary_exp->attribute.V.ConstTag;
     booltoint(unary_exp);
@@ -685,7 +688,7 @@ void FloatConst::TypeCheck() {
     attribute.V.val.FloatVal = val;
 }
 
-void StringConst::TypeCheck() { error_msgs.push_back("StringConst Semant"); }
+void StringConst::TypeCheck() { debug_msgs.push_back("StringConst Semant"); }
 
 void PrimaryExp_branch::TypeCheck() {
     exp->TypeCheck();
@@ -693,7 +696,7 @@ void PrimaryExp_branch::TypeCheck() {
 }
 
 void assign_stmt::TypeCheck() {
-    error_msgs.push_back("AssignStmt Semant");
+    debug_msgs.push_back("AssignStmt Semant");
     lval->TypeCheck();
     lval->is_left = true;
     exp->TypeCheck();
@@ -737,7 +740,7 @@ void if_stmt::TypeCheck() {
 }
 
 void while_stmt::TypeCheck() {
-    error_msgs.push_back("WhileStmt Semant");
+    debug_msgs.push_back("WhileStmt Semant");
     loopdepth++;    // 进入while循环时，增加嵌套深度
     Cond->TypeCheck();
     if (Cond->attribute.T.type == Type::VOID) {
@@ -748,34 +751,35 @@ void while_stmt::TypeCheck() {
 }
 
 void continue_stmt::TypeCheck() {
-    error_msgs.push_back("ContinueStmt Semant");
+    debug_msgs.push_back("ContinueStmt Semant");
     if (loopdepth == 0) {
         error_msgs.push_back("ERROR: Break can only be used inside a loop.");
     }
 }
 
 void break_stmt::TypeCheck() {
-    error_msgs.push_back("BreakStmt Semant");
+    debug_msgs.push_back("BreakStmt Semant");
     if (loopdepth == 0) {
         error_msgs.push_back("ERROR: Break can only be used inside a loop.");
     }
 }
 
 void return_stmt::TypeCheck() {
-    error_msgs.push_back("return_stmt Semant");
+    debug_msgs.push_back("return_stmt Semant");
     return_exp->TypeCheck();
     booltoint(return_exp);
     if (return_exp->attribute.T.type == now_func_return_type)
         return;
-    if (now_func_return_type == Type::VOID)
+    if (now_func_return_type == Type::VOID) {
         error_msgs.push_back("ERROR: Function declared with return type 'void' cannot return a value at line " +
                              std::to_string(line_number) + ".");
-    else if (now_func_return_type == Type::INT)
+        return;
+    } else if (now_func_return_type == Type::INT)
         floattoint(return_exp);
     else if (now_func_return_type == Type::FLOAT)
         inttofloat(return_exp);
     if (return_exp->attribute.T.type != now_func_return_type)
-        error_msgs.push_back("ERROR: Return type mismatchat at line " + std::to_string(line_number) + ".");
+        error_msgs.push_back("ERROR: Return type mismatch at line " + std::to_string(line_number) + ".");
 }
 
 void return_stmt_void::TypeCheck() {
@@ -784,14 +788,14 @@ void return_stmt_void::TypeCheck() {
 }
 
 void ConstInitVal::TypeCheck() {
-    error_msgs.push_back("ConstInitVal Semant");
+    debug_msgs.push_back("ConstInitVal Semant");
     for (auto init : *initval) {
         init->TypeCheck();
     }
 }
 
 void ConstInitVal_exp::TypeCheck() {
-    error_msgs.push_back("ConstInitValExp Semant");
+    debug_msgs.push_back("ConstInitValExp Semant");
     exp->TypeCheck();
     attribute.T.type = exp->attribute.T.type;
     attribute.V = exp->attribute.V;
@@ -799,21 +803,21 @@ void ConstInitVal_exp::TypeCheck() {
 }
 
 void VarInitVal::TypeCheck() {
-    error_msgs.push_back("VarInitVal Semant");
+    debug_msgs.push_back("VarInitVal Semant");
     for (auto init : *initval) {
         init->TypeCheck();
     }
 }
 
 void VarInitVal_exp::TypeCheck() {
-    error_msgs.push_back("VarInitValExp Semant");
+    debug_msgs.push_back("VarInitValExp Semant");
     exp->TypeCheck();
     attribute.T.type = exp->attribute.T.type;
     attribute.V = exp->attribute.V;
 }
 
 void VarDef_no_init::TypeCheck() {
-    error_msgs.push_back("VarDefNoInit Semant");
+    debug_msgs.push_back("VarDefNoInit Semant");
     if (isglobal) {
         if (semant_table.GlobalTable.find(name) != semant_table.GlobalTable.end()) {
             error_msgs.push_back("ERROR: multilpe definitions of vars at line " + std::to_string(line_number) + ".");
@@ -856,7 +860,7 @@ void VarDef_no_init::TypeCheck() {
 }
 
 void VarDef::TypeCheck() {
-    error_msgs.push_back("VarDef Semant");
+    debug_msgs.push_back("VarDef Semant");
     // 检查同名
     if (isglobal) {
         if (semant_table.GlobalTable.find(name) != semant_table.GlobalTable.end()) {
@@ -921,7 +925,7 @@ void VarDef::TypeCheck() {
                 init->attribute.T.type = Type::FLOAT;
                 attribute.V.val.FloatVal = init->attribute.V.val.FloatVal;
             } else {
-                error_msgs.push_back("Type mismatch in initialization at line " + std::to_string(line_number) +
+                error_msgs.push_back("ERROR: Type mismatch in initialization at line " + std::to_string(line_number) +
                                      ". Cannot convert from " + type_status[init->attribute.T.type] + " to " +
                                      type_status[val.type] + ".");
             }
@@ -940,7 +944,7 @@ void VarDef::TypeCheck() {
 }
 
 void ConstDef::TypeCheck() {
-    error_msgs.push_back("ConstDef Semant");
+    debug_msgs.push_back("ConstDef Semant");
     // 检查同名
     if (isglobal) {
         if (semant_table.GlobalTable.find(name) != semant_table.GlobalTable.end()) {
@@ -964,11 +968,11 @@ void ConstDef::TypeCheck() {
         for (auto dim : *dims) {
             dim->TypeCheck();
             if (!dim->attribute.V.ConstTag) {
-                error_msgs.push_back("Array Dim must be const expression in line " + std::to_string(line_number) +
-                                     "\n");
+                error_msgs.push_back("ERROR: Array Dim must be const expression in line " +
+                                     std::to_string(line_number) + "\n");
             }
             if (dim->attribute.T.type == Type::FLOAT) {
-                error_msgs.push_back("Array Dim can not be float in line " + std::to_string(line_number) + ".");
+                error_msgs.push_back("ERROR: Array Dim can not be float in line " + std::to_string(line_number) + ".");
             }
             val.dims.push_back(dim->attribute.V.val.IntVal);
         }
@@ -997,15 +1001,11 @@ void ConstDef::TypeCheck() {
     else {
         if (init->attribute.T.type != val.type) {
             if (val.type == Type::INT && init->attribute.T.type == Type::FLOAT) {
-                error_msgs.push_back("Warning: Implicit conversion from float to int at line " +
-                                     std::to_string(line_number) + ". Fractional part will be discarded.");
                 attribute.V.val.IntVal = static_cast<int>(init->attribute.V.val.FloatVal);
             } else if (val.type == Type::FLOAT && init->attribute.T.type == Type::INT) {
-                error_msgs.push_back("Warning: Implicit conversion from int to float at line " +
-                                     std::to_string(line_number) + ". Fractional part will be discarded.");
                 attribute.V.val.FloatVal = static_cast<float>(init->attribute.V.val.IntVal);
             } else {
-                error_msgs.push_back("Type mismatch in initialization at line " + std::to_string(line_number) +
+                error_msgs.push_back("ERROR: Type mismatch in initialization at line " + std::to_string(line_number) +
                                      ". Cannot convert from " + type_status[init->attribute.T.type] + " to " +
                                      type_status[val.type] + ".");
             }
@@ -1024,7 +1024,7 @@ void ConstDef::TypeCheck() {
 }
 
 void VarDecl::TypeCheck() {
-    error_msgs.push_back("VarDecl Semant");
+    debug_msgs.push_back("VarDecl Semant");
     // 检查变量定义列表是否为空
     if (var_def_list == nullptr) {
         error_msgs.push_back("Variable declaration list is null.");
@@ -1039,7 +1039,7 @@ void VarDecl::TypeCheck() {
 }
 
 void ConstDecl::TypeCheck() {
-    error_msgs.push_back("ConstDecl Semant");
+    debug_msgs.push_back("ConstDecl Semant");
     if (var_def_list == nullptr) {
         error_msgs.push_back("Variable declaration list is null.");
         return;
@@ -1052,17 +1052,17 @@ void ConstDecl::TypeCheck() {
 }
 
 void BlockItem_Decl::TypeCheck() {
-    error_msgs.push_back("BlockItem_Decl Semant");
+    debug_msgs.push_back("BlockItem_Decl Semant");
     decl->TypeCheck();
 }
 
 void BlockItem_Stmt::TypeCheck() {
-    error_msgs.push_back("BlockItem_Decl Semant");
+    debug_msgs.push_back("BlockItem_Decl Semant");
     stmt->TypeCheck();
 }
 
 void __Block::TypeCheck() {
-    error_msgs.push_back("Block Semant");
+    debug_msgs.push_back("Block Semant");
 
     semant_table.symbol_table.enter_scope();
     auto item_vector = *item_list;
@@ -1073,7 +1073,7 @@ void __Block::TypeCheck() {
 }
 
 void __FuncFParam::TypeCheck() {
-    error_msgs.push_back("FuncFParam Semant");
+    debug_msgs.push_back("FuncFParam Semant");
     // 创建一个变量属性对象 val，用于存储当前函数形参的属性
     VarAttribute val;
     val.ConstTag = false;
@@ -1085,19 +1085,19 @@ void __FuncFParam::TypeCheck() {
         auto dim_vector = *dims;    // 取出数组维度列表
 
         // 对于函数参数，第一维通常为空，例如 int f(int A[][30][40])
-        val.dims.push_back(-1);    // 使用 -1 表示空维度
+        val.dims.push_back(-1);    // 按照IRgenGetElementptrIndexI32的用法，作为参数的数组，第一维度为空不用放入dims中
         // 从第二维开始检查每个维度
         for (int i = 1; i < dim_vector.size(); ++i) {
             auto d = dim_vector[i];
             d->TypeCheck();    // 对当前维度进行类型检查
             // 检查维度是否为常量表达式
             if (d->attribute.V.ConstTag == false) {
-                error_msgs.push_back("Array Dim must be const expression in line " + std::to_string(line_number) +
-                                     "\n");
+                error_msgs.push_back("ERROR: Array Dim must be const expression in line " +
+                                     std::to_string(line_number) + "\n");
             }
             // 检查维度类型是否为浮点型
             if (d->attribute.T.type == Type::FLOAT) {
-                error_msgs.push_back("Array Dim can not be float in line " + std::to_string(line_number) + "\n");
+                error_msgs.push_back("ERROR: Array Dim can not be float in line " + std::to_string(line_number) + "\n");
             }
             val.dims.push_back(d->attribute.V.val.IntVal);
         }
@@ -1121,8 +1121,11 @@ void __FuncFParam::TypeCheck() {
 }
 
 void __FuncDef::TypeCheck() {
-    error_msgs.push_back("FuncDef Semant");
+    debug_msgs.push_back("FuncDef Semant");
     semant_table.symbol_table.enter_scope();
+    if (return_type != Type::INT && return_type != Type::FLOAT && return_type != Type::VOID)
+        error_msgs.push_back("ERROR: Function " + name->get_string() + " has a wrong return type at line " +
+                             std::to_string(line_number) + "\n");
     now_func_return_type = return_type;
     // 函数表是直接通过函数名进行储存的，不支持函数重载，需要检查函数是否重复声明
     if (semant_table.FunctionTable.find(name) != semant_table.FunctionTable.end()) {
@@ -1157,12 +1160,12 @@ void __FuncDef::TypeCheck() {
 }
 
 void CompUnit_Decl::TypeCheck() {
-    error_msgs.push_back("CompUnitDecl Semant");
+    debug_msgs.push_back("CompUnitDecl Semant");
     decl->isglobal = true;
     decl->TypeCheck();
 }
 
 void CompUnit_FuncDef::TypeCheck() {
-    error_msgs.push_back("CompUnit_FuncDef Semant");
+    debug_msgs.push_back("CompUnit_FuncDef Semant");
     func_def->TypeCheck();
 }

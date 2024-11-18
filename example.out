@@ -1,30 +1,125 @@
 Program Semant
-CompUnitDecl Semant
-VarDecl Semant
-VarDefNoInit Semant
-CompUnitDecl Semant
-VarDecl Semant
-VarDef Semant
-VarInitValExp Semant
-CompUnitDecl Semant
-ConstDecl Semant
-ConstDef Semant
-ConstInitValExp Semant
 CompUnit_FuncDef Semant
 FuncDef Semant
-
+BlockItem_Decl Semant
+VarDecl Semant
+VarDefNoInit Semant
+VarDefNoInit Semant
+BlockItem_Decl Semant
+AssignStmt Semant
+Lval Semant
+1
+BlockItem_Decl Semant
+AssignStmt Semant
+Lval Semant
+1
+BlockItem_Decl Semant
+AssignStmt Semant
+Lval Semant
+1
+AddExp_plus Semant
+AddExp_sub Semant
+Lval Semant
+1
+UnaryExp_neg
+UnaryExp_plus
+Lval Semant
+1
+BlockItem_Decl Semant
+UnaryExp_plus
+UnaryExp_neg
+UnaryExp_not
+UnaryExp_not
+UnaryExp_not
+Lval Semant
+1
+Block Semant
+BlockItem_Decl Semant
+AssignStmt Semant
+Lval Semant
+1
+UnaryExp_neg
+UnaryExp_neg
+UnaryExp_neg
+Block Semant
+BlockItem_Decl Semant
+AssignStmt Semant
+Lval Semant
+1
+AddExp_plus Semant
+UnaryExp_plus
+Lval Semant
+1
+BlockItem_Decl Semant
+FunctionCall Semant
+FuncRParams Semant
+Lval Semant
+1
+BlockItem_Decl Semant
+return_stmt Semant
 
 
 开始中间代码生成了。
 
 Program CodeIR
-CompUnitDecl CodeIR
+FunctionDef CodeIR
+Block CodeIR
+BlockItemDecl CodeIR
 VarDecl CodeIR
 VarDefNoInit CodeIR
-CompUnitDecl CodeIR
-VarDecl CodeIR
-VarDef CodeIR
-CompUnitDecl CodeIR
-ConstDecl CodeIR
-ConstDef CodeIR
-FunctionDef CodeIR
+VarDefNoInit CodeIR
+BlockItemStmt CodeIR
+AssignStmt CodeIR
+Lval CodeIR
+IntConst CodeIR
+BlockItemStmt CodeIR
+AssignStmt CodeIR
+Lval CodeIR
+IntConst CodeIR
+BlockItemStmt CodeIR
+AssignStmt CodeIR
+Lval CodeIR
+AddExp_plus CodeIR
+AddExp_sub CodeIR
+Lval CodeIR
+1111
+UnaryExpNeg CodeIR
+IntConst CodeIR
+UnaryExpPlus CodeIR
+Lval CodeIR
+1111
+BlockItemStmt CodeIR
+IfElseStmt CodeIR
+UnaryExpPlus CodeIR
+UnaryExpNeg CodeIR
+UnaryExpNot CodeIR
+UnaryExpNot CodeIR
+UnaryExpNot CodeIR
+Lval CodeIR
+1111
+BlockStmt CodeIR
+Block CodeIR
+BlockItemStmt CodeIR
+AssignStmt CodeIR
+Lval CodeIR
+UnaryExpNeg CodeIR
+UnaryExpNeg CodeIR
+UnaryExpNeg CodeIR
+IntConst CodeIR
+BlockStmt CodeIR
+Block CodeIR
+BlockItemStmt CodeIR
+AssignStmt CodeIR
+Lval CodeIR
+AddExp_plus CodeIR
+UnaryExpPlus CodeIR
+Lval CodeIR
+1111
+BlockItemStmt CodeIR
+expr_stmt CodeIR
+FunctionCall CodeIR
+Lval CodeIR
+1111
+BlockItemStmt CodeIR
+ReturnStmt CodeIR
+IntConst CodeIR
