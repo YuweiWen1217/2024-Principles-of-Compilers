@@ -1,14 +1,11 @@
-int main() {
-    int a, b;
-    a = 070;
-    b = 0x4;
-    a = a - - 4 + + b;
-    if (+-!!!a) {
-        a = - - -1;
-    }
-    else {
-        a = 0 + + b;
-    }
-    putint(a);
-    return 0;
+/*/skipher/*/
+//int main(){
+int main(){
+	////return 0;}/*
+	/*}
+	//}return 1;*/
+	//}return 2;*//*
+	return 3;
+	//*/
 }
+//

@@ -545,7 +545,7 @@ void Func_call::codeIR() {
             (*funcRParams->params)[i]->codeIR();
             IRgenTypeConverse(B, (*funcRParams->params)[i]->attribute.T.type, (*funcAttr->formals)[i]->type_decl,
                               reg_now);
-            args.push_back({Type2LLvm[(*funcRParams->params)[i]->attribute.T.type], GetNewRegOperand(reg_now)});
+            args.push_back({Type2LLvm[(*funcAttr->formals)[i]->type_decl], GetNewRegOperand(reg_now)});
         }
         if (attribute.T.type == Type::VOID)
             IRgenCallVoid(B, BasicInstruction::VOID, args, name->get_string());

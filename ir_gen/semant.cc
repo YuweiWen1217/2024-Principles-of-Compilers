@@ -193,7 +193,7 @@ void AddExp_sub::TypeCheck() {
     if (exp1.attribute.T.type == Type::INT && exp2.attribute.T.type == Type::INT) {
         attribute.T.type = Type::INT;
         if (attribute.V.ConstTag)
-            attribute.V.val.IntVal = exp1.attribute.V.val.IntVal + exp2.attribute.V.val.IntVal;
+            attribute.V.val.IntVal = exp1.attribute.V.val.IntVal - exp2.attribute.V.val.IntVal;
     } else if (exp1.attribute.T.type == Type::FLOAT && exp2.attribute.T.type == Type::FLOAT) {
         attribute.T.type = Type::FLOAT;
         if (attribute.V.ConstTag)
@@ -277,7 +277,7 @@ void MulExp_mod::TypeCheck() {
 
     if (exp1.attribute.T.type == Type::INT && exp2.attribute.T.type == Type::INT) {
         attribute.T.type = Type::INT;
-        if (exp2.attribute.V.val.IntVal == 0) {
+        if (unary_exp->attribute.V.ConstTag && exp2.attribute.V.val.IntVal == 0) {
             error_msgs.push_back("ERROR: Division by zero in '%' operation at line " + std::to_string(line_number) +
                                  ".");
             return;
@@ -717,9 +717,7 @@ void UnaryExp_not::TypeCheck() {
     debug_msgs.push_back("UnaryExp_not");
     unary_exp->TypeCheck();
     attribute.V.ConstTag = unary_exp->attribute.V.ConstTag;
-    std::cout << "111 " << std::to_string(unary_exp->attribute.T.type) << std::endl;
     auto exp = booltoint(unary_exp);
-    std::cout << "222 " << std::to_string(unary_exp->attribute.T.type) << std::endl;
     if (exp.attribute.T.type == Type::INT || exp.attribute.T.type == Type::FLOAT) {
         attribute.T.type = Type::BOOL;
         if (attribute.V.ConstTag)

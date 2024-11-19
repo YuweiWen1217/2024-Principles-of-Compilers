@@ -13,7 +13,7 @@ extern IdTable id_table;
 void yyerror(char* s, ...);
 %}
 
-SINGLE_COMMENT \/\/.*\n          
+SINGLE_COMMENT \/\/.*\n?          
 MULTI_COMMENT \/\*([^*]|\*+[^/])*\*\/
 ID         [_a-zA-Z][_a-zA-Z0-9]* 
 INT_CONST  ([1-9][0-9]*)|0           
