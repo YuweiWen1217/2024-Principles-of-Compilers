@@ -39,26 +39,29 @@ L1:  ;
     store i32 %r11, ptr %r0
     %r12 = load i32, ptr %r0
     %r13 = icmp eq i32 %r12,0
-    %r14 = icmp eq i32 %r13,0
+    %r14 = zext i1 %r13 to i32
     %r15 = icmp eq i32 %r14,0
-    %r16 = sub i32 0,%r15
-    %r16 = icmp ne i32 %r16,0
-    br i1 %r16, label %L2, label %L3
-L2:  ;
-    %r17 = add i32 1,0
-    %r18 = sub i32 0,%r17
+    %r16 = zext i1 %r15 to i32
+    %r17 = icmp eq i32 %r16,0
+    %r18 = zext i1 %r17 to i32
     %r19 = sub i32 0,%r18
-    %r20 = sub i32 0,%r19
-    store i32 %r20, ptr %r0
+    %r20 = icmp ne i32 %r19,0
+    br i1 %r20, label %L2, label %L3
+L2:  ;
+    %r21 = add i32 1,0
+    %r22 = sub i32 0,%r21
+    %r23 = sub i32 0,%r22
+    %r24 = sub i32 0,%r23
+    store i32 %r24, ptr %r0
     br label %L4
 L3:  ;
-    %r21 = load i32, ptr %r2
-    %r22 = add i32 0,%r21
-    store i32 %r22, ptr %r0
+    %r25 = load i32, ptr %r2
+    %r26 = add i32 0,%r25
+    store i32 %r26, ptr %r0
     br label %L4
 L4:  ;
-    %r23 = load i32, ptr %r0
-    call void @putint(i32 %r23)
-    %r24 = add i32 0,0
-    ret i32 %r24
+    %r27 = load i32, ptr %r0
+    call void @putint(i32 %r27)
+    %r28 = add i32 0,0
+    ret i32 %r28
 }

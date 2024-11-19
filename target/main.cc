@@ -160,6 +160,7 @@ int main(int argc, char **argv) {
         for (auto msg : debug_msgs) {
             fout << msg << std::endl;
         }
+        ast_root->printAST(fout, 0);
         fout.close();
         return 0;
     }

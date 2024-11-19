@@ -75,8 +75,30 @@ RegOperand *GetNewRegOperand(int RegNo);
 // generate TypeConverse Instructions from type_src to type_dst
 // eg. you can use fptosi instruction to converse float to int
 // eg. you can use zext instruction to converse bool to int
-void IRgenTypeConverse(LLVMBlock B, Type::ty type_src, Type::ty type_dst, int src, int dst) {
-    debug_msgs.push_back("IRgenTypeConverse. Implement it if you need it");
+
+void IRgenTypeConverse(LLVMBlock B, Type::ty type_src, Type::ty type_dst, int src) {
+    debug_msgs.push_back("IRgenTypeConverse: Handling type conversion");
+    if (type_src ==
+        type_dst)    // 由于有这种情况的存在，参数中不能直接传入dst(传入值为++reg_now)，不然这个新的寄存器是空的
+        return;
+    int dst = ++reg_now;
+    if (type_src == Type::BOOL) {
+        IRgenZextI1toI32(B, src, dst);
+        if (type_dst == Type::FLOAT)
+            // 调用IRgenTypeConverse时，dst为++reg_now，因此需要保证最终结果在reg_now里，而不是传入的dst里
+            IRgenSitofp(B, dst, ++reg_now);
+        return;
+    }
+    if (type_src == Type::INT && type_dst == Type::BOOL)
+        IRgenIcmpImmRight(B, BasicInstruction::ne, src, 0, dst);
+    else if (type_src == Type::INT && type_dst == Type::FLOAT)
+        IRgenSitofp(B, src, dst);
+    else if (type_src == Type::FLOAT && type_dst == Type::INT)
+        IRgenFptosi(B, src, dst);
+    else if (type_src == Type::FLOAT && type_dst == Type::BOOL)
+        IRgenFcmpImmRight(B, BasicInstruction::ONE, src, 0, dst);
+    else
+        assert(false);
 }
 
 void BasicBlock::InsertInstruction(int pos, Instruction Ins) {
@@ -153,12 +175,13 @@ BasicInstruction::LLVMIROpcode opint2float(BasicInstruction::LLVMIROpcode opcode
     }
 }
 
-void generateArithmeticInstruction(LLVMBlock B, Expression lexp, Expression rexp,
+void generateArithmeticInstruction(LLVMBlock B, Expression fexp, Expression lexp, Expression rexp,
                                    BasicInstruction::LLVMIROpcode opcode) {
-    bool isInt = lexp->attribute.T.type == Type::INT;
+    bool isInt = fexp->attribute.T.type == Type::INT;
     // 左常量，右变量
     if (lexp->attribute.V.ConstTag && !rexp->attribute.V.ConstTag) {
         rexp->codeIR();
+        IRgenTypeConverse(B, rexp->attribute.T.type, fexp->attribute.T.type, reg_now);
         int reg = reg_now;
         if (isInt)
             IRgenArithmeticI32ImmLeft(B, opcode, lexp->attribute.V.val.IntVal, reg, ++reg_now);
@@ -168,8 +191,10 @@ void generateArithmeticInstruction(LLVMBlock B, Expression lexp, Expression rexp
     // 左变量，右常量；左右均变量
     else {
         lexp->codeIR();
+        IRgenTypeConverse(B, lexp->attribute.T.type, fexp->attribute.T.type, reg_now);
         int reg1 = reg_now;
         rexp->codeIR();
+        IRgenTypeConverse(B, rexp->attribute.T.type, fexp->attribute.T.type, reg_now);
         int reg2 = reg_now;
         if (isInt)
             IRgenArithmeticI32(B, opcode, reg1, reg2, ++reg_now);
@@ -180,16 +205,16 @@ void generateArithmeticInstruction(LLVMBlock B, Expression lexp, Expression rexp
 
 void AddExp_plus::codeIR() {
     debug_msgs.push_back("AddExp_plus CodeIR");
-    //  类型检查已保证addexp和mulexp同时为int或同时为float，也保证了ConstTag是正确的
+    // 类型检查已保证作为常量addexp和mulexp类型已经转换，也保证了ConstTag是正确的
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
-    if (attribute.V.ConstTag && addexp->attribute.T.type == Type::INT)
+    if (attribute.V.ConstTag && attribute.T.type == Type::INT)
         IRgenArithmeticI32ImmAll(B, BasicInstruction::ADD, addexp->attribute.V.val.IntVal,
                                  mulexp->attribute.V.val.IntVal, ++reg_now);
-    else if (attribute.V.ConstTag && addexp->attribute.T.type == Type::FLOAT)
+    else if (attribute.V.ConstTag && attribute.T.type == Type::FLOAT)
         IRgenArithmeticF32ImmAll(B, BasicInstruction::FADD, addexp->attribute.V.val.FloatVal,
                                  mulexp->attribute.V.val.FloatVal, ++reg_now);
     else    // 两数中有变量的情况
-        generateArithmeticInstruction(B, addexp, mulexp, BasicInstruction::ADD);
+        generateArithmeticInstruction(B, this, addexp, mulexp, BasicInstruction::ADD);
 }
 
 void AddExp_sub::codeIR() {
@@ -202,7 +227,7 @@ void AddExp_sub::codeIR() {
         IRgenArithmeticF32ImmAll(B, BasicInstruction::FSUB, addexp->attribute.V.val.FloatVal,
                                  mulexp->attribute.V.val.FloatVal, ++reg_now);
     else
-        generateArithmeticInstruction(B, addexp, mulexp, BasicInstruction::SUB);
+        generateArithmeticInstruction(B, this, addexp, mulexp, BasicInstruction::SUB);
 }
 
 void MulExp_mul::codeIR() {
@@ -215,7 +240,7 @@ void MulExp_mul::codeIR() {
         IRgenArithmeticF32ImmAll(B, BasicInstruction::FMUL, mulexp->attribute.V.val.FloatVal,
                                  unary_exp->attribute.V.val.FloatVal, ++reg_now);
     else
-        generateArithmeticInstruction(B, mulexp, unary_exp, BasicInstruction::MUL);
+        generateArithmeticInstruction(B, this, mulexp, unary_exp, BasicInstruction::MUL);
 }
 
 void MulExp_div::codeIR() {
@@ -228,37 +253,39 @@ void MulExp_div::codeIR() {
         IRgenArithmeticF32ImmAll(B, BasicInstruction::FDIV, mulexp->attribute.V.val.FloatVal,
                                  unary_exp->attribute.V.val.FloatVal, ++reg_now);
     else
-        generateArithmeticInstruction(B, mulexp, unary_exp, BasicInstruction::DIV);
+        generateArithmeticInstruction(B, this, mulexp, unary_exp, BasicInstruction::DIV);
 }
 
 void MulExp_mod::codeIR() {
     debug_msgs.push_back("MulExp_mod CodeIR");
-    //  类型检查时已保证两数均为int
+    //  类型检查时已保证两数不为float
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     if (attribute.V.ConstTag)
         IRgenArithmeticI32ImmAll(B, BasicInstruction::MOD, mulexp->attribute.V.val.IntVal,
                                  unary_exp->attribute.V.val.IntVal, ++reg_now);
     else
-        generateArithmeticInstruction(B, mulexp, unary_exp, BasicInstruction::MOD);
+        generateArithmeticInstruction(B, this, mulexp, unary_exp, BasicInstruction::MOD);
 }
 
 void RelExp_leq::codeIR() {
     debug_msgs.push_back("RelExp_leq CodeIR");
-    //  类型检查后两数依旧均为int或均为float
-    bool isInt = relexp->attribute.T.type == Type::INT;
+    //  类型检查保证作为常量右数的类型正确
+    bool isInt = childType == Type::INT;
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     if (addexp->attribute.V.ConstTag) {
         relexp->codeIR();
+        IRgenTypeConverse(B, relexp->attribute.T.type, childType, reg_now);
         int reg = reg_now;
         if (isInt)
             IRgenIcmpImmRight(B, BasicInstruction::IcmpCond::sle, reg, addexp->attribute.V.val.IntVal, ++reg_now);
         else
             IRgenFcmpImmRight(B, BasicInstruction::FcmpCond::OLE, reg, addexp->attribute.V.val.FloatVal, ++reg_now);
-
     } else {
         relexp->codeIR();
+        IRgenTypeConverse(B, relexp->attribute.T.type, childType, reg_now);
         int reg1 = reg_now;
         addexp->codeIR();
+        IRgenTypeConverse(B, addexp->attribute.T.type, childType, reg_now);
         int reg2 = reg_now;
         if (isInt)
             IRgenIcmp(B, BasicInstruction::IcmpCond::sle, reg1, reg2, ++reg_now);
@@ -269,20 +296,22 @@ void RelExp_leq::codeIR() {
 
 void RelExp_lt::codeIR() {
     debug_msgs.push_back("RelExp_lt CodeIR");
-    bool isInt = relexp->attribute.T.type == Type::INT;
+    bool isInt = childType == Type::INT;
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     if (addexp->attribute.V.ConstTag) {
         relexp->codeIR();
+        IRgenTypeConverse(B, relexp->attribute.T.type, childType, reg_now);
         int reg = reg_now;
         if (isInt)
             IRgenIcmpImmRight(B, BasicInstruction::IcmpCond::slt, reg, addexp->attribute.V.val.IntVal, ++reg_now);
         else
             IRgenFcmpImmRight(B, BasicInstruction::FcmpCond::OLT, reg, addexp->attribute.V.val.FloatVal, ++reg_now);
-
     } else {
         relexp->codeIR();
+        IRgenTypeConverse(B, relexp->attribute.T.type, childType, reg_now);
         int reg1 = reg_now;
         addexp->codeIR();
+        IRgenTypeConverse(B, addexp->attribute.T.type, childType, reg_now);
         int reg2 = reg_now;
         if (isInt)
             IRgenIcmp(B, BasicInstruction::IcmpCond::slt, reg1, reg2, ++reg_now);
@@ -293,10 +322,11 @@ void RelExp_lt::codeIR() {
 
 void RelExp_geq::codeIR() {
     debug_msgs.push_back("RelExp_geq CodeIR");
-    bool isInt = relexp->attribute.T.type == Type::INT;
+    bool isInt = childType == Type::INT;
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     if (addexp->attribute.V.ConstTag) {
         relexp->codeIR();
+        IRgenTypeConverse(B, relexp->attribute.T.type, childType, reg_now);
         int reg = reg_now;
         if (isInt)
             IRgenIcmpImmRight(B, BasicInstruction::IcmpCond::sge, reg, addexp->attribute.V.val.IntVal, ++reg_now);
@@ -305,8 +335,10 @@ void RelExp_geq::codeIR() {
 
     } else {
         relexp->codeIR();
+        IRgenTypeConverse(B, relexp->attribute.T.type, childType, reg_now);
         int reg1 = reg_now;
         addexp->codeIR();
+        IRgenTypeConverse(B, addexp->attribute.T.type, childType, reg_now);
         int reg2 = reg_now;
         if (isInt)
             IRgenIcmp(B, BasicInstruction::IcmpCond::sge, reg1, reg2, ++reg_now);
@@ -317,10 +349,11 @@ void RelExp_geq::codeIR() {
 
 void RelExp_gt::codeIR() {
     debug_msgs.push_back("RelExp_gt CodeIR");
-    bool isInt = relexp->attribute.T.type == Type::INT;
+    bool isInt = childType == Type::INT;
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     if (addexp->attribute.V.ConstTag) {
         relexp->codeIR();
+        IRgenTypeConverse(B, relexp->attribute.T.type, childType, reg_now);
         int reg = reg_now;
         if (isInt)
             IRgenIcmpImmRight(B, BasicInstruction::IcmpCond::sgt, reg, addexp->attribute.V.val.IntVal, ++reg_now);
@@ -329,8 +362,10 @@ void RelExp_gt::codeIR() {
 
     } else {
         relexp->codeIR();
+        IRgenTypeConverse(B, relexp->attribute.T.type, childType, reg_now);
         int reg1 = reg_now;
         addexp->codeIR();
+        IRgenTypeConverse(B, relexp->attribute.T.type, childType, reg_now);
         int reg2 = reg_now;
         if (isInt)
             IRgenIcmp(B, BasicInstruction::IcmpCond::sgt, reg1, reg2, ++reg_now);
@@ -341,10 +376,11 @@ void RelExp_gt::codeIR() {
 
 void EqExp_eq::codeIR() {
     debug_msgs.push_back("EqExp_eq CodeIR");
-    bool isInt = relexp->attribute.T.type == Type::INT;
+    bool isInt = childType == Type::INT;
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     if (relexp->attribute.V.ConstTag) {
         eqexp->codeIR();
+        IRgenTypeConverse(B, eqexp->attribute.T.type, childType, reg_now);
         int reg = reg_now;
         if (isInt)
             IRgenIcmpImmRight(B, BasicInstruction::IcmpCond::eq, reg, relexp->attribute.V.val.IntVal, ++reg_now);
@@ -352,8 +388,10 @@ void EqExp_eq::codeIR() {
             IRgenFcmpImmRight(B, BasicInstruction::FcmpCond::OEQ, reg, relexp->attribute.V.val.FloatVal, ++reg_now);
     } else {
         eqexp->codeIR();
+        IRgenTypeConverse(B, eqexp->attribute.T.type, childType, reg_now);
         int reg1 = reg_now;
         relexp->codeIR();
+        IRgenTypeConverse(B, relexp->attribute.T.type, childType, reg_now);
         int reg2 = reg_now;
         if (isInt)
             IRgenIcmp(B, BasicInstruction::IcmpCond::eq, reg1, reg2, ++reg_now);
@@ -364,10 +402,11 @@ void EqExp_eq::codeIR() {
 
 void EqExp_neq::codeIR() {
     debug_msgs.push_back("EqExp_neq CodeIR");
-    bool isInt = relexp->attribute.T.type == Type::INT;
+    bool isInt = childType == Type::INT;
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     if (relexp->attribute.V.ConstTag) {
         eqexp->codeIR();
+        IRgenTypeConverse(B, eqexp->attribute.T.type, childType, reg_now);
         int reg = reg_now;
         if (isInt)
             IRgenIcmpImmRight(B, BasicInstruction::IcmpCond::ne, reg, relexp->attribute.V.val.IntVal, ++reg_now);
@@ -375,8 +414,10 @@ void EqExp_neq::codeIR() {
             IRgenFcmpImmRight(B, BasicInstruction::FcmpCond::ONE, reg, relexp->attribute.V.val.FloatVal, ++reg_now);
     } else {
         eqexp->codeIR();
+        IRgenTypeConverse(B, eqexp->attribute.T.type, childType, reg_now);
         int reg1 = reg_now;
         relexp->codeIR();
+        IRgenTypeConverse(B, relexp->attribute.T.type, childType, reg_now);
         int reg2 = reg_now;
         if (isInt)
             IRgenIcmp(B, BasicInstruction::IcmpCond::ne, reg1, reg2, ++reg_now);
@@ -398,11 +439,7 @@ void LAndExp_and::codeIR() {
     // 现在，reg_now为左边的运算结果（需要将INT/FLOAT->BOOL，类型检查中已保证只能为这两种类型）
     // false->跳过右边（短路）、true->右边
     LLVMBlock B1 = llvmIR.GetBlock(func_now, label_now);
-    if (landexp->attribute.T.type == Type::INT) {
-        IRgenIcmpImmRight(B1, BasicInstruction::IcmpCond::ne, reg_now, 0, reg_now);
-    } else if (landexp->attribute.T.type == Type::FLOAT) {
-        IRgenFcmpImmRight(B1, BasicInstruction::FcmpCond::ONE, reg_now, 0, reg_now);
-    }
+    IRgenTypeConverse(B1, landexp->attribute.T.type, Type::BOOL, reg_now);
     IRgenBrCond(B1, reg_now, landexp->true_label, landexp->false_label);    // 进行跳转，当前块的使命结束！
 
     // 切换到新创建的块，往其中添加指令
@@ -411,12 +448,7 @@ void LAndExp_and::codeIR() {
     eqexp->false_label = false_label;
     eqexp->codeIR();
     LLVMBlock B2 = llvmIR.GetBlock(func_now, label_now);
-    if (eqexp->attribute.T.type == Type::INT) {
-        IRgenIcmpImmRight(B2, BasicInstruction::IcmpCond::ne, reg_now, 0, reg_now);
-    } else if (eqexp->attribute.T.type == Type::FLOAT) {
-        IRgenFcmpImmRight(B2, BasicInstruction::FcmpCond::ONE, reg_now, 0, reg_now);
-    }
-    // TODO：：：这里需不需要跳转？
+    IRgenTypeConverse(B2, eqexp->attribute.T.type, Type::BOOL, reg_now);
 }
 
 // short circuit  lorexp || landexp
@@ -431,12 +463,8 @@ void LOrExp_or::codeIR() {
     // 现在，reg_now为左边的运算结果（需要将INT/FLOAT->BOOL，类型检查中已保证只能为这两种类型）
     // false->跳过右边（短路）、true->右边
     LLVMBlock B1 = llvmIR.GetBlock(func_now, label_now);
-    if (landexp->attribute.T.type == Type::INT) {
-        IRgenIcmpImmRight(B1, BasicInstruction::IcmpCond::ne, reg_now, 0, reg_now);
-    } else if (landexp->attribute.T.type == Type::FLOAT) {
-        IRgenFcmpImmRight(B1, BasicInstruction::FcmpCond::ONE, reg_now, 0, reg_now);
-    }
-    IRgenBrCond(B1, reg_now, landexp->true_label, landexp->false_label);    // 进行跳转，当前块的使命结束！
+    IRgenTypeConverse(B1, lorexp->attribute.T.type, Type::BOOL, reg_now);
+    IRgenBrCond(B1, reg_now, lorexp->true_label, lorexp->false_label);    // 进行跳转，当前块的使命结束！
 
     // 切换到新创建的块，往其中添加指令
     label_now = leftfalse_label;
@@ -444,12 +472,7 @@ void LOrExp_or::codeIR() {
     landexp->false_label = false_label;
     landexp->codeIR();
     LLVMBlock B2 = llvmIR.GetBlock(func_now, label_now);
-    if (landexp->attribute.T.type == Type::INT) {
-        IRgenIcmpImmRight(B2, BasicInstruction::IcmpCond::ne, reg_now, 0, reg_now);
-    } else if (landexp->attribute.T.type == Type::FLOAT) {
-        IRgenFcmpImmRight(B2, BasicInstruction::FcmpCond::ONE, reg_now, 0, reg_now);
-    }
-    // TODO：：：这里需不需要跳转？
+    IRgenTypeConverse(B2, landexp->attribute.T.type, Type::BOOL, reg_now);
 }
 
 void ConstExp::codeIR() {
@@ -478,6 +501,7 @@ void Lval::codeIR() {
         for (int i = 0; i < dims->size(); i++) {
             auto &dim = (*dims)[i];
             dim->codeIR();
+            IRgenTypeConverse(B, dim->attribute.T.type, Type::INT, reg_now);
             arrayindexs.push_back(GetNewRegOperand(reg_now));
         }
     }
@@ -499,25 +523,28 @@ void Lval::codeIR() {
 
     // 左值只需要获取ptr就完成了，其他普通Lval还需要得到ptr里的值
     if (is_left == false && attribute.T.type != Type::PTR) {
-        debug_msgs.push_back("111" + std::to_string(attribute.T.type));
+        debug_msgs.push_back("111  " + std::to_string(attribute.T.type));
         IRgenLoad(B, Type2LLvm[attribute.T.type], ++reg_now, ptr);
     }
 }
 
 void FuncRParams::codeIR() { debug_msgs.push_back("FuncRParams CodeIR"); }    // 没有用到，直接在Func_call中进行了生成
 
-// 类型检查已保证：1、对应实参和形参类型匹配；2、数组维度匹配
+// 类型检查已保证：1、对应实参和形参类型匹配(11.19更正：没有保证了TAT)；2、数组维度匹配
 void Func_call::codeIR() {
     debug_msgs.push_back("FunctionCall CodeIR");
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     if (funcr_params != nullptr) {
         // 跟typecheck里一样，不再调用funcRParams->codeIR，直接在此处转换为
         // FuncRParams后，对每个exp进行codeir，然后放到args里
+        FuncDef funcAttr = semant_table.FunctionTable.find(name)->second;
         auto funcRParams = dynamic_cast<FuncRParams *>(funcr_params);
         std::vector<std::pair<BasicInstruction::LLVMType, Operand>> args;
         // 遍历每个参数
         for (int i = 0; i < funcRParams->params->size(); i++) {
             (*funcRParams->params)[i]->codeIR();
+            IRgenTypeConverse(B, (*funcRParams->params)[i]->attribute.T.type, (*funcAttr->formals)[i]->type_decl,
+                              reg_now);
             args.push_back({Type2LLvm[(*funcRParams->params)[i]->attribute.T.type], GetNewRegOperand(reg_now)});
         }
         if (attribute.T.type == Type::VOID)
@@ -534,16 +561,19 @@ void Func_call::codeIR() {
     }
 }
 
-// +/- 已保证unary_exp以及结点本身为int或float
+// +/- 已保证unary_exp结点本身为int或float
 void UnaryExp_plus::codeIR() {
     debug_msgs.push_back("UnaryExpPlus CodeIR");
+    LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     unary_exp->codeIR();
+    IRgenTypeConverse(B, unary_exp->attribute.T.type, attribute.T.type, reg_now);
 }
 
 void UnaryExp_neg::codeIR() {
     debug_msgs.push_back("UnaryExpNeg CodeIR");
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     unary_exp->codeIR();
+    IRgenTypeConverse(B, unary_exp->attribute.T.type, attribute.T.type, reg_now);
     int ori_reg = reg_now;
     if (attribute.T.type == Type::INT)
         IRgenArithmeticI32ImmLeft(B, BasicInstruction::SUB, 0, ori_reg, ++reg_now);
@@ -556,6 +586,10 @@ void UnaryExp_not::codeIR() {
     debug_msgs.push_back("UnaryExpNot CodeIR");
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     unary_exp->codeIR();
+    if (unary_exp->attribute.T.type == Type::BOOL) {
+        IRgenTypeConverse(B, unary_exp->attribute.T.type, Type::INT, reg_now);
+        unary_exp->attribute.T.type = Type::INT;
+    }
     int ori_reg = reg_now;
     if (unary_exp->attribute.T.type == Type::INT)
         IRgenIcmpImmRight(B, BasicInstruction::eq, ori_reg, 0, ++reg_now);
@@ -621,10 +655,11 @@ void ifelse_stmt::codeIR() {
 
     // 此时，reg_now已经存了cond结果
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    int ori_reg = reg_now;
     if (Cond->attribute.T.type == Type::INT)
-        IRgenIcmpImmRight(B, BasicInstruction::IcmpCond::ne, reg_now, 0, reg_now);
+        IRgenIcmpImmRight(B, BasicInstruction::IcmpCond::ne, ori_reg, 0, ++reg_now);
     else if (Cond->attribute.T.type == Type::FLOAT)
-        IRgenFcmpImmRight(B, BasicInstruction::FcmpCond::ONE, reg_now, 0, reg_now);
+        IRgenFcmpImmRight(B, BasicInstruction::FcmpCond::ONE, ori_reg, 0, ++reg_now);
     IRgenBrCond(B, reg_now, Cond->true_label, Cond->false_label);    // 该块使命结束！
 
     // 切换到if内部语句块
@@ -1052,7 +1087,7 @@ void __FuncDef::codeIR() {
                 auto d = (*formal->dims)[j];
                 val.dims.push_back(d->attribute.V.val.IntVal);
             }
-            val.isFormalArray = true; //这是一个作为参数的数组
+            val.isFormalArray = true;    // 这是一个作为参数的数组
             irgen_table.symbol_table.add_Symbol(formal->name, i);
             irgen_table.reg_table[i] = val;
         }
@@ -1060,9 +1095,9 @@ void __FuncDef::codeIR() {
 
     // 0号块使命结束，进入1号块
     LLVMBlock B1 = llvmIR.NewBlock(func_now, ++label_max);
-    label_now = label_max; // =1
+    label_now = label_max;    // =1
     IRgenBRUnCond(B0, label_now);
-    
+
     // 让下面的慢慢生成吧
     block->codeIR();
 

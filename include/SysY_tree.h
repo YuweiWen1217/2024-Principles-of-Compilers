@@ -92,6 +92,7 @@ class RelExp_leq : public __Expression {
 public:
     Expression relexp;
     Expression addexp;
+    Type::ty childType;    // 规则同算术运算
     // add constructor
     RelExp_leq(Expression relexp, Expression addexp) : relexp(relexp), addexp(addexp) {}
     void codeIR();
@@ -104,6 +105,7 @@ class RelExp_lt : public __Expression {
 public:
     Expression relexp;
     Expression addexp;
+    Type::ty childType;
     RelExp_lt(Expression relexp, Expression addexp) : relexp(relexp), addexp(addexp) {}
     void codeIR();
     void TypeCheck();
@@ -115,6 +117,7 @@ class RelExp_geq : public __Expression {
 public:
     Expression relexp;
     Expression addexp;
+    Type::ty childType;
     RelExp_geq(Expression relexp, Expression addexp) : relexp(relexp), addexp(addexp) {}
     void codeIR();
     void TypeCheck();
@@ -126,6 +129,7 @@ class RelExp_gt : public __Expression {
 public:
     Expression relexp;
     Expression addexp;
+    Type::ty childType;
     RelExp_gt(Expression relexp, Expression addexp) : relexp(relexp), addexp(addexp) {}
     void codeIR();
     void TypeCheck();
@@ -137,6 +141,7 @@ class EqExp_eq : public __Expression {
 public:
     Expression eqexp;
     Expression relexp;
+    Type::ty childType;
     EqExp_eq(Expression eqexp, Expression relexp) : eqexp(eqexp), relexp(relexp) {}
     void codeIR();
     void TypeCheck();
@@ -148,6 +153,7 @@ class EqExp_neq : public __Expression {
 public:
     Expression eqexp;
     Expression relexp;
+    Type::ty childType;
     EqExp_neq(Expression eqexp, Expression relexp) : eqexp(eqexp), relexp(relexp) {}
     void codeIR();
     void TypeCheck();
