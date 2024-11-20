@@ -402,6 +402,7 @@ public:
 class return_stmt : public __Stmt {
 public:
     Expression return_exp;
+    Type::ty expected_type;
     return_stmt(Expression r) : return_exp(r) {}
     void codeIR();
     void TypeCheck();

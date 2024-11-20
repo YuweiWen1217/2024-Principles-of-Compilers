@@ -522,8 +522,8 @@ void Lval::TypeCheck() {
                     }
                     int indexValue = temp_dim.attribute.V.val.IntVal;
                     int arraySize = varAttr.dims[i];
-                    if (indexValue >= arraySize) {
-                        error_msgs.push_back("ERROR: Array index " + std::to_string(indexValue) +
+                    if (indexValue >= arraySize && arraySize != -1 && dim->attribute.V.ConstTag) {
+                        error_msgs.push_back("ERROR1: Array index " + std::to_string(indexValue) +
                                              " out of bounds for variable  with size " + std::to_string(arraySize) +
                                              " at line " + std::to_string(line_number) + ".");
                     }
@@ -551,15 +551,13 @@ void Lval::TypeCheck() {
                     error_msgs.push_back("ERROR: Array index must be of type int at line " +
                                          std::to_string(line_number) + ".");
                 }
-
                 // 左值表达式中，数组下标不要求为const，因此不做常值检查，但需要确认全部是常量还是有变量，以便后面赋值
                 constindex &= dim->attribute.V.ConstTag;
-
                 // 检查下标是否在有效范围内
                 int indexValue = temp_dim.attribute.V.val.IntVal;
                 int arraySize = varAttr.dims[i];
-                if (indexValue >= arraySize) {
-                    error_msgs.push_back("ERROR: Array index " + std::to_string(indexValue) +
+                if (indexValue >= arraySize && arraySize != -1 && dim->attribute.V.ConstTag) {
+                    error_msgs.push_back("ERROR2: Array index " + std::to_string(indexValue) +
                                          " out of bounds for variable  with size " + std::to_string(arraySize) +
                                          " at line " + std::to_string(line_number) + ".");
                 }
@@ -611,6 +609,7 @@ void FuncRParams::TypeCheck() {
     debug_msgs.push_back("FuncRParams Semant");
 }
 
+// 对于一个数组参数，如果从函数表中先获取参数、再获取类型，则为ptr、dims类型为expression；如果从符号表中查找变量名获取类型，则int/float、dims类型为int
 void Func_call::TypeCheck() {
     debug_msgs.push_back("FunctionCall Semant");
 
@@ -624,35 +623,64 @@ void Func_call::TypeCheck() {
 
     // 获取函数属性(形参)
     FuncDef funcAttr = funcIt->second;
+    auto FPs = funcAttr->formals;
 
     // 转换 funcr_params 为 FuncRParams 指针（实参）
     auto funcRParams = dynamic_cast<FuncRParams *>(funcr_params);
 
-    // 检查参数数量
-    if ((funcRParams == nullptr && funcAttr->formals->size() > 0) ||
-        (funcRParams != nullptr && funcRParams->params->size() != funcAttr->formals->size())) {
+    // 1、检查参数数量(没有实参是funcRParams == nullptr，没有形参是FPs->size()==0)
+    if ((funcRParams == nullptr && FPs->size() > 0) ||
+        (funcRParams != nullptr && funcRParams->params->size() != FPs->size())) {
         error_msgs.push_back("ERROR: Function parameter count mismatch for function '" + name->get_string() +
                              "' at line " + std::to_string(line_number) + ".");
         return;
-    } else if (funcRParams != nullptr) {
-        funcr_params->TypeCheck();    // 此行仅作标记，没有实际内容，可略
-        for (int i = 0; i < funcRParams->params->size(); ++i) {
-            (*funcRParams->params)[i]->TypeCheck();
-            // error_msgs.push_back(type_status[(*funcRParams->params)[i]->attribute.T.type]);
-            // error_msgs.push_back(type_status[(*funcAttr->formals)[i]->type_decl]);
-
+    }
+    // 2、有参数，则检查每个参数的类型
+    else if (funcRParams != nullptr) {
+        auto RPs = funcRParams->params;
+        for (int i = 0; i < RPs->size(); ++i) {
+            (*RPs)[i]->TypeCheck();
             // 检查是否为指针类型ptr，意味着传入数组
-            if ((*funcRParams->params)[i]->attribute.T.type == Type::PTR) {
-                auto lvalParam = dynamic_cast<Lval *>((*funcRParams->params)[i]);
-                if (lvalParam) {
-                    // 1. 检查维度是否匹配
-                    if (lvalParam->dims->size() != (*funcAttr->formals)[i]->dims->size()) {
-                        error_msgs.push_back("ERROR: Array dimension mismatch for parameter " + std::to_string(i + 1) +
-                                             " in function '" + name->get_string() + "' at line " +
-                                             std::to_string(line_number) + ".");
+            bool isArray = (*RPs)[i]->attribute.T.type == Type::PTR || (*FPs)[i]->dims != nullptr;
+            if (isArray) {
+                if ((*RPs)[i]->attribute.T.type != Type::PTR || (*FPs)[i]->dims == nullptr) {
+                    error_msgs.push_back("ERROR: The parameter type is incorrect at line " +
+                                         std::to_string(line_number) + ".");
+                    return;
+                }
+                auto RP = dynamic_cast<Lval *>((*RPs)[i]);
+                if (RP) {
+                    // 1. 检查维度是否匹配(实参定义维度 - 实参引用维度 = 形参的维度)
+                    int scope = semant_table.symbol_table.lookup_scope(RP->name);
+                    VarAttribute varAttr;
+                    if (scope == -1) {
+                        if (semant_table.GlobalTable.find(RP->name) != semant_table.GlobalTable.end()) {
+                            varAttr = semant_table.GlobalTable[RP->name];
+                            scope = 0;
+                        } else
+                            error_msgs.push_back("ERROR: Undefined variable at line " + std::to_string(line_number) +
+                                                 ".");
+                    } else {
+                        varAttr = semant_table.symbol_table.lookup_val(RP->name);
                     }
-                    // 2. 检查数组的基本类型是否匹配
-                    if (lvalParam->ptrtype != (*funcAttr->formals)[i]->type_decl) {
+                    auto Varoridims = varAttr.dims.size();
+                    auto Varnowdims = RP->dims == nullptr ? 0 : RP->dims->size();
+                    auto Arraydims = (*FPs)[i]->dims->size();
+                    if (Varoridims - Varnowdims != Arraydims)
+                        error_msgs.push_back("ERROR: Array dimension mismatch in function '" + name->get_string() +
+                                             "' at line " + std::to_string(line_number) + ".");
+
+                    // 2. 维度值检查
+                    for (int j = 1; j < Arraydims; j++) {
+                        if ((*(*FPs)[i]->dims)[j]->attribute.V.ConstTag)
+                            continue;
+                        auto Arraydim = (*(*FPs)[i]->dims)[j]->attribute.V.val.IntVal;
+                        if (Arraydim != varAttr.dims[Varnowdims + j])
+                            error_msgs.push_back("ERROR: Array dimension mismatch in function '" + name->get_string() +
+                                                 "' at line " + std::to_string(line_number) + ".");
+                    }
+                    // 3. 检查数组的基本类型是否匹配
+                    if (RP->ptrtype != (*FPs)[i]->type_decl) {
                         error_msgs.push_back("ERROR: Array base type mismatch for parameter " + std::to_string(i + 1) +
                                              " in function '" + name->get_string() + "' at line " +
                                              std::to_string(line_number) + ".");
@@ -665,11 +693,9 @@ void Func_call::TypeCheck() {
             }
 
             // 非数组
-            if (((*funcAttr->formals)[i]->type_decl != Type::INT &&
-                 (*funcAttr->formals)[i]->type_decl != Type::FLOAT) ||
-                ((*funcRParams->params)[i]->attribute.T.type != Type::INT &&
-                 (*funcRParams->params)[i]->attribute.T.type != Type::FLOAT &&
-                 (*funcRParams->params)[i]->attribute.T.type != Type::BOOL)) {
+            else if (((*FPs)[i]->type_decl != Type::INT && (*FPs)[i]->type_decl != Type::FLOAT) ||
+                     ((*RPs)[i]->attribute.T.type != Type::INT && (*RPs)[i]->attribute.T.type != Type::FLOAT &&
+                      (*RPs)[i]->attribute.T.type != Type::BOOL)) {
                 error_msgs.push_back("ERROR: The parameter type is incorrect at line " + std::to_string(line_number) +
                                      ".");
             }
@@ -816,9 +842,10 @@ void return_stmt::TypeCheck() {
     debug_msgs.push_back("return_stmt Semant");
     return_exp->TypeCheck();
     auto exp1 = booltoint(return_exp);
-    if (exp1.attribute.T.type == now_func_return_type)
+    expected_type = now_func_return_type;
+    if (exp1.attribute.T.type == expected_type)
         return;
-    if (now_func_return_type == Type::VOID) {
+    if (expected_type == Type::VOID) {
         error_msgs.push_back("ERROR: Function declared with return type 'void' cannot return a value at line " +
                              std::to_string(line_number) + ".");
         return;
@@ -891,7 +918,8 @@ void VarDef_no_init::TypeCheck() {
                                      std::to_string(line_number) + "\n");
             }
             auto temp_dim = booltoint(dim);
-            if (temp_dim.attribute.T.type != Type::INT) {
+            dim->attribute = temp_dim.attribute;
+            if (dim->attribute.T.type != Type::INT) {
                 error_msgs.push_back("ERROR: Array Dim must be int at line " + std::to_string(line_number) + ".");
             }
             val.dims.push_back(temp_dim.attribute.V.val.IntVal);
@@ -932,7 +960,8 @@ void VarDef::TypeCheck() {
                                      std::to_string(line_number) + ".");
             }
             auto temp_dim = booltoint(dim);
-            if (temp_dim.attribute.T.type != Type::INT) {
+            dim->attribute = temp_dim.attribute;
+            if (dim->attribute.T.type != Type::INT) {
                 error_msgs.push_back("ERROR: Array Dim must be int at line " + std::to_string(line_number) + ".");
             }
             val.dims.push_back(temp_dim.attribute.V.val.IntVal);
@@ -955,29 +984,39 @@ void VarDef::TypeCheck() {
     }
     // 非数组检查
     else {
-        if (init->attribute.T.type != val.type) {
-            if (init->attribute.T.type == Type::BOOL) {
-                init->attribute.V.val.IntVal = static_cast<int>(init->attribute.V.val.BoolVal);
-                init->attribute.T.type = Type::INT;
+        // 初始值是常数，进行类型转换
+        if (init->attribute.V.ConstTag) {
+            if (init->attribute.T.type != val.type) {
+                if (init->attribute.T.type == Type::BOOL) {
+                    init->attribute.V.val.IntVal = static_cast<int>(init->attribute.V.val.BoolVal);
+                    init->attribute.T.type = Type::INT;
+                }
+                if (val.type == Type::INT && init->attribute.T.type == Type::FLOAT) {
+                    init->attribute.V.val.IntVal = static_cast<int>(init->attribute.V.val.FloatVal);
+                    init->attribute.T.type = Type::INT;
+                    attribute.V.val.IntVal = init->attribute.V.val.IntVal;
+                } else if (val.type == Type::FLOAT && init->attribute.T.type == Type::INT) {
+                    init->attribute.V.val.FloatVal = static_cast<float>(init->attribute.V.val.IntVal);
+                    init->attribute.T.type = Type::FLOAT;
+                    attribute.V.val.FloatVal = init->attribute.V.val.FloatVal;
+                } else {
+                    error_msgs.push_back("ERROR: Type mismatch in initialization at line " +
+                                         std::to_string(line_number) + ". Cannot convert from " +
+                                         type_status[init->attribute.T.type] + " to " + type_status[val.type] + ".");
+                }
             }
-            if (val.type == Type::INT && init->attribute.T.type == Type::FLOAT) {
-                init->attribute.V.val.IntVal = static_cast<int>(init->attribute.V.val.FloatVal);
-                init->attribute.T.type = Type::INT;
-                attribute.V.val.IntVal = init->attribute.V.val.IntVal;
-            } else if (val.type == Type::FLOAT && init->attribute.T.type == Type::INT) {
-                init->attribute.V.val.FloatVal = static_cast<float>(init->attribute.V.val.IntVal);
-                init->attribute.T.type = Type::FLOAT;
-                attribute.V.val.FloatVal = init->attribute.V.val.FloatVal;
-            } else {
-                error_msgs.push_back("ERROR: Type mismatch in initialization at line " + std::to_string(line_number) +
-                                     ". Cannot convert from " + type_status[init->attribute.T.type] + " to " +
-                                     type_status[val.type] + ".");
+            if (val.type == Type::INT) {
+                val.IntInitVals.push_back(init->attribute.V.val.IntVal);
+            } else if (val.type == Type::FLOAT) {
+                val.FloatInitVals.push_back(init->attribute.V.val.FloatVal);
             }
         }
-        if (val.type == Type::INT) {
-            val.IntInitVals.push_back(init->attribute.V.val.IntVal);
-        } else if (val.type == Type::FLOAT) {
-            val.FloatInitVals.push_back(init->attribute.V.val.FloatVal);
+        // 初始值是变量，仅检查类型
+        else if (init->attribute.T.type != Type::BOOL && init->attribute.T.type != Type::FLOAT &&
+                 init->attribute.T.type != Type::INT) {
+            error_msgs.push_back("ERROR: Type mismatch in initialization at line " + std::to_string(line_number) +
+                                 ". Cannot convert from " + type_status[init->attribute.T.type] + " to " +
+                                 type_status[val.type] + ".");
         }
     }
     attribute.V.val = init->attribute.V.val;
@@ -1116,6 +1155,7 @@ void __Block::TypeCheck() {
     semant_table.symbol_table.exit_scope();
 }
 
+// 对于一个数组参数，如果从函数表中先获取参数、再获取类型，则为ptr、dims类型为expression；如果从符号表中查找变量名获取类型，则int/float、dims类型为int
 void __FuncFParam::TypeCheck() {
     debug_msgs.push_back("FuncFParam Semant");
     // 创建一个变量属性对象 val，用于存储当前函数形参的属性
@@ -1128,8 +1168,11 @@ void __FuncFParam::TypeCheck() {
     if (dims != nullptr) {
         auto dim_vector = *dims;    // 取出数组维度列表
 
-        // 对于函数参数，第一维通常为空，例如 int f(int A[][30][40])
-        val.dims.push_back(-1);    // 按照IRgenGetElementptrIndexI32的用法，作为参数的数组，第一维度为空不用放入dims中
+        // 对于数组，第一维为空，例如 int f(int A[][30][40])
+        // 参数    dim    实参
+        // a[][2]  {2}    A[1]
+        // a[]    null    A
+        val.dims.push_back(-1);
         // 从第二维开始检查每个维度
         for (int i = 1; i < dim_vector.size(); ++i) {
             auto d = dim_vector[i];
@@ -1143,6 +1186,11 @@ void __FuncFParam::TypeCheck() {
             if (d->attribute.T.type == Type::FLOAT) {
                 error_msgs.push_back("ERROR: Array Dim can not be float in line " + std::to_string(line_number) + "\n");
             }
+            // 形参也是const
+            if (d->attribute.T.type == Type::BOOL) {
+                d->attribute.T.type = Type::INT;
+                d->attribute.V.val.IntVal = d->attribute.V.val.BoolVal ? 1 : 0;
+            }
             val.dims.push_back(d->attribute.V.val.IntVal);
         }
         // 如果参数是数组，则将类型设置为指针
@@ -1151,31 +1199,32 @@ void __FuncFParam::TypeCheck() {
         // 如果不是数组，则直接设置为声明的类型
         attribute.T.type = type_decl;
     }
-    // 检查参数名称是否为 nullptr
-    if (name != nullptr) {
-        // 检查当前作用域中是否已经存在同名的参数
-        if (semant_table.symbol_table.lookup_scope(name) != -1) {
 
-            error_msgs.push_back("multiple definitions of formals in function " + name->get_string() + " in line " +
-                                 std::to_string(line_number) + "\n");
-        }
-        // 将参数的名称和属性添加到符号表中
-        semant_table.symbol_table.add_Symbol(name, val);
+    // 检查当前作用域中是否已经存在同名的参数
+    if (semant_table.symbol_table.lookup_scope(name) != -1) {
+        error_msgs.push_back("multiple definitions of formals in function " + name->get_string() + " in line " +
+                             std::to_string(line_number) + "\n");
     }
+
+    // 将参数的名称和属性添加到符号表中
+    semant_table.symbol_table.add_Symbol(name, val);
 }
 
 void __FuncDef::TypeCheck() {
     debug_msgs.push_back("FuncDef Semant");
+
     semant_table.symbol_table.enter_scope();
     if (return_type != Type::INT && return_type != Type::FLOAT && return_type != Type::VOID)
         error_msgs.push_back("ERROR: Function " + name->get_string() + " has a wrong return type at line " +
                              std::to_string(line_number) + "\n");
     now_func_return_type = return_type;
+
     // 函数表是直接通过函数名进行储存的，不支持函数重载，需要检查函数是否重复声明
     if (semant_table.FunctionTable.find(name) != semant_table.FunctionTable.end()) {
         error_msgs.push_back("Function " + name->get_string() + " is redefined at line " + std::to_string(line_number) +
                              "\n");
     }
+
     if (name->get_string() == "main") {
         has_main = true;
         if (return_type != Type::INT) {
@@ -1186,12 +1235,14 @@ void __FuncDef::TypeCheck() {
             error_msgs.push_back("ERROR: 'main' function must have 0 or 2 parameters.");
         }
     }
-    semant_table.FunctionTable[name] = this;
+
     // 获取函数的参数列表，并对每个参数进行类型检查
     auto formal_vector = *formals;
     for (auto formal : formal_vector) {
         formal->TypeCheck();
     }
+    semant_table.FunctionTable[name] = this;
+
     // 如果函数体存在，则进行块内的类型检查
     if (block != nullptr) {
         auto item_vector = *(block->item_list);

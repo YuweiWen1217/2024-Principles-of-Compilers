@@ -97,8 +97,10 @@ void IRgenTypeConverse(LLVMBlock B, Type::ty type_src, Type::ty type_dst, int sr
         IRgenFptosi(B, src, dst);
     else if (type_src == Type::FLOAT && type_dst == Type::BOOL)
         IRgenFcmpImmRight(B, BasicInstruction::ONE, src, 0, dst);
-    else
+    else {
+        std::cout << std::to_string(type_src) << " " << std::to_string(type_dst) << std::endl;
         assert(false);
+    }
 }
 
 void BasicBlock::InsertInstruction(int pos, Instruction Ins) {
@@ -543,9 +545,12 @@ void Func_call::codeIR() {
         // 遍历每个参数
         for (int i = 0; i < funcRParams->params->size(); i++) {
             (*funcRParams->params)[i]->codeIR();
-            IRgenTypeConverse(B, (*funcRParams->params)[i]->attribute.T.type, (*funcAttr->formals)[i]->type_decl,
-                              reg_now);
-            args.push_back({Type2LLvm[(*funcAttr->formals)[i]->type_decl], GetNewRegOperand(reg_now)});
+            if ((*funcRParams->params)[i]->attribute.T.type != Type::PTR) {
+                IRgenTypeConverse(B, (*funcRParams->params)[i]->attribute.T.type, (*funcAttr->formals)[i]->type_decl,
+                                  reg_now);
+                args.push_back({Type2LLvm[(*funcAttr->formals)[i]->type_decl], GetNewRegOperand(reg_now)});
+            } else
+                args.push_back({Type2LLvm[Type::PTR], GetNewRegOperand(reg_now)});
         }
         if (attribute.T.type == Type::VOID)
             IRgenCallVoid(B, BasicInstruction::VOID, args, name->get_string());
@@ -616,12 +621,13 @@ void PrimaryExp_branch::codeIR() {
     exp->codeIR();
 }
 
-// lval = exp， 已保证exp的类型和lval相同
+// lval = exp
 void assign_stmt::codeIR() {
     debug_msgs.push_back("AssignStmt CodeIR");
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     lval->codeIR();
     exp->codeIR();
+    IRgenTypeConverse(B, exp->attribute.T.type, lval->attribute.T.type, reg_now);
     IRgenStore(B, Type2LLvm[lval->attribute.T.type], reg_now, ((Lval *)lval)->ptr);
 }
 
@@ -692,10 +698,11 @@ void if_stmt::codeIR() {
 
     // 此时，reg_now已经存了cond结果
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    int ori_reg = reg_now;
     if (Cond->attribute.T.type == Type::INT)
-        IRgenIcmpImmRight(B, BasicInstruction::IcmpCond::ne, reg_now, 0, reg_now);
+        IRgenIcmpImmRight(B, BasicInstruction::IcmpCond::ne, ori_reg, 0, ++reg_now);
     else if (Cond->attribute.T.type == Type::FLOAT)
-        IRgenFcmpImmRight(B, BasicInstruction::FcmpCond::ONE, reg_now, 0, reg_now);
+        IRgenFcmpImmRight(B, BasicInstruction::FcmpCond::ONE, ori_reg, 0, ++reg_now);
     IRgenBrCond(B, reg_now, Cond->true_label, Cond->false_label);    // 该块使命结束！
 
     // 切换到if内部语句块
@@ -735,10 +742,11 @@ void while_stmt::codeIR() {
     label_now = cond_label;
     Cond->codeIR();
     LLVMBlock B1 = llvmIR.GetBlock(func_now, label_now);
+    int ori_reg = reg_now;
     if (Cond->attribute.T.type == Type::INT)
-        IRgenIcmpImmRight(B1, BasicInstruction::IcmpCond::ne, reg_now, 0, reg_now);
+        IRgenIcmpImmRight(B1, BasicInstruction::IcmpCond::ne, ori_reg, 0, ++reg_now);
     else if (Cond->attribute.T.type == Type::FLOAT)
-        IRgenFcmpImmRight(B1, BasicInstruction::FcmpCond::ONE, reg_now, 0, reg_now);
+        IRgenFcmpImmRight(B1, BasicInstruction::FcmpCond::ONE, ori_reg, 0, ++reg_now);
     IRgenBrCond(B1, reg_now, Cond->true_label, Cond->false_label);
     // 以上均为cond块的内容
 
@@ -767,11 +775,11 @@ void break_stmt::codeIR() {
     label_now = llvmIR.NewBlock(func_now, ++label_max)->block_id;
 }
 
-// 类型检查时已保证返回值与函数声明的返回值一致。
 void return_stmt::codeIR() {
     debug_msgs.push_back("ReturnStmt CodeIR");
-    return_exp->codeIR();
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
+    return_exp->codeIR();
+    IRgenTypeConverse(B, return_exp->attribute.T.type, expected_type, reg_now);
     IRgenRetReg(B, Type2LLvm[return_exp->attribute.T.type], reg_now);
 }
 
@@ -821,7 +829,7 @@ void VarDef_no_init::codeIR() {
             IRgenStore(B, Type2LLvm[type_decl], GetNewRegOperand(reg_now), GetNewRegOperand(reg_alloc));
             return;
         }
-        // 剩下的就是数组了
+        // 剩下的就是数组了，维度由于是const，因此在类型检查时，已经转换好了。
         int size = 1;
         for (auto dim : *dims) {
             val.dims.push_back(dim->attribute.V.val.IntVal);
@@ -866,11 +874,13 @@ void VarDef::codeIR() {
         val.ConstTag = false;
         val.type = type_decl;
         if (dims == nullptr) {
-            irgen_table.reg_table[reg_now];
+            irgen_table.reg_table[reg_now] = val;
             //  3、分配->声明值->储存
             IRgenAlloca(B0, Type2LLvm[type_decl], reg_now);
             int reg_alloc = reg_now;
             init->codeIR();    // 执行后，regnow储存初始化值
+            if (!init->attribute.V.ConstTag)
+                IRgenTypeConverse(B, init->attribute.T.type, type_decl, reg_now);
             IRgenStore(B, Type2LLvm[type_decl], GetNewRegOperand(reg_now), GetNewRegOperand(reg_alloc));
             return;
         }
