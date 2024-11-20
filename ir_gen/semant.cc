@@ -175,10 +175,11 @@ void AddExp_plus::TypeCheck() {
     mulexp->TypeCheck();
 
     auto [exp1, exp2] = unifyTypes(addexp, mulexp);
-    if (addexp->attribute.V.ConstTag)
+    if (addexp->attribute.V.ConstTag) {
         addexp->attribute = exp1.attribute;
-    if (mulexp->attribute.V.ConstTag)
-        mulexp->attribute = exp2.attribute;
+        if (mulexp->attribute.V.ConstTag)
+            mulexp->attribute = exp2.attribute;
+    }
     attribute.V.ConstTag = addexp->attribute.V.ConstTag & mulexp->attribute.V.ConstTag;
 
     if (exp1.attribute.T.type == Type::INT && exp2.attribute.T.type == Type::INT) {
@@ -200,10 +201,11 @@ void AddExp_sub::TypeCheck() {
     mulexp->TypeCheck();
 
     auto [exp1, exp2] = unifyTypes(addexp, mulexp);
-    if (addexp->attribute.V.ConstTag)
+    if (addexp->attribute.V.ConstTag) {
         addexp->attribute = exp1.attribute;
-    if (mulexp->attribute.V.ConstTag)
-        mulexp->attribute = exp2.attribute;
+        if (mulexp->attribute.V.ConstTag)
+            mulexp->attribute = exp2.attribute;
+    }
     attribute.V.ConstTag = addexp->attribute.V.ConstTag & mulexp->attribute.V.ConstTag;
 
     if (exp1.attribute.T.type == Type::INT && exp2.attribute.T.type == Type::INT) {
@@ -225,10 +227,11 @@ void MulExp_mul::TypeCheck() {
     unary_exp->TypeCheck();
 
     auto [exp1, exp2] = unifyTypes(mulexp, unary_exp);
-    if (mulexp->attribute.V.ConstTag)
+    if (mulexp->attribute.V.ConstTag) {
         mulexp->attribute = exp1.attribute;
-    if (unary_exp->attribute.V.ConstTag)
-        unary_exp->attribute = exp2.attribute;
+        if (unary_exp->attribute.V.ConstTag)
+            unary_exp->attribute = exp2.attribute;
+    }
     attribute.V.ConstTag = unary_exp->attribute.V.ConstTag & mulexp->attribute.V.ConstTag;
 
     if (exp1.attribute.T.type == Type::INT && exp2.attribute.T.type == Type::INT) {
@@ -250,10 +253,11 @@ void MulExp_div::TypeCheck() {
     unary_exp->TypeCheck();
 
     auto [exp1, exp2] = unifyTypes(mulexp, unary_exp);
-    if (mulexp->attribute.V.ConstTag)
+    if (mulexp->attribute.V.ConstTag) {
         mulexp->attribute = exp1.attribute;
-    if (unary_exp->attribute.V.ConstTag)
-        unary_exp->attribute = exp2.attribute;
+        if (unary_exp->attribute.V.ConstTag)
+            unary_exp->attribute = exp2.attribute;
+    }
     attribute.V.ConstTag = unary_exp->attribute.V.ConstTag & mulexp->attribute.V.ConstTag;
 
     if (exp1.attribute.T.type == Type::INT && exp2.attribute.T.type == Type::INT) {
@@ -285,10 +289,10 @@ void MulExp_mod::TypeCheck() {
     unary_exp->TypeCheck();
 
     auto [exp1, exp2] = unifyTypes(mulexp, unary_exp);
-    if (mulexp->attribute.V.ConstTag)
+    if (mulexp->attribute.V.ConstTag && unary_exp->attribute.V.ConstTag) {
         mulexp->attribute = exp1.attribute;
-    if (unary_exp->attribute.V.ConstTag)
         unary_exp->attribute = exp2.attribute;
+    }
     attribute.V.ConstTag = unary_exp->attribute.V.ConstTag & mulexp->attribute.V.ConstTag;
 
     if (exp1.attribute.T.type == Type::INT && exp2.attribute.T.type == Type::INT) {
@@ -599,7 +603,7 @@ void Lval::TypeCheck() {
                 total *= varAttr.dims[i];
             }
             int offset = total;
-            int index = 1;
+            int index = 0;
             for (size_t i = 0; i < dims->size(); ++i) {
                 offset /= varAttr.dims[i];
                 index += (*dims)[i]->attribute.V.val.IntVal * offset;
@@ -1087,7 +1091,7 @@ void ConstDef::TypeCheck() {
         // for (int i = 0; i < val.IntInitVals.size(); i++) {
         //     std::cout << val.IntInitVals[i] << " ";
         // }
-        std::cout << std::endl;
+        // std::cout << std::endl;
         // 确保初始化值的数量匹配
         if (val.IntInitVals.size() != totalElements && val.FloatInitVals.size() != totalElements) {
             error_msgs.push_back("ERROR: Initialization values count does not match array dimensions at line " +
@@ -1099,9 +1103,9 @@ void ConstDef::TypeCheck() {
     else {
         if (init->attribute.T.type != val.type) {
             if (val.type == Type::INT && init->attribute.T.type == Type::FLOAT) {
-                attribute.V.val.IntVal = static_cast<int>(init->attribute.V.val.FloatVal);
+                init->attribute.V.val.IntVal = static_cast<int>(init->attribute.V.val.FloatVal);
             } else if (val.type == Type::FLOAT && init->attribute.T.type == Type::INT) {
-                attribute.V.val.FloatVal = static_cast<float>(init->attribute.V.val.IntVal);
+                init->attribute.V.val.FloatVal = static_cast<float>(init->attribute.V.val.IntVal);
             } else {
                 error_msgs.push_back("ERROR: Type mismatch in initialization at line " + std::to_string(line_number) +
                                      ". Cannot convert from " + type_status[init->attribute.T.type] + " to " +
