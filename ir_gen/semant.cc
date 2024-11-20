@@ -36,18 +36,26 @@ bool has_main = false;
 Type::ty now_func_return_type;
 
 // int a[5][4][3] = { { {2,3}, 6,7,5,4,3,2,11,2,4 },7,8,11 };
-void HandleArrayInit(InitVal init, VarAttribute &val, int count, int handled) {
+std::vector<Expression> VarInits{}; 
+void HandleArrayInit(InitVal init, VarAttribute &val, int count, int handled, bool &isAllConst) {
     debug_msgs.push_back("HandleArrayInit");
     int beforeadd = (val.type == Type::INT) ? val.IntInitVals.size() : val.FloatInitVals.size();
     for (InitVal iv : *(init->GetList())) {
         if (iv->IsExp()) {
+            if(!iv->attribute.V.ConstTag)
+            {
+                isAllConst = false;
+                VarInits.push_back(iv->GetExp());
+            }
             if (val.type == Type::INT) {
+                val.IntInitValsTag.push_back(iv->attribute.V.ConstTag);
                 if (iv->attribute.T.type == Type::INT) {
                     val.IntInitVals.push_back(iv->attribute.V.val.IntVal);
                 } else if (iv->attribute.T.type == Type::FLOAT) {
                     val.IntInitVals.push_back(static_cast<int>(iv->attribute.V.val.FloatVal));
                 }
             } else if (val.type == Type::FLOAT) {
+                val.FloatInitValsTag.push_back(iv->attribute.V.ConstTag);
                 if (iv->attribute.T.type == Type::INT) {
                     val.FloatInitVals.push_back(static_cast<float>(iv->attribute.V.val.IntVal));
                 } else if (iv->attribute.T.type == Type::FLOAT) {
@@ -68,7 +76,7 @@ void HandleArrayInit(InitVal init, VarAttribute &val, int count, int handled) {
                                      std::to_string(init->GetLineNumber()) + ".");
                 return;
             }
-            HandleArrayInit(iv, val, count, h);
+            HandleArrayInit(iv, val, count, h, isAllConst);
         }
     }
     int afteradd = (val.type == Type::INT) ? val.IntInitVals.size() : val.FloatInitVals.size();
@@ -80,8 +88,10 @@ void HandleArrayInit(InitVal init, VarAttribute &val, int count, int handled) {
     while (realcount < count / handled) {
         if (val.type == Type::INT) {
             val.IntInitVals.push_back(0);
+            val.IntInitValsTag.push_back(true);
         } else {
             val.FloatInitVals.push_back(0);
+            val.FloatInitValsTag.push_back(true);
         }
         realcount++;
     }
@@ -1000,10 +1010,15 @@ void VarDef::TypeCheck() {
         for (int dim : val.dims) {
             totalElements *= dim;    // 计算总元素数
         }
-        HandleArrayInit(init, val, totalElements, 1);
+        bool isAllconst = true;
+        VarInits.clear();
+        HandleArrayInit(init, val, totalElements, 1, isAllconst);
         // 中间代码生成时不用再次初始化数组值了
         IntInitVals = val.IntInitVals;
         FloatInitVals = val.FloatInitVals;
+        IntInitValsTag = val.IntInitValsTag;
+        FloatInitValsTag = val.FloatInitValsTag;
+        varinits = VarInits;
         // 确保初始化值的数量匹配
         if (val.IntInitVals.size() != totalElements && val.FloatInitVals.size() != totalElements) {
             error_msgs.push_back("ERROR: Initialization values count does not match array dimensions at line " +
@@ -1093,7 +1108,12 @@ void ConstDef::TypeCheck() {
         for (int dim : val.dims) {
             totalElements *= dim;    // 计算总元素数
         }
-        HandleArrayInit(init, val, totalElements, 1);
+        bool isAllconst = true;
+        HandleArrayInit(init, val, totalElements, 1, isAllconst);
+        VarInits.clear();
+        if (!isAllconst)
+            error_msgs.push_back("ERROR: Constarray initialization must be constant values at line " +
+                                 std::to_string(line_number) + ".");
         // 中间代码生成时不用再次初始化数组值了
         IntInitVals = val.IntInitVals;
         FloatInitVals = val.FloatInitVals;

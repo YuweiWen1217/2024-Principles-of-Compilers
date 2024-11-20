@@ -895,6 +895,7 @@ void VarDef::codeIR() {
         //  3、分配->声明值->储存
         IRgenAllocaArray(B0, Type2LLvm[type_decl], reg_now, val.dims);
         // 元素已经储存在了std::vector<int> IntInitVals或 std::vector<float> FloatInitVals中，大小已经确保和size匹配
+        int j = 0;
         for (int i = 0; i < size; ++i) {
             // i -> 索引
             // arrayindexs储存地址
@@ -914,9 +915,20 @@ void VarDef::codeIR() {
             int reg_adr = reg_now;    // 存放应当赋值的地址
             // 获取初始化值
             if (val.type == Type::INT) {
-                IRgenArithmeticI32ImmAll(B, BasicInstruction::ADD, IntInitVals[i], 0, ++reg_now);
+                if (IntInitValsTag[i])
+                    IRgenArithmeticI32ImmAll(B, BasicInstruction::ADD, IntInitVals[i], 0, ++reg_now);
+                else {
+                    varinits[j]->codeIR();
+                    IRgenTypeConverse(B, varinits[j]->attribute.T.type, Type::INT, reg_now);
+                    j++;
+                }
             } else if (val.type == Type::FLOAT) {
-                IRgenArithmeticF32ImmAll(B, BasicInstruction::FADD, FloatInitVals[i], 0, ++reg_now);
+                if (FloatInitValsTag[i])
+                    IRgenArithmeticF32ImmAll(B, BasicInstruction::FADD, FloatInitVals[i], 0, ++reg_now);
+                else {
+                    varinits[j]->codeIR();
+                    IRgenTypeConverse(B, varinits[j]->attribute.T.type, Type::FLOAT, reg_now);
+                }
             }
             // 此时reg_now存放的是获取的数值
             IRgenStore(B, Type2LLvm[val.type], GetNewRegOperand(reg_now), GetNewRegOperand(reg_adr));

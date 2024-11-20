@@ -516,6 +516,9 @@ public:
 
     std::vector<int> IntInitVals{};
     std::vector<float> FloatInitVals{};
+    std::vector<bool> IntInitValsTag{};
+    std::vector<bool> FloatInitValsTag{};
+    std::vector<Expression> varinits{}; 
     void codeIR();
     void TypeCheck();
     void printAST(std::ostream &s, int pad);
