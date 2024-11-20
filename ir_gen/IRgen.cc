@@ -952,11 +952,13 @@ void ConstDef::codeIR() {
         val.ConstTag = true;
         val.type = type_decl;
         if (dims == nullptr) {
-            irgen_table.reg_table[reg_now];
+            irgen_table.reg_table[reg_now] = val;
             //  3、分配->声明值->储存
             IRgenAlloca(B0, Type2LLvm[type_decl], reg_now);
             int reg_alloc = reg_now;
             init->codeIR();    // 执行后，regnow储存初始化值
+            if (!init->attribute.V.ConstTag)
+                IRgenTypeConverse(B, init->attribute.T.type, type_decl, reg_now);
             IRgenStore(B, Type2LLvm[type_decl], GetNewRegOperand(reg_now), GetNewRegOperand(reg_alloc));
             return;
         }
@@ -969,12 +971,13 @@ void ConstDef::codeIR() {
         irgen_table.reg_table[reg_now] = val;
         int reg_array = reg_now;    // 存放数组首地址
         //  3、分配->声明值->储存
+        IRgenAllocaArray(B0, Type2LLvm[type_decl], reg_now, val.dims);
         // 元素已经储存在了std::vector<int> IntInitVals或 std::vector<float> FloatInitVals中，大小已经确保和size匹配
         for (int i = 0; i < size; ++i) {
             // i -> 索引
             // arrayindexs储存地址
             // int a[3][2][2]
-            // i = 10 -> arrayindexs:{2,1,0}
+            // i = 10 -> a[2][1][0] -> arrayindexs:{0,2,1,0}
             std::vector<Operand> arrayindexs;
             int remainder = i;
             for (int d = val.dims.size() - 1; d >= 0; --d) {
@@ -982,6 +985,7 @@ void ConstDef::codeIR() {
                 remainder /= val.dims[d];
                 arrayindexs.insert(arrayindexs.begin(), new ImmI32Operand(idx));
             }
+            arrayindexs.insert(arrayindexs.begin(), new ImmI32Operand(0));
             // 计算应当赋值的地址
             IRgenGetElementptrIndexI32(B, Type2LLvm[val.type], ++reg_now, GetNewRegOperand(reg_array), val.dims,
                                        arrayindexs);

@@ -425,6 +425,7 @@ public:
     virtual int IsConst() = 0;
     virtual std::vector<__InitVal *> *GetList() = 0;
     virtual Expression GetExp() = 0;
+    bool valallconst;
 };
 typedef __InitVal *InitVal;
 
@@ -466,6 +467,7 @@ public:
     void printAST(std::ostream &s, int pad);
     int IsExp() { return 0; }
     int IsConst() { return 0; }
+    bool valallconst = true;
     std::vector<InitVal> *GetList() { return initval; }
     Expression GetExp() { return NULL; }
 };
@@ -510,6 +512,7 @@ public:
     // 如果dims为nullptr, 表示该变量不含数组下标, 你也可以通过其他方式判断，但需要修改SysY_parser.y已有的代码
     InitVal init;
     VarDef(Symbol n, std::vector<Expression> *d, InitVal i) : name(n), dims(d), init(i) {}
+    bool valallconst = true;
 
     std::vector<int> IntInitVals{};
     std::vector<float> FloatInitVals{};

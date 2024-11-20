@@ -2,6 +2,7 @@
 #include "../include/SysY_tree.h"
 #include "../include/ir.h"
 #include "../include/type.h"
+#include <unordered_set>
 /*
     语义分析阶段需要对语法树节点上的类型和常量等信息进行标注, 即NodeAttribute类
     同时还需要标注每个变量的作用域信息，即部分语法树节点中的scope变量
@@ -36,6 +37,7 @@ Type::ty now_func_return_type;
 
 // int a[5][4][3] = { { {2,3}, 6,7,5,4,3,2,11,2,4 },7,8,11 };
 void HandleArrayInit(InitVal init, VarAttribute &val, int count, int handled) {
+    debug_msgs.push_back("HandleArrayInit");
     int beforeadd = (val.type == Type::INT) ? val.IntInitVals.size() : val.FloatInitVals.size();
     for (InitVal iv : *(init->GetList())) {
         if (iv->IsExp()) {
@@ -620,7 +622,6 @@ void Lval::TypeCheck() {
             }
         }
     }
-    debug_msgs.push_back(std::to_string(attribute.T.type));
 }
 
 void FuncRParams::TypeCheck() {
@@ -628,9 +629,17 @@ void FuncRParams::TypeCheck() {
     debug_msgs.push_back("FuncRParams Semant");
 }
 
+static const std::unordered_set<std::string> specialFuncs = {"getfarray", "getarray", "putfarray", "putarray"};
+bool isSpecialFunc(Symbol name) {
+    std::string func = name->get_string();
+    return specialFuncs.find(func) != specialFuncs.end();
+}
+
 // 对于一个数组参数，如果从函数表中先获取参数、再获取类型，则为ptr、dims类型为expression；如果从符号表中查找变量名获取类型，则int/float、dims类型为int
 void Func_call::TypeCheck() {
     debug_msgs.push_back("FunctionCall Semant");
+
+    bool isSpecial = isSpecialFunc(name);
 
     // 检查函数是否存在
     auto funcIt = semant_table.FunctionTable.find(name);
@@ -659,6 +668,8 @@ void Func_call::TypeCheck() {
         auto RPs = funcRParams->params;
         for (int i = 0; i < RPs->size(); ++i) {
             (*RPs)[i]->TypeCheck();
+            if (isSpecial)
+                continue;
             // 检查是否为指针类型ptr，意味着传入数组
             bool isArray = (*RPs)[i]->attribute.T.type == Type::PTR || (*FPs)[i]->dims != nullptr;
             if (isArray) {
@@ -675,7 +686,6 @@ void Func_call::TypeCheck() {
                     if (scope == -1) {
                         if (semant_table.GlobalTable.find(RP->name) != semant_table.GlobalTable.end()) {
                             varAttr = semant_table.GlobalTable[RP->name];
-                            scope = 0;
                         } else
                             error_msgs.push_back("ERROR: Undefined variable at line " + std::to_string(line_number) +
                                                  ".");
