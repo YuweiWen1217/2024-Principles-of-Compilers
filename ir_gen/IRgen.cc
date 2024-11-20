@@ -780,7 +780,7 @@ void return_stmt::codeIR() {
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     return_exp->codeIR();
     IRgenTypeConverse(B, return_exp->attribute.T.type, expected_type, reg_now);
-    IRgenRetReg(B, Type2LLvm[return_exp->attribute.T.type], reg_now);
+    IRgenRetReg(B, Type2LLvm[expected_type], reg_now);
 }
 
 void return_stmt_void::codeIR() {
@@ -893,6 +893,7 @@ void VarDef::codeIR() {
         irgen_table.reg_table[reg_now] = val;
         int reg_array = reg_now;    // 存放数组首地址
         //  3、分配->声明值->储存
+        IRgenAllocaArray(B0, Type2LLvm[type_decl], reg_now, val.dims);
         // 元素已经储存在了std::vector<int> IntInitVals或 std::vector<float> FloatInitVals中，大小已经确保和size匹配
         for (int i = 0; i < size; ++i) {
             // i -> 索引

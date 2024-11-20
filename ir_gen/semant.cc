@@ -111,6 +111,14 @@ expr_struct inttofloat(const Expression oriexp) {
     return exp;
 }
 
+void inttofloat(expr_struct &exp) {
+    if (exp.attribute.T.type != Type::INT)
+        return;
+    exp.attribute.T.type = Type::FLOAT;
+    exp.attribute.V.val.FloatVal = static_cast<float>(exp.attribute.V.val.IntVal);
+    return;
+}
+
 expr_struct floattoint(const Expression oriexp) {
     expr_struct exp;
     exp.attribute = oriexp->attribute;
@@ -121,14 +129,22 @@ expr_struct floattoint(const Expression oriexp) {
     return exp;
 }
 
+void floattoint(expr_struct &exp) {
+    if (exp.attribute.T.type != Type::FLOAT)
+        return;
+    exp.attribute.T.type = Type::INT;
+    exp.attribute.V.val.IntVal = static_cast<int>(exp.attribute.V.val.FloatVal);
+    return;
+}
+
 std::pair<expr_struct, expr_struct> unifyTypes(const Expression oriexp1, const Expression oriexp2) {
     auto exp1 = booltoint(oriexp1);
     auto exp2 = booltoint(oriexp2);
     if (exp1.attribute.T.type == exp2.attribute.T.type)
         return {exp1, exp2};
     if (exp1.attribute.T.type == Type::FLOAT || exp2.attribute.T.type == Type::FLOAT) {
-        exp1 = inttofloat(oriexp1);
-        exp2 = inttofloat(oriexp2);
+        inttofloat(exp1);
+        inttofloat(exp2);
     }
     return {exp1, exp2};
 }
@@ -418,7 +434,6 @@ void EqExp_neq::TypeCheck() {
     debug_msgs.push_back("!= Semant");
     eqexp->TypeCheck();
     relexp->TypeCheck();
-
     auto [exp1, exp2] = unifyTypes(eqexp, relexp);
     if (relexp->attribute.V.ConstTag)
         relexp->attribute = exp2.attribute;
