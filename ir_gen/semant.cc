@@ -289,7 +289,7 @@ void MulExp_div::TypeCheck() {
             return;
         }
         if (attribute.V.ConstTag)
-            attribute.V.val.IntVal = exp1.attribute.V.val.FloatVal / exp2.attribute.V.val.FloatVal;
+            attribute.V.val.FloatVal = exp1.attribute.V.val.FloatVal / exp2.attribute.V.val.FloatVal;
     } else {
         error_msgs.push_back("ERROR: Type mismatch in '/' at line " + std::to_string(line_number) + ".");
     }

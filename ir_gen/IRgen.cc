@@ -525,7 +525,6 @@ void Lval::codeIR() {
 
     // 左值只需要获取ptr就完成了，其他普通Lval还需要得到ptr里的值
     if (is_left == false && attribute.T.type != Type::PTR) {
-        debug_msgs.push_back("111  " + std::to_string(attribute.T.type));
         IRgenLoad(B, Type2LLvm[attribute.T.type], ++reg_now, ptr);
     }
 }
@@ -928,6 +927,7 @@ void VarDef::codeIR() {
                 else {
                     varinits[j]->codeIR();
                     IRgenTypeConverse(B, varinits[j]->attribute.T.type, Type::FLOAT, reg_now);
+                    j++;
                 }
             }
             // 此时reg_now存放的是获取的数值

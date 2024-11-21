@@ -1,37 +1,32 @@
-// reference:
-// https://stackoverflow.com/questions/8310749/discrete-cosine-transform-dct-implementation-c
+int k;
 
-const int MAX_DIM_X = 8, MAX_DIM_Y = 8;
-float test_block[MAX_DIM_X][MAX_DIM_Y];
-
-void write_mat(float mat[][MAX_DIM_Y], int n, int m) {
-    int i = 0;
-    while (i < n) {
-        putfloat(mat[i][0]);
-        int j = 1;
-        while (j < m) {
-            putch(32);
-            putfloat(mat[i][j]);
-            j = j + 1;
-        }
-        putch(10);
-        i = i + 1;
-    }
-    putch(10);
-}
-
-int main() {
-    int dim_x = getint(), dim_y = getint();
-
-    test_block[0][0] = getfloat();
-    test_block[1][0] = getfloat();
-
-    putfloat(test_block[0][0]);
-    putch(32);
-    putfloat(test_block[1][0]);
-    putch(32);
-    putfloat(test_block[1][1]);
-    putch(10);
-
+float params_f40(float x0, float x1) {
+    // putfloat(x0);
+    // putch(10);
+    // putfloat(x1);
+    // putch(10);
+    float arr[2] = {x0, x1};
+    // putfloat(x0 + x1 + x2 + x3);
+    // putch(10);
+    // putfloat(x4 + x5 + x6 + x7);
+    // putch(10);
+    // putfloat(arr[0]);
+    // putch(10);
+    putfloat(arr[1]);
+    // putch(10);
+    // putfarray(10, arr);
     return 0;
 }
+int main() {
+    float ret0 = params_f40(0x1.d8283ap+0, 0x1.527e9ep+0);
+    return 0;
+}
+
+// int main() {
+//     int a = 1;
+//     int b = 2;
+//     int arr[3] = {a, b, a + b};
+//     putint(arr[0]);
+//     putint(arr[1]);
+//     putint(arr[2]);
+// }
