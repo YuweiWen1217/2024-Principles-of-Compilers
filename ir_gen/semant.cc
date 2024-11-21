@@ -36,14 +36,13 @@ bool has_main = false;
 Type::ty now_func_return_type;
 
 // int a[5][4][3] = { { {2,3}, 6,7,5,4,3,2,11,2,4 },7,8,11 };
-std::vector<Expression> VarInits{}; 
+std::vector<Expression> VarInits{};
 void HandleArrayInit(InitVal init, VarAttribute &val, int count, int handled, bool &isAllConst) {
     debug_msgs.push_back("HandleArrayInit");
     int beforeadd = (val.type == Type::INT) ? val.IntInitVals.size() : val.FloatInitVals.size();
     for (InitVal iv : *(init->GetList())) {
         if (iv->IsExp()) {
-            if(!iv->attribute.V.ConstTag)
-            {
+            if (!iv->attribute.V.ConstTag) {
                 isAllConst = false;
                 VarInits.push_back(iv->GetExp());
             }
@@ -65,8 +64,12 @@ void HandleArrayInit(InitVal init, VarAttribute &val, int count, int handled, bo
         } else {
             int h = 1;
             for (auto d : val.dims) {
-                if (h <= handled)
+                if (h < handled)    // 不能直接用h <= handled，因为某维度可能等于1
                     h *= d;
+                else {
+                    h *= d;
+                    break;
+                }
             }
             // 如果是多维数组，则递归处理
             int afteradd = (val.type == Type::INT) ? val.IntInitVals.size() : val.FloatInitVals.size();
