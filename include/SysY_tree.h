@@ -418,7 +418,7 @@ public:
 class __Decl;
 typedef __Decl *Decl;
 
-// 初始值类中的新增的相关函数（IsExp、IsConst、GetList、GetExp）参考自SysY相关部分。
+// // Reference: https://github.com/yuhuifishash/SysY （增加了IsExp、IsConst、GetList、GetExp等函数）
 class __InitVal : public tree_node {
 public:
     virtual int IsExp() = 0;

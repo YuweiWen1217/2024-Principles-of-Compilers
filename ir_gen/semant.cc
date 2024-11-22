@@ -103,9 +103,6 @@ struct expr_struct {
     NodeAttribute attribute;
 };
 
-// 统一为相同的类型，优先级：float > int > bool，其中（bool，bool）会转换为（int，int）
-// 按值传递，而不是按引用传递：保证结点原属性不改变，在中间代码生成中，结点原属性意味着寄存器类型，现在改变会导致错误
-// !!!!注意，虽然是按值传递，但传入的是指针，不能直接用，要先深拷贝
 expr_struct booltoint(const Expression oriexp) {
     expr_struct exp;
     exp.attribute = oriexp->attribute;
@@ -152,6 +149,7 @@ void floattoint(expr_struct &exp) {
     return;
 }
 
+// 统一为相同的类型，优先级：float > int > bool，其中（bool，bool）也会转换为（int，int）
 std::pair<expr_struct, expr_struct> unifyTypes(const Expression oriexp1, const Expression oriexp2) {
     auto exp1 = booltoint(oriexp1);
     auto exp2 = booltoint(oriexp2);
@@ -166,7 +164,7 @@ std::pair<expr_struct, expr_struct> unifyTypes(const Expression oriexp1, const E
 
 void __Program::TypeCheck() {
     debug_msgs.push_back("Program Semant");
-    // 进入一个新的作用域
+    // 进入一个新的作用域（scope = 0）
     semant_table.symbol_table.enter_scope();
     auto comp_vector = *comp_list;
     for (auto comp : comp_vector) {
@@ -532,7 +530,7 @@ void Lval::TypeCheck() {
     if (scope == -1) {
         if (semant_table.GlobalTable.find(name) != semant_table.GlobalTable.end()) {
             varAttr = semant_table.GlobalTable[name];
-            scope = 0;
+            scope = 0; //这个参数没什么用，只在PrintAST里用
         } else
             error_msgs.push_back("ERROR: Undefined variable at line " + std::to_string(line_number) + ".");
     } else {

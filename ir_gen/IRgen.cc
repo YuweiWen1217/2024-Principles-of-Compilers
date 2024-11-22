@@ -97,10 +97,8 @@ void IRgenTypeConverse(LLVMBlock B, Type::ty type_src, Type::ty type_dst, int sr
         IRgenFptosi(B, src, dst);
     else if (type_src == Type::FLOAT && type_dst == Type::BOOL)
         IRgenFcmpImmRight(B, BasicInstruction::ONE, src, 0, dst);
-    else {
-        std::cout << std::to_string(type_src) << " " << std::to_string(type_dst) << std::endl;
+    else
         assert(false);
-    }
 }
 
 void BasicBlock::InsertInstruction(int pos, Instruction Ins) {
@@ -838,6 +836,7 @@ void VarDef_no_init::codeIR() {
         //  3、分配->memset函数初始化值
         // void *memset(起始地址, 每字节初始化的值, 字节数, 对齐方式);
         IRgenAllocaArray(B0, Type2LLvm[type_decl], reg_now, val.dims);
+        // Reference: https://github.com/yuhuifishash/SysY/ir_gen/IRgen.cc line618-line623
         CallInstruction *memsetCall =
         new CallInstruction(BasicInstruction::VOID, nullptr, std::string("llvm.memset.p0.i32"));
         memsetCall->push_back_Parameter(BasicInstruction::PTR, GetNewRegOperand(reg_now));
@@ -1129,7 +1128,8 @@ void __FuncDef::codeIR() {
     block->codeIR();
 
     // <FuncDefIns, { <0, block>, <1, block>, ···} >
-    // 块末没有跳转或返回，一律返回默认值
+    // 未定义行为处理：代码执行结束后没有return语句，返回随机值即可（为了不再将main函数与其他int类型函数作区分，我们返回0）
+    // Reference: https://github.com/yuhuifishash/SysY/ir_gen/IRgen.cc line91-line104
     for (auto block : llvmIR.function_block_map[func_now]) {
         LLVMBlock B = block.second;
         int opcode = -1;
