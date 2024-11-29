@@ -1,32 +1,5 @@
 int k;
-
-float params_f40(float x0, float x1) {
-    // putfloat(x0);
-    // putch(10);
-    // putfloat(x1);
-    // putch(10);
-    float arr[2] = {x0, x1};
-    // putfloat(x0 + x1 + x2 + x3);
-    // putch(10);
-    // putfloat(x4 + x5 + x6 + x7);
-    // putch(10);
-    // putfloat(arr[0]);
-    // putch(10);
-    putfloat(arr[1]);
-    // putch(10);
-    // putfarray(10, arr);
-    return 0;
+int main()
+{
+    
 }
-int main() {
-    float ret0 = params_f40(0x1.d8283ap+0, 0x1.527e9ep+0);
-    return 0;
-}
-
-// int main() {
-//     int a = 1;
-//     int b = 2;
-//     int arr[3] = {a, b, a + b};
-//     putint(arr[0]);
-//     putint(arr[1]);
-//     putint(arr[2]);
-// }

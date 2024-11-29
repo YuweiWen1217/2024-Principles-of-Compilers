@@ -38,8 +38,6 @@ public:
     // 对于数组的初始化值，我们将高维数组看作一维后再存储 eg.([3 x [4 x i32]] => [12 x i32])
     std::vector<int> IntInitVals{};
     std::vector<float> FloatInitVals{};
-    std::vector<bool> IntInitValsTag{};
-    std::vector<bool> FloatInitValsTag{};
 
     bool isFormalArray = 0;    // 是否是 作为参数的数组 a[][1];
     // TODO():也许你需要添加更多变量

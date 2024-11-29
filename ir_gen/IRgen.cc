@@ -735,9 +735,9 @@ void while_stmt::codeIR() {
     Cond->false_label = end_label;
     LLVMBlock B = llvmIR.GetBlock(func_now, label_now);
     IRgenBRUnCond(B, cond_label);
-
     label_now = cond_label;
     Cond->codeIR();
+
     LLVMBlock B1 = llvmIR.GetBlock(func_now, label_now);
     int ori_reg = reg_now;
     if (Cond->attribute.T.type == Type::INT)
@@ -816,7 +816,7 @@ void VarDef_no_init::codeIR() {
         val.type = type_decl;
         if (dims == nullptr) {
             irgen_table.reg_table[reg_now];
-            //  3、分配->默认值->储存
+            //  3、非数组：分配->默认值->储存
             IRgenAlloca(B0, Type2LLvm[type_decl], reg_now);
             int reg_alloc = reg_now;
             if (type_decl == Type::INT)
@@ -891,43 +891,44 @@ void VarDef::codeIR() {
         irgen_table.reg_table[reg_now] = val;
         int reg_array = reg_now;    // 存放数组首地址
         //  3、分配->声明值->储存
+        // 3.1 在函数0号块分配空间
         IRgenAllocaArray(B0, Type2LLvm[type_decl], reg_now, val.dims);
-        // 元素已经储存在了std::vector<int> IntInitVals或 std::vector<float> FloatInitVals中，大小已经确保和size匹配
-        int j = 0;
-        for (int i = 0; i < size; ++i) {
-            // i -> 索引
+        // 3.2 这个空间先清0
+        CallInstruction *memsetCall =
+        new CallInstruction(BasicInstruction::VOID, nullptr, std::string("llvm.memset.p0.i32"));
+        memsetCall->push_back_Parameter(BasicInstruction::PTR, GetNewRegOperand(reg_now));
+        memsetCall->push_back_Parameter(BasicInstruction::I8, new ImmI32Operand(0));
+        memsetCall->push_back_Parameter(BasicInstruction::I32, new ImmI32Operand(size * sizeof(int)));
+        memsetCall->push_back_Parameter(BasicInstruction::I1, new ImmI32Operand(0));
+        B->InsertInstruction(1, memsetCall);
+
+        // 3.3 按照类型检查时，初始化好的varinits，进行初始值赋值
+        for (int i = 0; i < varinits.size(); ++i) {
+            // 回忆一下varinits：<exp, 线性索引>
+            int remainder = varinits[i].second;
+            // remainder -> 索引
             // arrayindexs储存地址
             // int a[3][2][2]
-            // i = 10 -> a[2][1][0] -> arrayindexs:{0,2,1,0}
+            // remainder = 10 -> a[2][1][0] -> arrayindexs:{0,2,1,0}
             std::vector<Operand> arrayindexs;
-            int remainder = i;
             for (int d = val.dims.size() - 1; d >= 0; --d) {
                 int idx = remainder % val.dims[d];
                 remainder /= val.dims[d];
                 arrayindexs.insert(arrayindexs.begin(), new ImmI32Operand(idx));
             }
             arrayindexs.insert(arrayindexs.begin(), new ImmI32Operand(0));
+
             // 计算应当赋值的地址
             IRgenGetElementptrIndexI32(B, Type2LLvm[val.type], ++reg_now, GetNewRegOperand(reg_array), val.dims,
                                        arrayindexs);
             int reg_adr = reg_now;    // 存放应当赋值的地址
             // 获取初始化值
             if (val.type == Type::INT) {
-                if (IntInitValsTag[i])
-                    IRgenArithmeticI32ImmAll(B, BasicInstruction::ADD, IntInitVals[i], 0, ++reg_now);
-                else {
-                    varinits[j]->codeIR();
-                    IRgenTypeConverse(B, varinits[j]->attribute.T.type, Type::INT, reg_now);
-                    j++;
-                }
+                varinits[i].first->codeIR();
+                IRgenTypeConverse(B, varinits[i].first->attribute.T.type, Type::INT, reg_now);
             } else if (val.type == Type::FLOAT) {
-                if (FloatInitValsTag[i])
-                    IRgenArithmeticF32ImmAll(B, BasicInstruction::FADD, FloatInitVals[i], 0, ++reg_now);
-                else {
-                    varinits[j]->codeIR();
-                    IRgenTypeConverse(B, varinits[j]->attribute.T.type, Type::FLOAT, reg_now);
-                    j++;
-                }
+                varinits[i].first->codeIR();
+                IRgenTypeConverse(B, varinits[i].first->attribute.T.type, Type::FLOAT, reg_now);
             }
             // 此时reg_now存放的是获取的数值
             IRgenStore(B, Type2LLvm[val.type], GetNewRegOperand(reg_now), GetNewRegOperand(reg_adr));
@@ -983,29 +984,40 @@ void ConstDef::codeIR() {
         int reg_array = reg_now;    // 存放数组首地址
         //  3、分配->声明值->储存
         IRgenAllocaArray(B0, Type2LLvm[type_decl], reg_now, val.dims);
-        // 元素已经储存在了std::vector<int> IntInitVals或 std::vector<float> FloatInitVals中，大小已经确保和size匹配
-        for (int i = 0; i < size; ++i) {
-            // i -> 索引
+        CallInstruction *memsetCall =
+        new CallInstruction(BasicInstruction::VOID, nullptr, std::string("llvm.memset.p0.i32"));
+        memsetCall->push_back_Parameter(BasicInstruction::PTR, GetNewRegOperand(reg_now));
+        memsetCall->push_back_Parameter(BasicInstruction::I8, new ImmI32Operand(0));
+        memsetCall->push_back_Parameter(BasicInstruction::I32, new ImmI32Operand(size * sizeof(int)));
+        memsetCall->push_back_Parameter(BasicInstruction::I1, new ImmI32Operand(0));
+        B->InsertInstruction(1, memsetCall);
+        // 3.3 按照类型检查时，初始化好的varinits，进行初始值赋值
+        for (int i = 0; i < varinits.size(); ++i) {
+            // 回忆一下varinits：<exp, 线性索引>
+            int remainder = varinits[i].second;
+            // remainder -> 索引
             // arrayindexs储存地址
             // int a[3][2][2]
-            // i = 10 -> a[2][1][0] -> arrayindexs:{0,2,1,0}
+            // remainder = 10 -> a[2][1][0] -> arrayindexs:{0,2,1,0}
             std::vector<Operand> arrayindexs;
-            int remainder = i;
             for (int d = val.dims.size() - 1; d >= 0; --d) {
                 int idx = remainder % val.dims[d];
                 remainder /= val.dims[d];
                 arrayindexs.insert(arrayindexs.begin(), new ImmI32Operand(idx));
             }
             arrayindexs.insert(arrayindexs.begin(), new ImmI32Operand(0));
+
             // 计算应当赋值的地址
             IRgenGetElementptrIndexI32(B, Type2LLvm[val.type], ++reg_now, GetNewRegOperand(reg_array), val.dims,
                                        arrayindexs);
             int reg_adr = reg_now;    // 存放应当赋值的地址
             // 获取初始化值
             if (val.type == Type::INT) {
-                IRgenArithmeticI32ImmAll(B, BasicInstruction::ADD, IntInitVals[i], 0, ++reg_now);
+                varinits[i].first->codeIR();
+                IRgenTypeConverse(B, varinits[i].first->attribute.T.type, Type::INT, reg_now);
             } else if (val.type == Type::FLOAT) {
-                IRgenArithmeticF32ImmAll(B, BasicInstruction::FADD, FloatInitVals[i], 0, ++reg_now);
+                varinits[i].first->codeIR();
+                IRgenTypeConverse(B, varinits[i].first->attribute.T.type, Type::FLOAT, reg_now);
             }
             // 此时reg_now存放的是获取的数值
             IRgenStore(B, Type2LLvm[val.type], GetNewRegOperand(reg_now), GetNewRegOperand(reg_adr));
