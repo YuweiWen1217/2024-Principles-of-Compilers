@@ -18,19 +18,26 @@ declare i32 @llvm.smin.i32(i32,i32)
 define i32 @main()
 {
 L0:  ;
-    %r9 = alloca i32
+    %r2 = alloca i32
     %r0 = alloca i32
     br label %L1
 L1:  ;
     %r1 = add i32 5,0
     store i32 %r1, ptr %r0
-    %r2 = load i32, ptr %r0
-    %r3 = icmp sgt i32 %r2,5
-    br i1 %r3, label %L2, label %L3
+    %r3 = add i32 4,0
+    store i32 %r3, ptr %r2
+    %r4 = add i32 1,0
+    %r5 = icmp ne i32 %r4,0
+    br i1 %r5, label %L2, label %L3
 L2:  ;
-    %r4 = add i32 5,0
-    ret i32 %r4
+    %r6 = load i32, ptr %r2
+    store i32 %r6, ptr %r0
+    br label %L4
 L3:  ;
+    %r7 = add i32 4,0
+    store i32 %r7, ptr %r0
+    br label %L4
+L4:  ;
     %r8 = add i32 0,0
     ret i32 %r8
 }

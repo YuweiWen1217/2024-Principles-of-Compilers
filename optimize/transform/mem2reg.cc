@@ -34,7 +34,63 @@ pseudo IR is:
 // 提示:deque直接在中间删除是O(n)的, 可以先标记要删除的指令, 最后想一个快速的方法统一删除
 void Mem2RegPass::Mem2RegNoUseAlloca(CFG *C, std::set<int> &vset) {
     // this function is used in InsertPhi
-    TODO("Mem2RegNoUseAlloca");
+    // TODO("Mem2RegNoUseAlloca");
+
+    // 1. 检查 unusedRegs 是否为空，如果为空，直接返回
+    if (C->regInfo.unusedRegs.empty()) {
+        return;
+    }
+
+    // 2. 如果 unusedRegs 不为空，求一下涉及到的代码块
+    std::unordered_set<int> blockSet;
+    for (const Operand &reg : C->regInfo.unusedRegs) {
+        auto regBlockIt = C->regInfo.regToBlocks.find(reg);
+        if (regBlockIt != C->regInfo.regToBlocks.end()) {
+            const std::unordered_set<int> &blocks = regBlockIt->second;
+            blockSet.insert(blocks.begin(), blocks.end());    // 并集
+        }
+    }
+
+    // 3. 删除 0 号块中的 alloca 指令
+    LLVMBlock block0 = (*C->block_map)[0];
+    std::deque<Instruction> &instructions = block0->Instruction_list;
+    std::deque<Instruction> newDeque;    // 用于存储没被删除的指令
+    // 遍历0号块的所有指令，删除不需要的 alloca 指令
+    for (auto &inst : instructions) {
+        if (inst->GetOpcode() == BasicInstruction::ALLOCA) {
+            // 如果当前指令的操作数是 unusedRegs 中的寄存器，则跳过
+            AllocaInstruction *allocaInst = dynamic_cast<AllocaInstruction *>(inst);
+            if (allocaInst && C->regInfo.unusedRegs.find(allocaInst->GetResult()) != C->regInfo.unusedRegs.end()) {
+                continue;
+            }
+        }
+        // 其他指令保持不变
+        newDeque.push_back(inst);
+    }
+    block0->Instruction_list = newDeque;
+
+    // 4. 遍历并集中的块，删除涉及到的store指令
+    for (int blockId : blockSet) {
+        LLVMBlock block = (*C->block_map)[blockId];
+        std::deque<Instruction> &blockInstructions = block->Instruction_list;
+        std::deque<Instruction> newBlockDeque;    // 用于存储没被删除的指令
+
+        for (auto &inst : blockInstructions) {
+            auto opcode = inst->GetOpcode();
+            if (opcode == BasicInstruction::STORE) {
+                // 如果是 store 指令，且涉及到 unusedRegs 中的寄存器，则跳过该指令
+                StoreInstruction *storeInst = dynamic_cast<StoreInstruction *>(inst);
+                if (storeInst) {
+                    Operand ptr = storeInst->GetPointer();
+                    if (C->regInfo.unusedRegs.find(ptr) != C->regInfo.unusedRegs.end()) {
+                        continue;
+                    }
+                }
+            }
+            newBlockDeque.push_back(inst);
+        }
+        block->Instruction_list = newBlockDeque;
+    }
 }
 
 /*

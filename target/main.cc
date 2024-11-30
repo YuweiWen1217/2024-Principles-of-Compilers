@@ -156,6 +156,8 @@ int main(int argc, char **argv) {
 
     ast_root->codeIR();
 
+    llvmIR.PrintFuncRegInfo();
+
     if (debug_msgs.size() > 0 && strcmp(argv[step_tag], "-p") == 0) {
         for (auto msg : debug_msgs) {
             fout << msg << std::endl;

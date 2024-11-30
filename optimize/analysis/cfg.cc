@@ -8,6 +8,7 @@ void LLVMIR::CFGInit() {
         CFG *cfg = new CFG();
         cfg->block_map = &bb_map;
         cfg->function_def = defI;
+        cfg->regInfo = FuncRegInfo_map[defI];
         cfg->G.resize(bb_map.size());
         cfg->invG.resize(bb_map.size());
         cfg->BuildCFG();

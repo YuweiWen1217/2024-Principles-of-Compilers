@@ -26,6 +26,7 @@ public:
     // 使用邻接表表示图结构
     std::vector<std::vector<LLVMBlock>> G{};       // 控制流图（CFG），存储每个基本块的后继基本块
     std::vector<std::vector<LLVMBlock>> invG{};    // 逆控制流图，存储每个基本块的前驱基本块
+    FuncRegInfo regInfo;
 
     /**
      * 构建控制流图（CFG）和逆控制流图（invG）。

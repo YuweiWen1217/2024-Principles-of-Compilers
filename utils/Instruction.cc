@@ -1,11 +1,14 @@
 #include "../include/Instruction.h"
 #include "../include/basic_block.h"
+#include "../include/ir.h"
 #include <assert.h>
 #include <unordered_map>
 
 static std::unordered_map<int, RegOperand *> RegOperandMap;
 static std::map<int, LabelOperand *> LabelOperandMap;
 static std::map<std::string, GlobalOperand *> GlobalOperandMap;
+
+extern LLVMIR llvmIR;
 
 RegOperand *GetNewRegOperand(int RegNo) {
     auto it = RegOperandMap.find(RegNo);
@@ -97,7 +100,7 @@ void IRgenFcmpImmRight(LLVMBlock B, BasicInstruction::FcmpCond cmp_op, int reg1,
                                                 new ImmF32Operand(val2), cmp_op, GetNewRegOperand(result_reg)));
 }
 
-// 转换 
+// 转换
 void IRgenFptosi(LLVMBlock B, int src, int dst) {
     B->InsertInstruction(1, new FptosiInstruction(GetNewRegOperand(dst), GetNewRegOperand(src)));
 }
@@ -127,14 +130,24 @@ void IRgenGetElementptrIndexI64(LLVMBlock B, BasicInstruction::LLVMType type, in
 // 加载和储存(目前没用到)
 void IRgenLoad(LLVMBlock B, BasicInstruction::LLVMType type, int result_reg, Operand ptr) {
     B->InsertInstruction(1, new LoadInstruction(type, ptr, GetNewRegOperand(result_reg)));
+
+    FuncDefInstruction funcDef = B->Function;
+    llvmIR.FuncRegInfo_map[funcDef].unusedRegs.erase(ptr);
+    llvmIR.FuncRegInfo_map[funcDef].regToBlocks[ptr].insert(B->block_id);
 }
 
 void IRgenStore(LLVMBlock B, BasicInstruction::LLVMType type, int value_reg, Operand ptr) {
     B->InsertInstruction(1, new StoreInstruction(type, ptr, GetNewRegOperand(value_reg)));
+
+    FuncDefInstruction funcDef = B->Function;
+    llvmIR.FuncRegInfo_map[funcDef].regToBlocks[ptr].insert(B->block_id);
 }
 
 void IRgenStore(LLVMBlock B, BasicInstruction::LLVMType type, Operand value, Operand ptr) {
     B->InsertInstruction(1, new StoreInstruction(type, ptr, value));
+
+    FuncDefInstruction funcDef = B->Function;
+    llvmIR.FuncRegInfo_map[funcDef].regToBlocks[ptr].insert(B->block_id);
 }
 
 // 函数调用(目前没用到)
@@ -186,9 +199,15 @@ void IRgenBrCond(LLVMBlock B, int cond_reg, int true_label, int false_label) {
 // 生成栈分配指令，为指定寄存器分配一个变量的内存
 void IRgenAlloca(LLVMBlock B, BasicInstruction::LLVMType type, int reg) {
     B->InsertInstruction(0, new AllocaInstruction(type, GetNewRegOperand(reg)));
+
+    FuncDefInstruction funcDef = B->Function;
+    llvmIR.FuncRegInfo_map[funcDef].unusedRegs.insert(GetNewRegOperand(reg));
 }
 
 // 生成数组栈分配指令，为指定寄存器分配数组的内存(目前没用到)
 void IRgenAllocaArray(LLVMBlock B, BasicInstruction::LLVMType type, int reg, std::vector<int> dims) {
     B->InsertInstruction(0, new AllocaInstruction(type, dims, GetNewRegOperand(reg)));
+
+    FuncDefInstruction funcDef = B->Function;
+    llvmIR.FuncRegInfo_map[funcDef].unusedRegs.insert(GetNewRegOperand(reg));
 }

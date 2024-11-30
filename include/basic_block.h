@@ -17,6 +17,8 @@ public:
     // 基本块中 IR 指令的集合；双端队列允许我们在队列的头部和尾部快速插入或删除指令。
     std::deque<Instruction> Instruction_list{};
 
+    FuncDefInstruction Function;    // 该块所属函数。
+
     /*
         pos = 1 -> end   pos = 0 -> begin
         inst1  <- front
@@ -27,11 +29,9 @@ public:
     // 插入指令，pos = 1在末尾插入、pos = 0`在开头插入
     void InsertInstruction(int pos, Instruction Ins);
 
-
     void printIR(std::ostream &s);
 
-    
-    BasicBlock(int id) : block_id(id) {}
+    BasicBlock(int id, FuncDefInstruction func) : block_id(id), Function(func) {}
 };
 typedef BasicBlock *LLVMBlock;
 

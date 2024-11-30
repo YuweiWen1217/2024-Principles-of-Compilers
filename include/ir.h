@@ -2,6 +2,13 @@
 #define IR_H
 
 #include "cfg.h"
+#include <unordered_map>
+#include <unordered_set>
+
+struct FuncRegInfo {
+    std::unordered_set<Operand> unusedRegs;
+    std::unordered_map<Operand, std::unordered_set<int>> regToBlocks;
+};
 
 class LLVMIR {
 public:
@@ -18,6 +25,8 @@ public:
     // 你必须保证函数的入口基本块为0号基本块，否则在后端会出现错误。
     std::map<FuncDefInstruction, std::map<int, LLVMBlock>> function_block_map;
 
+    std::map<FuncDefInstruction, FuncRegInfo> FuncRegInfo_map;
+
     // 我们用函数定义指令来对应一个函数
     // 在LLVMIR中新建一个函数
     void NewFunction(FuncDefInstruction I) { function_block_map[I] = {}; }
@@ -27,13 +36,39 @@ public:
 
     // 在函数I中新建一个新的编号为x的基本块, 该编号不能与已经有的重复
     LLVMBlock NewBlock(FuncDefInstruction I, int x) {
-        function_block_map[I][x] = new BasicBlock(x);
+        function_block_map[I][x] = new BasicBlock(x, I);
         return GetBlock(I, x);
     }
     void printIR(std::ostream &s);
 
     void CFGInit();
     void BuildCFG();
+
+    // 打印FuncRegInfo，仅作调试用。
+    void PrintFuncRegInfo() {
+        for (const auto &entry : FuncRegInfo_map) {
+            FuncDefInstruction funcDef = entry.first;
+            FuncRegInfo regInfo = entry.second;
+            std::cout << "Function: " << funcDef->GetFunctionName() << std::endl;
+            std::cout << "  Unused Registers: ";
+            for (const auto &reg : regInfo.unusedRegs) {
+                std::cout << reg->GetFullName() << " ";
+            }
+            std::cout << std::endl;
+            std::cout << "  Registers to Blocks:" << std::endl;
+            for (const auto &regBlockPair : regInfo.regToBlocks) {
+                const Operand &reg = regBlockPair.first;
+                const std::unordered_set<int> &blocks = regBlockPair.second;
+
+                std::cout << "    Register: " << reg->GetFullName() << " -> Blocks: ";
+                for (int blockId : blocks) {
+                    std::cout << blockId << " ";
+                }
+                std::cout << std::endl;
+            }
+            std::cout << std::endl;
+        }
+    }
 };
 
 #endif
