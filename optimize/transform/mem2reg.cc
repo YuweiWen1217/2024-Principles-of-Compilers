@@ -74,7 +74,6 @@ void Mem2RegPass::Mem2RegNoUseAlloca(CFG *C, std::set<int> &vset) {
         LLVMBlock block = (*C->block_map)[blockId];
         std::deque<Instruction> &blockInstructions = block->Instruction_list;
         std::deque<Instruction> newBlockDeque;    // 用于存储没被删除的指令
-
         for (auto &inst : blockInstructions) {
             auto opcode = inst->GetOpcode();
             if (opcode == BasicInstruction::STORE) {

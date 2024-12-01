@@ -5,11 +5,6 @@
 #include <unordered_map>
 #include <unordered_set>
 
-struct FuncRegInfo {
-    std::unordered_set<Operand> unusedRegs;
-    std::unordered_map<Operand, std::unordered_set<int>> regToBlocks;
-};
-
 class LLVMIR {
 public:
     // 全局变量定义指令
