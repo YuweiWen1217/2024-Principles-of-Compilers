@@ -50,8 +50,19 @@ public:
                 std::cout << reg->GetFullName() << " ";
             }
             std::cout << std::endl;
-            std::cout << "  Registers to Blocks:" << std::endl;
-            for (const auto &regBlockPair : regInfo.regToBlocks) {
+            std::cout << "  Registers to use Blocks:" << std::endl;
+            for (const auto &regBlockPair : regInfo.reg2useBlocks) {
+                const Operand &reg = regBlockPair.first;
+                const std::unordered_set<int> &blocks = regBlockPair.second;
+
+                std::cout << "    Register: " << reg->GetFullName() << " -> Blocks: ";
+                for (int blockId : blocks) {
+                    std::cout << blockId << " ";
+                }
+                std::cout << std::endl;
+            }
+            std::cout << "  Registers to def Blocks:" << std::endl;
+            for (const auto &regBlockPair : regInfo.reg2defBlocks) {
                 const Operand &reg = regBlockPair.first;
                 const std::unordered_set<int> &blocks = regBlockPair.second;
 

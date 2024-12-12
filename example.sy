@@ -1,23 +1,6 @@
 int main() {
-    int a = 5;
-    int b = 4;
-    if (a > 2) {
-        a = b;
-    } else {
-        return 0;
-        a = 4;
-        if (a >= 4) {
-            b = 2;
-        } else {
-            return 1;
-            a = 3;
-        }
-    }
-    
-    if (a >= 4) {
-        b = 2;
-    } else {
-        a = 3;
-    }
-    return 0;
+    int a = getint();
+    int b = getint();
+    a = a + 5;
+    return a + b;
 }

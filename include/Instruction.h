@@ -294,6 +294,7 @@ public:
     int GetOpcode() { return opcode; }    // one solution: convert to pointer of subclasses
 
     virtual void PrintIR(std::ostream &s) = 0;
+    virtual void ReplaceRegByMap(const std::map<int, int> &Rule) = 0;
 };
 
 // load
@@ -316,6 +317,7 @@ public:
         this->pointer = pointer;
     }
     void PrintIR(std::ostream &s);
+    void ReplaceRegByMap(const std::map<int, int> &Rule);
 };
 
 // store
@@ -340,6 +342,7 @@ public:
     }
 
     virtual void PrintIR(std::ostream &s);
+    void ReplaceRegByMap(const std::map<int, int> &Rule);
 };
 
 //<result>=add <ty> <op1>,<op2>
@@ -372,6 +375,7 @@ public:
     }
 
     virtual void PrintIR(std::ostream &s);
+    void ReplaceRegByMap(const std::map<int, int> &Rule);
 };
 
 //<result>=icmp <cond> <ty> <op1>,<op2>
@@ -401,6 +405,7 @@ public:
         this->result = result;
     }
     virtual void PrintIR(std::ostream &s);
+    void ReplaceRegByMap(const std::map<int, int> &Rule);
 };
 
 //<result>=fcmp <cond> <ty> <op1>,<op2>
@@ -427,6 +432,7 @@ public:
         this->result = result;
     }
     virtual void PrintIR(std::ostream &s);
+    void ReplaceRegByMap(const std::map<int, int> &Rule);
 };
 
 // phi syntax:
@@ -450,6 +456,7 @@ public:
         this->result = result;
     }
     virtual void PrintIR(std::ostream &s);
+    void ReplaceRegByMap(const std::map<int, int> &Rule);
 };
 
 // alloca
@@ -477,6 +484,7 @@ public:
     }
 
     virtual void PrintIR(std::ostream &s);
+    void ReplaceRegByMap(const std::map<int, int> &Rule);
 };
 
 // Conditional branch
@@ -499,6 +507,7 @@ public:
     }
 
     virtual void PrintIR(std::ostream &s);
+    void ReplaceRegByMap(const std::map<int, int> &Rule);
 };
 
 // Unconditional branch
@@ -514,6 +523,7 @@ public:
         this->destLabel = destLabel;
     }
     virtual void PrintIR(std::ostream &s);
+    void ReplaceRegByMap(const std::map<int, int> &Rule);
 };
 
 /*
@@ -542,6 +552,7 @@ public:
         this->opcode = LLVMIROpcode::GLOBAL_VAR;
     }
     virtual void PrintIR(std::ostream &s);
+    void ReplaceRegByMap(const std::map<int, int> &Rule);
 };
 
 class GlobalStringConstInstruction : public BasicInstruction {
@@ -553,6 +564,7 @@ public:
     }
 
     virtual void PrintIR(std::ostream &s);
+    void ReplaceRegByMap(const std::map<int, int> &Rule);
 };
 
 /*
@@ -600,6 +612,7 @@ public:
     void push_back_Parameter(std::pair<enum LLVMType, Operand> newPara) { args.push_back(newPara); }
     void push_back_Parameter(enum LLVMType type, Operand val) { args.push_back(std::make_pair(type, val)); }
     virtual void PrintIR(std::ostream &s);
+    void ReplaceRegByMap(const std::map<int, int> &Rule);
 };
 
 /*
@@ -627,6 +640,7 @@ public:
     Operand GetRetVal() { return ret_val; }
 
     virtual void PrintIR(std::ostream &s);
+    void ReplaceRegByMap(const std::map<int, int> &Rule);
 };
 
 /*
@@ -672,6 +686,7 @@ public:
     std::vector<Operand> GetIndexes() { return indexes; }
 
     void PrintIR(std::ostream &s);
+    void ReplaceRegByMap(const std::map<int, int> &Rule);
 };
 
 class FunctionDefineInstruction : public BasicInstruction {
@@ -694,6 +709,7 @@ public:
     std::string GetFunctionName() { return Func_name; }
 
     void PrintIR(std::ostream &s);
+    void ReplaceRegByMap(const std::map<int, int> &Rule);
 };
 typedef FunctionDefineInstruction *FuncDefInstruction;
 
@@ -713,6 +729,7 @@ public:
     std::string GetFunctionName() { return Func_name; }
 
     void PrintIR(std::ostream &s);
+    void ReplaceRegByMap(const std::map<int, int> &Rule);
 };
 
 // 这条指令目前只支持float和i32的转换，如果你需要double, i64等类型，需要自己添加更多变量
@@ -729,6 +746,7 @@ public:
     Operand GetResult() { return result; }
     Operand GetSrc() { return value; }
     void PrintIR(std::ostream &s);
+    void ReplaceRegByMap(const std::map<int, int> &Rule);
 };
 
 // 这条指令目前只支持float和i32的转换，如果你需要double, i64等类型，需要自己添加更多变量
@@ -746,6 +764,7 @@ public:
     Operand GetResult() { return result; }
     Operand GetSrc() { return value; }
     void PrintIR(std::ostream &s);
+    void ReplaceRegByMap(const std::map<int, int> &Rule);
 };
 
 // 无符号扩展，你大概率需要它来将i1无符号扩展至i32(即对应c语言bool类型转int)
@@ -764,6 +783,7 @@ public:
         this->opcode = ZEXT;
     }
     void PrintIR(std::ostream &s);
+    void ReplaceRegByMap(const std::map<int, int> &Rule);
 };
 
 std::ostream &operator<<(std::ostream &s, BasicInstruction::LLVMType type);

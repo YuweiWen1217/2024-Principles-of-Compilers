@@ -14,7 +14,9 @@
 
 struct FuncRegInfo {
     std::unordered_set<Operand> unusedRegs;
-    std::unordered_map<Operand, std::unordered_set<int>> regToBlocks;
+    std::unordered_set<Operand> usedRegs;
+    std::unordered_map<Operand, std::unordered_set<int>> reg2useBlocks;
+    std::unordered_map<Operand, std::unordered_set<int>> reg2defBlocks;
 };
 
 class CFG {
