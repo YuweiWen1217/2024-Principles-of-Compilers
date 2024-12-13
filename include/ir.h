@@ -38,43 +38,7 @@ public:
 
     void CFGInit();
     void BuildCFG();
-
-    // 打印FuncRegInfo，仅作调试用。
-    void PrintFuncRegInfo() {
-        for (const auto &entry : FuncRegInfo_map) {
-            FuncDefInstruction funcDef = entry.first;
-            FuncRegInfo regInfo = entry.second;
-            std::cout << "Function: " << funcDef->GetFunctionName() << std::endl;
-            std::cout << "  Unused Registers: ";
-            for (const auto &reg : regInfo.unusedRegs) {
-                std::cout << reg->GetFullName() << " ";
-            }
-            std::cout << std::endl;
-            std::cout << "  Registers to use Blocks:" << std::endl;
-            for (const auto &regBlockPair : regInfo.reg2useBlocks) {
-                const Operand &reg = regBlockPair.first;
-                const std::unordered_set<int> &blocks = regBlockPair.second;
-
-                std::cout << "    Register: " << reg->GetFullName() << " -> Blocks: ";
-                for (int blockId : blocks) {
-                    std::cout << blockId << " ";
-                }
-                std::cout << std::endl;
-            }
-            std::cout << "  Registers to def Blocks:" << std::endl;
-            for (const auto &regBlockPair : regInfo.reg2defBlocks) {
-                const Operand &reg = regBlockPair.first;
-                const std::unordered_set<int> &blocks = regBlockPair.second;
-
-                std::cout << "    Register: " << reg->GetFullName() << " -> Blocks: ";
-                for (int blockId : blocks) {
-                    std::cout << blockId << " ";
-                }
-                std::cout << std::endl;
-            }
-            std::cout << std::endl;
-        }
-    }
+    
 };
 
 #endif

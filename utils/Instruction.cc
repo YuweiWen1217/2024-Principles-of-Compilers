@@ -132,23 +132,23 @@ void IRgenLoad(LLVMBlock B, BasicInstruction::LLVMType type, int result_reg, Ope
     B->InsertInstruction(1, new LoadInstruction(type, ptr, GetNewRegOperand(result_reg)));
 
     FuncDefInstruction funcDef = B->Function;
-    llvmIR.FuncRegInfo_map[funcDef].unusedRegs.erase(ptr);
-    llvmIR.FuncRegInfo_map[funcDef].usedRegs.insert(ptr);
-    llvmIR.FuncRegInfo_map[funcDef].reg2useBlocks[ptr].insert(B->block_id);
+    // llvmIR.FuncRegInfo_map[funcDef].unusedRegs.erase(ptr);
+    // llvmIR.FuncRegInfo_map[funcDef].usedRegs.insert(ptr);
+    // llvmIR.FuncRegInfo_map[funcDef].reg2useBlocks[ptr].insert(B->block_id);
 }
 
 void IRgenStore(LLVMBlock B, BasicInstruction::LLVMType type, int value_reg, Operand ptr) {
     B->InsertInstruction(1, new StoreInstruction(type, ptr, GetNewRegOperand(value_reg)));
 
     FuncDefInstruction funcDef = B->Function;
-    llvmIR.FuncRegInfo_map[funcDef].reg2defBlocks[ptr].insert(B->block_id);
+    //llvmIR.FuncRegInfo_map[funcDef].reg2defBlocks[ptr].insert(B->block_id);
 }
 
 void IRgenStore(LLVMBlock B, BasicInstruction::LLVMType type, Operand value, Operand ptr) {
     B->InsertInstruction(1, new StoreInstruction(type, ptr, value));
 
     FuncDefInstruction funcDef = B->Function;
-    llvmIR.FuncRegInfo_map[funcDef].reg2defBlocks[ptr].insert(B->block_id);
+    //llvmIR.FuncRegInfo_map[funcDef].reg2defBlocks[ptr].insert(B->block_id);
 }
 
 // 函数调用(目前没用到)

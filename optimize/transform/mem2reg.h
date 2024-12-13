@@ -8,6 +8,9 @@
 class Mem2RegPass : public IRPass {
 private:
     DomAnalysis *domtrees;
+
+    std::map<PhiInstruction *, int> phi2reg;
+
     // TODO():添加更多你需要的成员变量
     bool IsPromotable(CFG *C, Instruction AllocaInst);
     void Mem2RegNoUseAlloca(CFG *C, std::set<int> &vset);

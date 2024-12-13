@@ -37,10 +37,11 @@ public:
     std::vector<std::vector<LLVMBlock>> invG{};    // 逆控制流图，存储每个基本块的前驱基本块
 
     //----新增变量&函数-----
-    FuncRegInfo regInfo;     // CFG对应函数的寄存器信息
-    int Label_num;           // 用于重新构建G、invG时，resize大小
-    std::vector<int> ord;    // 逆后序
-    void Check_one_block(int bbid); // 用于dfs构建cfg时检查
+    FuncRegInfo regInfo;               // CFG对应函数的寄存器信息
+    int Label_num;                     // 用于构建G、invG时，resize大小
+    std::vector<int> ord;              // 逆后序
+    void Check_one_block(int bbid);    // 用于dfs构建cfg时检查
+    int reg_max;
 
     /**
      * 构建控制流图（CFG）和逆控制流图（invG）。
@@ -54,7 +55,7 @@ public:
     std::vector<LLVMBlock> GetSuccessor(LLVMBlock B);
     std::vector<LLVMBlock> GetSuccessor(int bbid);
 
-    // PrintCFG仅作调试用
+    // PrintCFG、printFuncRegInfo仅作调试用
     void PrintCFG() {
         std::cout << "Graph G (Control Flow Graph):" << std::endl;
         for (size_t i = 0; i < G.size(); ++i) {
@@ -77,6 +78,49 @@ public:
             std::cout << i << " ";
         }
         std::cout << std::endl;
+    }
+    void printFuncRegInfo() {
+        // 打印 unusedRegs
+        std::cout << "unusedRegs: ";
+        if (regInfo.unusedRegs.empty()) {
+            std::cout << "None";
+        } else {
+            for (const auto &reg : regInfo.unusedRegs) {
+                std::cout << reg << " ";
+            }
+        }
+        std::cout << std::endl;
+
+        // 打印 usedRegs
+        std::cout << "usedRegs: ";
+        if (regInfo.usedRegs.empty()) {
+            std::cout << "None";
+        } else {
+            for (const auto &reg : regInfo.usedRegs) {
+                std::cout << reg << " ";
+            }
+        }
+        std::cout << std::endl;
+
+        // 打印 reg2useBlocks
+        std::cout << "reg2useBlocks: " << std::endl;
+        for (const auto &entry : regInfo.reg2useBlocks) {
+            std::cout << "  " << entry.first << " -> { ";
+            for (const auto &block : entry.second) {
+                std::cout << block << " ";
+            }
+            std::cout << "}" << std::endl;
+        }
+
+        // 打印 reg2defBlocks
+        std::cout << "reg2defBlocks: " << std::endl;
+        for (const auto &entry : regInfo.reg2defBlocks) {
+            std::cout << "  " << entry.first << " -> { ";
+            for (const auto &block : entry.second) {
+                std::cout << block << " ";
+            }
+            std::cout << "}" << std::endl;
+        }
     }
 };
 

@@ -156,8 +156,6 @@ int main(int argc, char **argv) {
 
     ast_root->codeIR();
 
-    //llvmIR.PrintFuncRegInfo(); // 调试用
-
     if (debug_msgs.size() > 0 && strcmp(argv[step_tag], "-p") == 0) {
         for (auto msg : debug_msgs) {
             fout << msg << std::endl;
@@ -167,21 +165,20 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    // 当你完成控制流图建立后，将下面注释取消
+    // 1、初始化每个CFG的各个变量、构建控制流图
     llvmIR.CFGInit();
 
-    // 对于AnalysisPass后续应该由TransformPass更新信息, 维护Analysis的正确性
-    // (例如在执行完SimplifyCFG后，需要保证控制流图依旧是正确的)
-
-    // 当你完成消除不可达基本块和指令后，将下面注释取消
+    // 2、消除不可达指令和不可达基本块，并更新控制流图。控制流图建立/更新时，记录逆后序.
+    // 同时，记录reg的use和def情况，为后面的mem2reg优化做准备。
     SimplifyCFGPass(&llvmIR).Execute();
-    llvmIR.BuildCFG(); //更新CFG;
+    llvmIR.BuildCFG();
 
-    // 消除不可达基本块和指令在不开启O1的情况也需要进行，原因是这属于基本优化
     optimize_flag = (argc == 6 && (strcmp(argv[optimize_tag], "-O1") == 0));
     if (optimize_flag) {
+
+        // 3、构建支配树、计算立即支配块
         DomAnalysis dom(&llvmIR);
-        //dom.Execute();   // 完成支配树建立后，取消该行代码的注释
+        dom.Execute();   // 完成支配树建立后，取消该行代码的注释
         (Mem2RegPass(&llvmIR, &dom)).Execute();
 
         // error_msgs.push_back: add more passes

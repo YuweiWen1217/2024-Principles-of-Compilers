@@ -457,6 +457,8 @@ public:
     }
     virtual void PrintIR(std::ostream &s);
     void ReplaceRegByMap(const std::map<int, int> &Rule);
+    Operand GetResult() { return result; }
+    void InsertPhi(Operand label, Operand val) { phi_list.push_back({label, val}); }
 };
 
 // alloca
@@ -695,6 +697,8 @@ private:
     std::string Func_name;
 
 public:
+    int reg_max;    // 插入phi指令用
+
     std::vector<enum LLVMType> formals;
     std::vector<Operand> formals_reg;
     FunctionDefineInstruction(enum LLVMType t, std::string n) {

@@ -65,6 +65,22 @@ void SimplifyCFGPass::EliminateUnreachedBlocksInsts(CFG *C) {
                 instructions.erase(std::next(it), instructions.end());
                 break;
             }
+            // 以下是mem2reg的准备工作
+            else if (opcode == BasicInstruction::LOAD) {
+                LoadInstruction *loadInst = dynamic_cast<LoadInstruction *>(inst);
+                Operand ptr = loadInst->GetPointer();
+                if (ptr->GetOperandType() == BasicOperand::REG) {
+                    C->regInfo.unusedRegs.erase(ptr);
+                    C->regInfo.usedRegs.insert(ptr);
+                    C->regInfo.reg2useBlocks[ptr].insert(block_id);
+                }
+            } else if (opcode == BasicInstruction::STORE) {
+                StoreInstruction *storeInst = dynamic_cast<StoreInstruction *>(inst);
+                Operand ptr = storeInst->GetPointer();
+                if (ptr->GetOperandType() == BasicOperand::REG) {
+                    C->regInfo.reg2defBlocks[ptr].insert(block_id);
+                }
+            }
             ++it;
         }
     }
@@ -77,4 +93,5 @@ void SimplifyCFGPass::EliminateUnreachedBlocksInsts(CFG *C) {
             ++it;
         }
     }
+    //C->printFuncRegInfo();
 }

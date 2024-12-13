@@ -1158,6 +1158,7 @@ void __FuncDef::codeIR() {
         }
     }
     irgen_table.symbol_table.exit_scope();
+    FuncDefIns->reg_max = reg_now;
 }
 
 void CompUnit_Decl::codeIR() {

@@ -1,6 +1,14 @@
 int main() {
-    int a = getint();
-    int b = 1;
-    b = b;
-    return a + b;
+    int i = 0;
+    int n = 100000;
+    while (i < n) {
+        if (i > 9961) {
+            while (i < n) {
+                // putint(i);
+                // putch(10);
+                return 0;
+            }
+        }
+        i = i + 1;
+    }
 }

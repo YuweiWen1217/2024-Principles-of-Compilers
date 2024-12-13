@@ -12,6 +12,8 @@ void LLVMIR::CFGInit() {
         cfg->function_def = defI;
         cfg->regInfo = FuncRegInfo_map[defI];
         cfg->Label_num = bb_map.size();
+        cfg->reg_max = defI->reg_max;
+        
         cfg->G.resize(cfg->Label_num);
         cfg->invG.resize(cfg->Label_num);
 
@@ -30,7 +32,7 @@ void LLVMIR::BuildCFG() {
         cfg->ord.clear();
 
         cfg->BuildCFG();
-        //cfg->PrintCFG();
+        cfg->PrintCFG();
     }
 }
 

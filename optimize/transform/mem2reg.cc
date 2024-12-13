@@ -121,6 +121,9 @@ pseudo IR is:
 对于每一个load，我们只需要找到最近的store,然后用store的值替换之后load的结果即可
 */
 
+// 维护一个映射：原寄存器 ID -> 新寄存器 ID
+std::map<int, int> regRenameMap;
+
 // vset is the set of alloca regno that load and store are all in the BB block_id
 // 该函数对你的时间复杂度有一定要求，你需要保证你的时间复杂度小于等于O(nlognlogn), n为该函数的指令数
 void Mem2RegPass::Mem2RegUseDefInSameBlock(CFG *C, std::set<int> &vset, int block_id) {
@@ -139,8 +142,12 @@ void Mem2RegPass::Mem2RegUseDefInSameBlock(CFG *C, std::set<int> &vset, int bloc
             qualifiedRegs.insert(reg);
         }
     }
+    // 这些寄存器在本函数中全部处理完成，从集合中删去。
+    for (const auto &reg : qualifiedRegs) {
+        regInfo.usedRegs.erase(reg);
+    }
 
-    // 2、删除 0 号块中的相关alloca 指令
+    // 2、删除 0 号块中的相关 alloca 指令和 usedRegs 集合中的寄存器编号。
     auto *entryBlock = C->block_map->at(0);
     std::deque<Instruction> newDeque;
     for (const auto &instr : entryBlock->Instruction_list) {
@@ -162,8 +169,6 @@ void Mem2RegPass::Mem2RegUseDefInSameBlock(CFG *C, std::set<int> &vset, int bloc
         for (const auto &reg : regs) {
             regToVal[reg] = -1;    // 初始化
         }
-        // 维护一个映射：原寄存器 ID -> 新寄存器 ID
-        std::map<int, int> regRenameMap;
 
         std::deque<Instruction> newDeque;
         for (auto &inst : block->Instruction_list) {
@@ -185,7 +190,7 @@ void Mem2RegPass::Mem2RegUseDefInSameBlock(CFG *C, std::set<int> &vset, int bloc
                     }
                     continue;
                 }
-            } 
+            }
             // 3.2 指令是目标寄存器的load指令，向regRenameMap中添加映射：load指令中的result_op -> regToVal中对应的op
             else if (inst->GetOpcode() == BasicInstruction::LOAD) {
                 LoadInstruction *loadInst = dynamic_cast<LoadInstruction *>(inst);
@@ -214,16 +219,175 @@ void Mem2RegPass::Mem2RegOneDefDomAllUses(CFG *C, std::set<int> &vset) {
     TODO("Mem2RegOneDefDomAllUses");
 }
 
-void Mem2RegPass::InsertPhi(CFG *C) { TODO("InsertPhi"); }
+void Mem2RegPass::InsertPhi(CFG *C) {
+    // TODO("InsertPhi");
+    auto &regInfo = C->regInfo;
+    auto DomTree = domtrees->GetDomTree(C);
+    // 1、遍历0号块，删除usedRegs中的指令，并建立reg->指令类型的映射
+    auto *entryBlock = C->block_map->at(0);
+    std::deque<Instruction> newDeque;
+    std::map<Operand, AllocaInstruction::LLVMType> reg2Itype;
+    for (auto instr : entryBlock->Instruction_list) {
+        if (instr->GetOpcode() == BasicInstruction::ALLOCA) {
+            auto *allocaInst = dynamic_cast<AllocaInstruction *>(instr);
+            if (allocaInst && regInfo.usedRegs.count(allocaInst->GetResult())) {
+                reg2Itype[allocaInst->GetResult()] = allocaInst->GetDataType();
+                continue;
+            }
+        }
+        newDeque.push_back(instr);    // 其他指令保留
+    }
+    // 更新 0 号块的指令列表
+    entryBlock->Instruction_list = newDeque;
 
-void Mem2RegPass::VarRename(CFG *C) { TODO("VarRename"); }
+    // 2、遍历 usedRegs 集合中的寄存器（特殊的已经处理好了，集合中都是剩下的）
+    for (auto reg : regInfo.usedRegs) {
+
+        // 3、计算支配边界闭包
+        std::unordered_set<int> phiBlocks;
+        auto &defBlocks = regInfo.reg2defBlocks[reg];
+        std::unordered_set<int> worklist = defBlocks;
+        while (!worklist.empty()) {
+            int currentBlock = *worklist.begin();
+            worklist.erase(currentBlock);
+
+            // 遍历当前块的支配边界
+            for (int df : DomTree->GetDF(currentBlock)) {
+                // 插入phiBlocks中，一个新块会返回true，已经存在返回false。
+                if (phiBlocks.insert(df).second)
+                    worklist.insert(df);
+            }
+        }
+
+        // 4、遍历支配边界闭包，将 phi 指令插入相应块
+        for (int phiBlock : phiBlocks) {
+            // 创建新的 phi 指令
+            PhiInstruction *phi = new PhiInstruction(reg2Itype[reg], GetNewRegOperand(++C->reg_max));
+            (*C->block_map)[phiBlock]->InsertInstruction(0, phi);
+            // 映射 phi 指令到当前寄存器
+            phi2reg[phi] = ((RegOperand *)reg)->GetRegNo();
+        }
+    }
+}
+
+void Mem2RegPass::VarRename(CFG *C) {
+    // TODO("VarRename");
+
+    // 1、准备一些需要用到的变量
+    // visited: dfs用
+    std::vector<bool> visited;
+    visited.resize(C->Label_num);
+    std::stack<int> tobecheck;
+    std::set<Instruction> Erase_set;
+
+    // blockid + reg -> value，功能同Mem2RegUseDefInSameBlock里的regToval
+    std::unordered_map<int, std::unordered_map<Operand, int>> idreg2val;
+
+    auto &regInfo = C->regInfo;
+
+    // 2、DFS处理剩下的寄存器
+    tobecheck.push(0);
+    while (!tobecheck.empty()) {
+        int block_id = tobecheck.top();
+        tobecheck.pop();
+        if (visited[block_id])
+            continue;
+        visited[block_id] = 1;
+
+        // 3、对当前块进行变量重命名
+        auto block = (C->block_map)->at(block_id);
+        for (auto &Inst : block->Instruction_list) {
+            auto opcode = Inst->GetOpcode();
+            // 3.1、STORE指令，更新寄存器的val
+            if (opcode == BasicInstruction::STORE) {
+                StoreInstruction *storeInst = dynamic_cast<StoreInstruction *>(Inst);
+                Operand storePointer = storeInst->GetPointer();
+                if (regInfo.usedRegs.count(storePointer)) {
+                    Erase_set.insert(storeInst);
+                    // 逻辑同Mem2RegUseDefInSameBlock，避免regNo本身也是要被替换的。
+                    auto regNo = ((RegOperand *)(storeInst->GetValue()))->GetRegNo();
+                    if (regRenameMap.count(regNo))
+                        idreg2val[block_id][storePointer] = regRenameMap[regNo];
+                    else
+                        idreg2val[block_id][storePointer] = regNo;
+                }
+            }
+            // 3.2、PHI指令：其功能同store指令
+            else if (opcode == BasicInstruction::PHI) {
+                PhiInstruction *phiInst = dynamic_cast<PhiInstruction *>(Inst);
+                if (Erase_set.find(phiInst) != Erase_set.end())
+                    continue;
+                auto regNo = ((RegOperand *)phiInst->GetResult())->GetRegNo();
+                if (regRenameMap.count(regNo))
+                    idreg2val[block_id][GetNewRegOperand(phi2reg[phiInst])] = regRenameMap[regNo];
+                else
+                    idreg2val[block_id][GetNewRegOperand(phi2reg[phiInst])] = regNo;
+            }
+            // 3.3、LOAD指令：向map中添加 原寄存器-> 新寄存器 的映射
+            else if (opcode == BasicInstruction::LOAD) {
+                LoadInstruction *loadInst = dynamic_cast<LoadInstruction *>(Inst);
+                Operand loadPointer = loadInst->GetPointer();
+
+                if (regInfo.usedRegs.count(loadPointer)) {
+                    Erase_set.insert(loadInst);
+                    Operand loadResult = loadInst->GetResult();
+                    RegOperand *loadRegOperand = dynamic_cast<RegOperand *>(loadResult);
+                    regRenameMap[loadRegOperand->GetRegNo()] = idreg2val[block_id][loadPointer];
+                }
+            }
+        }
+
+        // 4、处理后继块，继承当前块的寄存器映射关系
+        for (auto next_block : C->G[block_id]) {
+            int next_block_id = next_block->block_id;
+            tobecheck.push(next_block_id);
+            idreg2val[next_block_id] = idreg2val[block_id];
+
+            // 处理后继块中的 PHI 指令
+            for (auto Inst : (*C->block_map)[next_block_id]->Instruction_list) {
+                if (Inst->GetOpcode() != BasicInstruction::PHI)
+                    break;
+                PhiInstruction *phiInst = dynamic_cast<PhiInstruction *>(Inst);
+
+                // 查找当前 PHI 指令对应的 alloca 寄存器
+                int RegNo = phi2reg[phiInst];
+                auto Reg = GetNewRegOperand(RegNo);
+                // 如果当前 block 没有为该 pointer_reg 赋值，则删除该 PHI 指令
+                if (idreg2val[block_id].find(Reg) == idreg2val[block_id].end()) {
+                    Erase_set.insert(phiInst);
+                    continue;
+                }
+                // 为 PHI 指令添加前驱块的信息
+                phiInst->InsertPhi(GetNewLabelOperand(block_id), GetNewRegOperand(idreg2val[block_id][Reg]));
+            }
+        }
+    }
+
+    // 5、 删除 Erase_set 中的无用指令
+    for (auto &[bid, block] : *C->block_map) {
+        auto tmp_Instruction_list = block->Instruction_list;
+        block->Instruction_list.clear();
+
+        // 只保留不在删除集合中的指令
+        for (auto I : tmp_Instruction_list) {
+            if (Erase_set.find(I) == Erase_set.end())
+                block->InsertInstruction(1, I);
+        }
+    }
+
+    // 6、 进行变量的重命名，替换寄存器映射
+    for (auto &[bid, block] : *C->block_map) {
+        for (auto I : block->Instruction_list)
+            I->ReplaceRegByMap(regRenameMap);
+    }
+}
 
 void Mem2RegPass::Mem2Reg(CFG *C) {
     std::set<int> s;
     Mem2RegNoUseAlloca(C, s);
     Mem2RegUseDefInSameBlock(C, s, 0);
-    // InsertPhi(C);
-    // VarRename(C);
+    InsertPhi(C);
+    //VarRename(C);
 }
 
 void Mem2RegPass::Execute() {

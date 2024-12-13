@@ -9,7 +9,7 @@ void DomAnalysis::Execute() {
 }
 
 void DominatorTree::BuildDominatorTree(bool reverse) {
-    const int n = C->G.size();    // 这里用的是G的size，不是C的Label_num，写后面的内容时注意两者的改变。
+    const int n = C->Label_num;    // 这里用的是G的size，不是C的Label_num，写后面的内容时注意两者的改变。
     dom_tree.clear();
     dom_tree.resize(n);
     idom.clear();
@@ -37,18 +37,19 @@ void DominatorTree::BuildDominatorTree(bool reverse) {
             }
         }
     }
+
     dom_tree[0].push_back((*C->block_map)[0]);
     for (int i = 1; i < n; ++i) {
-        for (int j = 0; j < n; ++j) {
-            if (dom[i][j]) {
-                dom_tree[i].push_back((*C->block_map)[j]);
-            }
+         for (int j = 0; j < n; ++j) {
+             if (dom[i][j]) {
+                dom_tree[j].push_back((*C->block_map)[i]);
+             }
         }
     }
 
     // 下面开始计算idom
     idom[0] = nullptr;    // 0号块没有立即支配块
-    for (int u = 2; u <= n; ++u) {
+    for (int u = 2; u < n; ++u) {
         for (auto v : dom_tree[u]) {
             // s -> v1 -> ... -> v -> ...->vm ->...-> vn ->...-> u
             // dom[v->block_id] & dom[u]:  s ～ v
@@ -63,7 +64,6 @@ void DominatorTree::BuildDominatorTree(bool reverse) {
     }
 }
 
-
 std::set<int> DominatorTree::GetDF(std::set<int> S) {
     std::set<int> result;
     for (int id : S) {
@@ -73,7 +73,13 @@ std::set<int> DominatorTree::GetDF(std::set<int> S) {
     return result;
 }
 
+// u的支配边界：DF[u]，意为恰好支配不到的块
+// DF[u] = {v}：
+// 1. u == v
+// 2. u支配v的前驱结点，但不支配v
 
+// 求df[u]：将u放入集合中；遍历u支配的点的后继节点，若不被u支配，则放入集合中。
+// df[u,v] = df[u] U df[v]
 std::set<int> DominatorTree::GetDF(int id) {
     std::set<int> result;
     result.insert(id);
@@ -84,7 +90,7 @@ std::set<int> DominatorTree::GetDF(int id) {
                 int succ_id = successor->block_id;
                 // 如果后继节点不被 id 支配，则加入结果集
                 if (!dom[succ_id][id]) {
-                    result.insert(succ_id); 
+                    result.insert(succ_id);
                 }
             }
         }
