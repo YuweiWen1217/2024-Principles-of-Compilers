@@ -1,6 +1,6 @@
 int main() {
     int a = getint();
-    int b = getint();
-    a = a + 5;
+    int b = 1;
+    b = b;
     return a + b;
 }

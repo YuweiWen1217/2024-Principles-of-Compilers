@@ -215,6 +215,7 @@ void IRgenAllocaArray(LLVMBlock B, BasicInstruction::LLVMType type, int reg, std
 }
 
 
+// Reference：https://github.com/yuhuifishash/SysY
 void LoadInstruction::ReplaceRegByMap(const std::map<int, int> &Rule) {
     if (pointer->GetOperandType() == BasicOperand::REG) {
         auto pointer_reg = (RegOperand *)pointer;

@@ -21,9 +21,7 @@ L0:  ;
     br label %L1
 L1:  ;
     %r1 = call i32 @getint()
-    %r3 = call i32 @getint()
-    %r5 = add i32 5,0
-    %r6 = add i32 %r1,%r5
-    %r9 = add i32 %r6,%r3
-    ret i32 %r9
+    %r3 = add i32 1,0
+    %r7 = add i32 %r1,%r3
+    ret i32 %r7
 }

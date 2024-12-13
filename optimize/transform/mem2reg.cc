@@ -167,6 +167,7 @@ void Mem2RegPass::Mem2RegUseDefInSameBlock(CFG *C, std::set<int> &vset, int bloc
 
         std::deque<Instruction> newDeque;
         for (auto &inst : block->Instruction_list) {
+            // 3.1 指令是目标寄存器的store指令，替换regToVal中的值为value_op(或value_op被替换的值)
             if (inst->GetOpcode() == BasicInstruction::STORE) {
                 StoreInstruction *storeInst = dynamic_cast<StoreInstruction *>(inst);
 
@@ -174,10 +175,19 @@ void Mem2RegPass::Mem2RegUseDefInSameBlock(CFG *C, std::set<int> &vset, int bloc
                 if (regs.count(storePointer)) {
                     Operand storeValue = storeInst->GetValue();
                     RegOperand *storeRegOperand = dynamic_cast<RegOperand *>(storeValue);
-                    regToVal[storePointer] = storeRegOperand->GetRegNo();
+                    int regNo = storeRegOperand->GetRegNo();
+
+                    // 检查 regRenameMap 是否包含此寄存器编号，即该寄存器好是否是本身要被替换的。
+                    if (regRenameMap.count(regNo)) {
+                        regToVal[storePointer] = regRenameMap[regNo];
+                    } else {
+                        regToVal[storePointer] = regNo;
+                    }
                     continue;
                 }
-            } else if (inst->GetOpcode() == BasicInstruction::LOAD) {
+            } 
+            // 3.2 指令是目标寄存器的load指令，向regRenameMap中添加映射：load指令中的result_op -> regToVal中对应的op
+            else if (inst->GetOpcode() == BasicInstruction::LOAD) {
                 LoadInstruction *loadInst = dynamic_cast<LoadInstruction *>(inst);
                 if (loadInst) {
                     Operand loadTarget = loadInst->GetPointer();
@@ -189,7 +199,7 @@ void Mem2RegPass::Mem2RegUseDefInSameBlock(CFG *C, std::set<int> &vset, int bloc
                     }
                 }
             }
-            // 对普通指令，更新寄存器 ID 并加入新队列
+            // 3.3 对其他指令，更新寄存器 ID 并加入新队列
             inst->ReplaceRegByMap(regRenameMap);
             newDeque.push_back(inst);
         }
