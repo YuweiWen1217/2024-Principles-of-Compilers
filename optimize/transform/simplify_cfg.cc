@@ -70,8 +70,10 @@ void SimplifyCFGPass::EliminateUnreachedBlocksInsts(CFG *C) {
                 LoadInstruction *loadInst = dynamic_cast<LoadInstruction *>(inst);
                 Operand ptr = loadInst->GetPointer();
                 if (ptr->GetOperandType() == BasicOperand::REG) {
-                    C->regInfo.unusedRegs.erase(ptr);
-                    C->regInfo.usedRegs.insert(ptr);
+                    if (C->regInfo.unusedRegs.count(ptr)) {
+                        C->regInfo.unusedRegs.erase(ptr);
+                        C->regInfo.usedRegs.insert(ptr);
+                    }
                     C->regInfo.reg2useBlocks[ptr].insert(block_id);
                 }
             } else if (opcode == BasicInstruction::STORE) {
@@ -93,5 +95,5 @@ void SimplifyCFGPass::EliminateUnreachedBlocksInsts(CFG *C) {
             ++it;
         }
     }
-    //C->printFuncRegInfo();
+    // C->printFuncRegInfo();
 }

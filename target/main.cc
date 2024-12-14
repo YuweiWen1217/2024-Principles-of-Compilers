@@ -173,13 +173,18 @@ int main(int argc, char **argv) {
     SimplifyCFGPass(&llvmIR).Execute();
     llvmIR.BuildCFG();
 
+
+    DomAnalysis dom(&llvmIR);
+    dom.Execute();    // 完成支配树建立后，取消该行代码的注释
+    (Mem2RegPass(&llvmIR, &dom)).Execute();
+
     optimize_flag = (argc == 6 && (strcmp(argv[optimize_tag], "-O1") == 0));
     if (optimize_flag) {
 
         // 3、构建支配树、计算立即支配块
-        DomAnalysis dom(&llvmIR);
-        dom.Execute();   // 完成支配树建立后，取消该行代码的注释
-        (Mem2RegPass(&llvmIR, &dom)).Execute();
+        // DomAnalysis dom(&llvmIR);
+        // dom.Execute();    // 完成支配树建立后，取消该行代码的注释
+        // (Mem2RegPass(&llvmIR, &dom)).Execute();
 
         // error_msgs.push_back: add more passes
     }

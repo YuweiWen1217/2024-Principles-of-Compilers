@@ -32,7 +32,7 @@ void LLVMIR::BuildCFG() {
         cfg->ord.clear();
 
         cfg->BuildCFG();
-        cfg->PrintCFG();
+        // cfg->PrintCFG();
     }
 }
 

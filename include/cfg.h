@@ -79,6 +79,7 @@ public:
         }
         std::cout << std::endl;
     }
+    
     void printFuncRegInfo() {
         // 打印 unusedRegs
         std::cout << "unusedRegs: ";

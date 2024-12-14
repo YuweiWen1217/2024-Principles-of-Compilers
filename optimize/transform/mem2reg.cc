@@ -129,7 +129,7 @@ std::map<int, int> regRenameMap;
 void Mem2RegPass::Mem2RegUseDefInSameBlock(CFG *C, std::set<int> &vset, int block_id) {
     // this function is used in InsertPhi
     // TODO("Mem2RegUseDefInSameBlock");
-
+    regRenameMap.clear();
     auto &regInfo = C->regInfo;
     // 1、 构建 block_id -> 满足条件的寄存器集合
     std::unordered_map<int, std::unordered_set<Operand>> blockToRegs;
@@ -195,11 +195,11 @@ void Mem2RegPass::Mem2RegUseDefInSameBlock(CFG *C, std::set<int> &vset, int bloc
             else if (inst->GetOpcode() == BasicInstruction::LOAD) {
                 LoadInstruction *loadInst = dynamic_cast<LoadInstruction *>(inst);
                 if (loadInst) {
-                    Operand loadTarget = loadInst->GetPointer();
-                    if (regs.count(loadTarget)) {
+                    Operand loadPointer = loadInst->GetPointer();
+                    if (regs.count(loadPointer)) {
                         Operand loadResult = loadInst->GetResult();
                         RegOperand *loadRegOperand = dynamic_cast<RegOperand *>(loadResult);
-                        regRenameMap[loadRegOperand->GetRegNo()] = regToVal[loadTarget];
+                        regRenameMap[loadRegOperand->GetRegNo()] = regToVal[loadPointer];
                         continue;
                     }
                 }
@@ -220,6 +220,7 @@ void Mem2RegPass::Mem2RegOneDefDomAllUses(CFG *C, std::set<int> &vset) {
 }
 
 void Mem2RegPass::InsertPhi(CFG *C) {
+    // int ans = 0;
     // TODO("InsertPhi");
     auto &regInfo = C->regInfo;
     auto DomTree = domtrees->GetDomTree(C);
@@ -242,25 +243,36 @@ void Mem2RegPass::InsertPhi(CFG *C) {
 
     // 2、遍历 usedRegs 集合中的寄存器（特殊的已经处理好了，集合中都是剩下的）
     for (auto reg : regInfo.usedRegs) {
+        // std::cout << "当前reg " << reg << std::endl;
+        // std::cout << "计算闭包中..." << std::endl;
+        // std::cout << "work list: ";
+        // for(auto i:regInfo.reg2defBlocks[reg])
+        //     std::cout<<i<<" ";
+        // std::cout<<std::endl;
 
         // 3、计算支配边界闭包
-        std::unordered_set<int> phiBlocks;
         auto &defBlocks = regInfo.reg2defBlocks[reg];
+        std::unordered_set<int> phiBlocks;
         std::unordered_set<int> worklist = defBlocks;
         while (!worklist.empty()) {
             int currentBlock = *worklist.begin();
             worklist.erase(currentBlock);
 
-            // 遍历当前块的支配边界
+            // std::cout << currentBlock << "的支配边界是：";
+            //  遍历当前块的支配边界
             for (int df : DomTree->GetDF(currentBlock)) {
-                // 插入phiBlocks中，一个新块会返回true，已经存在返回false。
+                // std::cout << df << " ";
+                //  插入phiBlocks中，一个新块会返回true，已经存在返回false。
                 if (phiBlocks.insert(df).second)
                     worklist.insert(df);
             }
+            // std::cout << std::endl;
         }
+       
 
-        // 4、遍历支配边界闭包，将 phi 指令插入相应块
+        //  4、遍历支配边界闭包，将 phi 指令插入相应块
         for (int phiBlock : phiBlocks) {
+
             // 创建新的 phi 指令
             PhiInstruction *phi = new PhiInstruction(reg2Itype[reg], GetNewRegOperand(++C->reg_max));
             (*C->block_map)[phiBlock]->InsertInstruction(0, phi);
@@ -387,7 +399,7 @@ void Mem2RegPass::Mem2Reg(CFG *C) {
     Mem2RegNoUseAlloca(C, s);
     Mem2RegUseDefInSameBlock(C, s, 0);
     InsertPhi(C);
-    //VarRename(C);
+    VarRename(C);
 }
 
 void Mem2RegPass::Execute() {
