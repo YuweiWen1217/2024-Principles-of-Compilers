@@ -11,7 +11,6 @@ void DcePass::dce(CFG *C) {
 
     // 2、遍历指令，填充useMap和defMap
     for (auto [bid, block] : *C->block_map) {
-
         for (auto Inst : block->Instruction_list) {
             int resultRegNo = Inst->GetResultRegNo();
             std::vector<int> operandRegsNo = Inst->GetOperandRegsNo();

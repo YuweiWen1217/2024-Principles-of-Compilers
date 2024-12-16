@@ -2,9 +2,10 @@
 #include "../ir_gen/semant.h"
 #include "../parser/SysY_parser.tab.h"
 
+#include "../optimize/transform/adce.h"
+#include "../optimize/transform/dce.h"
 #include "../optimize/transform/mem2reg.h"
 #include "../optimize/transform/simplify_cfg.h"
-#include "../optimize/transform/dce.h"
 
 #include "../optimize/analysis/dominator_tree.h"
 
@@ -174,22 +175,15 @@ int main(int argc, char **argv) {
     SimplifyCFGPass(&llvmIR).Execute();
     llvmIR.BuildCFG();
 
-
-    DomAnalysis dom(&llvmIR);
-    dom.Execute();    // 完成支配树建立后，取消该行代码的注释
-    (Mem2RegPass(&llvmIR, &dom)).Execute();
-
-    DcePass(&llvmIR).Execute();
-
     optimize_flag = (argc == 6 && (strcmp(argv[optimize_tag], "-O1") == 0));
     if (optimize_flag) {
 
-        // 3、构建支配树、计算立即支配块
-        // DomAnalysis dom(&llvmIR);
-        // dom.Execute();    // 完成支配树建立后，取消该行代码的注释
-        // (Mem2RegPass(&llvmIR, &dom)).Execute();
+        DomAnalysis dom(&llvmIR);
+        dom.Execute();    // 完成支配树建立后，取消该行代码的注释
+        (Mem2RegPass(&llvmIR, &dom)).Execute();
 
-        // error_msgs.push_back: add more passes
+        DcePass(&llvmIR).Execute();
+        AdcePass(&llvmIR).Execute();
     }
 
     if (strcmp(argv[step_tag], "-llvm") == 0) {

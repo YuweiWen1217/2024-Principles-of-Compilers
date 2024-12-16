@@ -55,7 +55,7 @@ public:
     std::vector<LLVMBlock> GetSuccessor(LLVMBlock B);
     std::vector<LLVMBlock> GetSuccessor(int bbid);
 
-    // PrintCFG、printFuncRegInfo仅作调试用
+    // PrintCFG、printFuncRegInfo 仅作调试用
     void PrintCFG() {
         std::cout << "Graph G (Control Flow Graph):" << std::endl;
         for (size_t i = 0; i < G.size(); ++i) {
@@ -123,6 +123,8 @@ public:
             std::cout << "}" << std::endl;
         }
     }
+
+
 };
 
 #endif

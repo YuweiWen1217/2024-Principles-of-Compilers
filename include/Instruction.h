@@ -474,6 +474,7 @@ public:
     int GetResultRegNo();
     Operand GetResult() { return result; }
     void InsertPhi(Operand label, Operand val) { phi_list.push_back({label, val}); }
+    std::vector<std::pair<Operand, Operand>> GetPhiList() { return phi_list; };
 };
 
 // alloca

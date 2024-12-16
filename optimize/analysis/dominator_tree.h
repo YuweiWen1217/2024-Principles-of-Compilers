@@ -15,8 +15,7 @@ public:
     std::vector<std::vector<LLVMBlock>> dom_tree{};
     std::vector<std::bitset<N>> dom;    // dom[i][x]，储存i的支配块，为1,则x支配i，为0，则x不支配i
 
-    std::unordered_map<int, std::set<int>> df;     // 支配边界
-    std::unordered_map<int, std::set<int>> df1;    // 支配边界
+    std::unordered_map<int, std::set<int>> df;    // 支配边界
 
     // idom[i] 存储的是块i的立即支配块（所有支配块中，距离i最近的那个）
     std::vector<LLVMBlock> idom{};
@@ -62,23 +61,22 @@ public:
         for (int i = 0; i < n; i++) {
             int id = i;
             const std::set<int> &dfSet = df[id];
-            const std::set<int> &dfSet1 = df1[id];
-            if (dfSet == dfSet1) {
-                // std::cout << "11111111111111" << std::endl;
-                //  打印块号
-                std::cout << id << ": ";
-                // 打印支配边界集合
-                for (const int block : dfSet) {
-                    std::cout << " " << block;
-                }
-                std::cout << std::endl;
-                // std::cout << id << " from 2: ";
-                // // 打印支配边界集合
-                // for (const int block : dfSet1) {
-                //     std::cout << " " << block;
-                // }
-                // std::cout << std::endl;
+            //  打印块号
+            std::cout << id << ": ";
+            // 打印支配边界集合
+            for (const int block : dfSet) {
+                std::cout << " " << block;
             }
+            std::cout << std::endl;
+        }
+    }
+    void Printidom(size_t n) {
+        for (int i = 0; i < n; i++) {
+            if (idom[i])
+                std::cout << "idom[" << i << "]: " << idom[i];
+            else
+                std::cout << "idom[" << i << "]: nullptr";
+            std::cout << std::endl;
         }
     }
 };

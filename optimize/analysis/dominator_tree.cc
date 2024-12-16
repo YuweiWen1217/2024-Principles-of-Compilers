@@ -9,7 +9,7 @@ void DomAnalysis::Execute() {
 }
 
 void DominatorTree::BuildDominatorTree(bool reverse) {
-    const int n = C->Label_num;    // 这里用的是G的size，不是C的Label_num，写后面的内容时注意两者的改变。
+    const int n = C->Label_num;
     dom_tree.clear();
     dom_tree.resize(n);
     idom.clear();
@@ -18,20 +18,19 @@ void DominatorTree::BuildDominatorTree(bool reverse) {
     dom.resize(n);
     df.clear();
 
-    // 第0行全0，后面且没有被删除的设置为1
+    // dom的初始化：起点设置为0、其余点设置为1。（原因：环）
     for (int index : C->ord) {
-        dom[index].set();
+        if (C->invG[index].size() != 0)
+            dom[index].set();
     }
-    dom[0].reset();
 
-    dom[0][0] = true;
     bool flag = true;
     while (flag) {
         flag = false;
         for (int u : C->ord) {
             std::bitset<N> tmp;
             if (C->invG[u].size() != 0)
-                tmp.set();     
+                tmp.set();
             // 前驱节点的交集
             for (auto v : C->invG[u]) {
                 int id = v->block_id;
@@ -48,13 +47,11 @@ void DominatorTree::BuildDominatorTree(bool reverse) {
     }
 
     // 赋值 dom_tree && df
-    dom_tree[0].push_back((*C->block_map)[0]);
-    for (int i = 1; i < n; ++i) {
+    for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
             if (dom[i][j]) {
                 // 构建 dom_tree[j]
                 dom_tree[i].push_back((*C->block_map)[j]);
-
                 // 同时计算 df[j]（遍历u支配的点的后继节点，若不被u支配，或其本身就是u，则放入集合中）
                 for (auto successor : C->G[i]) {
                     int succ_id = successor->block_id;
@@ -67,8 +64,11 @@ void DominatorTree::BuildDominatorTree(bool reverse) {
     }
 
     // 下面开始计算idom
-    idom[0] = nullptr;    // 0号块没有立即支配块
-    for (int u = 2; u < n; ++u) {
+    for (int u = 0; u < n; ++u) {
+        if (dom_tree[u].size() == 1){
+            idom[u] = nullptr;    // 起点块没有立即支配块
+            continue;
+        }
         for (auto v : dom_tree[u]) {
             // s -> v1 -> ... -> v -> ...->vm ->...-> vn ->...-> u
             // dom[v->block_id] & dom[u]:  s ～ v
@@ -82,29 +82,6 @@ void DominatorTree::BuildDominatorTree(bool reverse) {
         }
     }
 
-    for (int i = 0; i < n; i++) {
-        // std::cout << "现在是" << i << " 开始遍历其后继节点" << std::endl;
-        for (auto block_y : C->G[i]) {
-            // std::cout << i << "的后继节点：" << block_y->block_id << std::endl;
-            int x = i;
-            int y = block_y->block_id;
-            // 第一轮:x支配x，且x是y的前驱节点；
-            // 后序迭代：x向上爬之后一直支配pri_x！
-
-            while (x == y || IsDominate(x, y) == 0) {
-                // std::cout << "满足条件：" << x << " " << y << std::endl;
-                df1[x].insert(y);
-                if (idom[x] != NULL) {
-                    // std::cout << "更新" << x << " 为立即支配点" << idom[x]->block_id << std::endl;
-                    x = idom[x]->block_id;
-                } else
-                    break;
-            }
-        }
-    }
-
-    // PrintDF(n);
-    // printRows(n);
 }
 
 std::set<int> DominatorTree::GetDF(std::set<int> S) {
