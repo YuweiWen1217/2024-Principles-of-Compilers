@@ -141,14 +141,14 @@ void IRgenStore(LLVMBlock B, BasicInstruction::LLVMType type, int value_reg, Ope
     B->InsertInstruction(1, new StoreInstruction(type, ptr, GetNewRegOperand(value_reg)));
 
     FuncDefInstruction funcDef = B->Function;
-    //llvmIR.FuncRegInfo_map[funcDef].reg2defBlocks[ptr].insert(B->block_id);
+    // llvmIR.FuncRegInfo_map[funcDef].reg2defBlocks[ptr].insert(B->block_id);
 }
 
 void IRgenStore(LLVMBlock B, BasicInstruction::LLVMType type, Operand value, Operand ptr) {
     B->InsertInstruction(1, new StoreInstruction(type, ptr, value));
 
     FuncDefInstruction funcDef = B->Function;
-    //llvmIR.FuncRegInfo_map[funcDef].reg2defBlocks[ptr].insert(B->block_id);
+    // llvmIR.FuncRegInfo_map[funcDef].reg2defBlocks[ptr].insert(B->block_id);
 }
 
 // 函数调用(目前没用到)
@@ -210,10 +210,9 @@ void IRgenAllocaArray(LLVMBlock B, BasicInstruction::LLVMType type, int reg, std
     B->InsertInstruction(0, new AllocaInstruction(type, dims, GetNewRegOperand(reg)));
 
     FuncDefInstruction funcDef = B->Function;
-    //数组不需要 
-    //llvmIR.FuncRegInfo_map[funcDef].unusedRegs.insert(GetNewRegOperand(reg));
+    // 数组不需要
+    // llvmIR.FuncRegInfo_map[funcDef].unusedRegs.insert(GetNewRegOperand(reg));
 }
-
 
 // Reference：https://github.com/yuhuifishash/SysY
 void LoadInstruction::ReplaceRegByMap(const std::map<int, int> &Rule) {
@@ -404,7 +403,6 @@ void FptosiInstruction::ReplaceRegByMap(const std::map<int, int> &Rule) {
     }
 }
 
-
 void SitofpInstruction::ReplaceRegByMap(const std::map<int, int> &Rule) {
     if (result->GetOperandType() == BasicOperand::REG) {
         auto result_reg = (RegOperand *)result;
@@ -430,3 +428,159 @@ void ZextInstruction::ReplaceRegByMap(const std::map<int, int> &Rule) {
             value = GetNewRegOperand(Rule.find(result_reg->GetRegNo())->second);
     }
 }
+
+std::vector<int> LoadInstruction::GetOperandRegsNo() {
+    std::vector<int> regs;
+    if (pointer->GetOperandType() == BasicOperand::REG) {
+        int regNo = ((RegOperand *)pointer)->GetRegNo();
+        regs.push_back(regNo);
+    }
+    return regs;
+};
+int LoadInstruction::GetResultRegNo() {
+    int regNo = ((RegOperand *)result)->GetRegNo();
+    return regNo;
+};
+
+std::vector<int> StoreInstruction::GetOperandRegsNo() {
+    std::vector<int> regs;
+    if (pointer->GetOperandType() == BasicOperand::REG) {
+        int regNo = ((RegOperand *)pointer)->GetRegNo();
+        regs.push_back(regNo);
+    }
+    if (value->GetOperandType() == BasicOperand::REG) {
+        int regNo = ((RegOperand *)value)->GetRegNo();
+        regs.push_back(regNo);
+    }
+    return regs;
+};
+int StoreInstruction::GetResultRegNo() { return -1; };
+
+std::vector<int> ArithmeticInstruction::GetOperandRegsNo() {
+    std::vector<int> regs;
+    if (op1->GetOperandType() == BasicOperand::REG)
+        regs.push_back(((RegOperand *)op1)->GetRegNo());
+    if (op2->GetOperandType() == BasicOperand::REG)
+        regs.push_back(((RegOperand *)op2)->GetRegNo());
+    return regs;
+}
+int ArithmeticInstruction::GetResultRegNo() { return ((RegOperand *)result)->GetRegNo(); }
+
+std::vector<int> IcmpInstruction::GetOperandRegsNo() {
+    std::vector<int> regs;
+    if (op1->GetOperandType() == BasicOperand::REG)
+        regs.push_back(((RegOperand *)op1)->GetRegNo());
+    if (op2->GetOperandType() == BasicOperand::REG)
+        regs.push_back(((RegOperand *)op2)->GetRegNo());
+    return regs;
+}
+int IcmpInstruction::GetResultRegNo() { return ((RegOperand *)result)->GetRegNo(); }
+
+std::vector<int> FcmpInstruction::GetOperandRegsNo() {
+    std::vector<int> regs;
+    if (op1->GetOperandType() == BasicOperand::REG)
+        regs.push_back(((RegOperand *)op1)->GetRegNo());
+
+    if (op2->GetOperandType() == BasicOperand::REG)
+        regs.push_back(((RegOperand *)op2)->GetRegNo());
+
+    return regs;
+}
+int FcmpInstruction::GetResultRegNo() { return ((RegOperand *)result)->GetRegNo(); }
+
+std::vector<int> PhiInstruction::GetOperandRegsNo() {
+    std::vector<int> regs;
+    for (auto p : phi_list) {
+        auto op = p.second;
+        if (op->GetOperandType() == BasicOperand::REG)
+            regs.push_back(((RegOperand *)op)->GetRegNo());
+    }
+    return regs;
+}
+int PhiInstruction::GetResultRegNo() { return ((RegOperand *)result)->GetRegNo(); }
+
+std::vector<int> AllocaInstruction::GetOperandRegsNo() { return {}; }
+int AllocaInstruction::GetResultRegNo() { return ((RegOperand *)result)->GetRegNo(); }
+
+std::vector<int> BrCondInstruction::GetOperandRegsNo() {
+    std::vector<int> regs;
+    if (cond->GetOperandType() == BasicOperand::REG)
+        regs.push_back(((RegOperand *)cond)->GetRegNo());
+    return regs;
+}
+int BrCondInstruction::GetResultRegNo() { return -1; }
+
+std::vector<int> BrUncondInstruction::GetOperandRegsNo() { return {}; }
+int BrUncondInstruction::GetResultRegNo() { return -1; }
+
+std::vector<int> GlobalVarDefineInstruction::GetOperandRegsNo() { return {}; }
+int GlobalVarDefineInstruction::GetResultRegNo() { return NULL; }
+
+std::vector<int> GlobalStringConstInstruction::GetOperandRegsNo() { return {}; }
+int GlobalStringConstInstruction::GetResultRegNo() { return NULL; }
+
+std::vector<int> CallInstruction::GetOperandRegsNo() {
+    std::vector<int> regs;
+    for (auto &argpair : args) {
+        auto arg = argpair.second;
+        if (arg->GetOperandType() == BasicOperand::REG) {
+            regs.push_back(((RegOperand *)arg)->GetRegNo());
+        }
+    }
+    return regs;
+}
+int CallInstruction::GetResultRegNo() {
+    if (result) {
+        return ((RegOperand *)result)->GetRegNo();
+    }
+    return -1;
+}
+
+std::vector<int> RetInstruction::GetOperandRegsNo() {
+    std::vector<int> regs;
+    if (ret_val && ret_val->GetOperandType() == BasicOperand::REG) {
+        regs.push_back(((RegOperand *)ret_val)->GetRegNo());
+    }
+    return regs;
+}
+int RetInstruction::GetResultRegNo() { return -1; }
+
+std::vector<int> GetElementptrInstruction::GetOperandRegsNo() {
+    std::vector<int> regs;
+    for (auto i : indexes) {
+        if (i->GetOperandType() == BasicOperand::REG)
+            regs.push_back(((RegOperand *)i)->GetRegNo());
+    }
+    return regs;
+}
+int GetElementptrInstruction::GetResultRegNo() { return ((RegOperand *)result)->GetRegNo(); }
+
+std::vector<int> FunctionDefineInstruction::GetOperandRegsNo() { return {}; }
+int FunctionDefineInstruction::GetResultRegNo() { return NULL; }
+
+std::vector<int> FunctionDeclareInstruction::GetOperandRegsNo() { return {}; }
+int FunctionDeclareInstruction::GetResultRegNo() { return NULL; }
+
+std::vector<int> FptosiInstruction::GetOperandRegsNo() {
+    std::vector<int> regs;
+    if (value->GetOperandType() == BasicOperand::REG)
+        regs.push_back(((RegOperand *)value)->GetRegNo());
+    return regs;
+}
+int FptosiInstruction::GetResultRegNo() { return ((RegOperand *)result)->GetRegNo(); }
+
+std::vector<int> SitofpInstruction::GetOperandRegsNo() {
+    std::vector<int> regs;
+    if (value->GetOperandType() == BasicOperand::REG)
+        regs.push_back(((RegOperand *)value)->GetRegNo());
+    return regs;
+}
+int SitofpInstruction::GetResultRegNo() { return ((RegOperand *)result)->GetRegNo(); }
+
+std::vector<int> ZextInstruction::GetOperandRegsNo() {
+    std::vector<int> regs;
+    if (value->GetOperandType() == BasicOperand::REG)
+        regs.push_back(((RegOperand *)value)->GetRegNo());
+    return regs;
+}
+int ZextInstruction::GetResultRegNo() { return ((RegOperand *)result)->GetRegNo(); }

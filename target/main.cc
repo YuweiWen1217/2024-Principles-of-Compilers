@@ -4,6 +4,7 @@
 
 #include "../optimize/transform/mem2reg.h"
 #include "../optimize/transform/simplify_cfg.h"
+#include "../optimize/transform/dce.h"
 
 #include "../optimize/analysis/dominator_tree.h"
 
@@ -177,6 +178,8 @@ int main(int argc, char **argv) {
     DomAnalysis dom(&llvmIR);
     dom.Execute();    // 完成支配树建立后，取消该行代码的注释
     (Mem2RegPass(&llvmIR, &dom)).Execute();
+
+    DcePass(&llvmIR).Execute();
 
     optimize_flag = (argc == 6 && (strcmp(argv[optimize_tag], "-O1") == 0));
     if (optimize_flag) {
