@@ -349,7 +349,7 @@ void Mem2RegPass::VarRename(CFG *C) {
             }
         }
 
-        // 4、处理后继块，继承当前块的寄存器映射关系
+        // 4、处理后继块中的 PHI 指令：
         for (auto next_block : C->G[block_id]) {
             int next_block_id = next_block->block_id;
             tobecheck.push(next_block_id);
@@ -364,11 +364,16 @@ void Mem2RegPass::VarRename(CFG *C) {
                 // 查找当前 PHI 指令对应的 alloca 寄存器
                 int RegNo = phi2reg[phiInst];
                 auto Reg = GetNewRegOperand(RegNo);
+
+                // Reference: https://github.com/yuhuifishash/SysY/
                 // 如果当前 block 没有为该 pointer_reg 赋值，则删除该 PHI 指令
+                // 该路径下都没有出现该寄存器定值，这个reg一定不会在下一次def前使用，后继块的phi没有必要存在
                 if (idreg2val[block_id].find(Reg) == idreg2val[block_id].end()) {
                     Erase_set.insert(phiInst);
                     continue;
                 }
+
+                
                 // 为 PHI 指令添加前驱块的信息
                 phiInst->InsertPhi(GetNewLabelOperand(block_id), GetNewRegOperand(idreg2val[block_id][Reg]));
             }

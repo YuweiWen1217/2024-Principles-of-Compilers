@@ -161,25 +161,25 @@ void AdcePass::adce(CFG *C) {
     // 4. 删除非活跃指令
     for (auto [bid, block] : *C->block_map) {
         auto LastInst = (*C->block_map)[bid]->Instruction_list.back();
-        auto tmp_Instruction_list = block->Instruction_list;    // 暂存指令列表
+        std::deque<Instruction> newDeque;
 
-        block->Instruction_list.clear();    // 清空基本块的指令列表
-
-        for (auto I : tmp_Instruction_list) {
+        // 活跃指令保留，非活跃指令删除
+        // 如果最后一条指令是非活跃的，替换为无条件跳转到后支配树的立即支配前驱（相当于会跳过一个分支，直接到分支之后）。
+        for (auto I : block->Instruction_list) {
             if (liveInsts.find(I) == liveInsts.end()) {
-                // 如果是非活跃的终止指令，替换为跳转到活跃基本块的指令
                 if (LastInst == I) {
-                    auto liveblockid = CDG->idom[bid]->block_id;    // 后支配的直接前驱块 ID
+                    auto liveblockid = CDG->idom[bid]->block_id;
                     while (liveBlocks.find(liveblockid) == liveBlocks.end()) {
-                        liveblockid = CDG->idom[bid]->block_id;    // 找到最近的活跃基本块
+                        liveblockid = CDG->idom[bid]->block_id;
                     }
-                    I = new BrUncondInstruction(GetNewLabelOperand(liveblockid));    // 创建无条件跳转指令
-                } else {
-                    continue;    // 跳过其他非活跃指令
-                }
+                    I = new BrUncondInstruction(GetNewLabelOperand(liveblockid));
+                } else 
+                    continue;
             }
-            block->InsertInstruction(1, I);    // 将指令插入到新的列表
+            // 将活跃指令插入到新的列表
+            newDeque.push_back(I);
         }
+        block->Instruction_list = newDeque;
     }
 }
 
