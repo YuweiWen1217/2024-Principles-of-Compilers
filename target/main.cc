@@ -192,16 +192,22 @@ int main(int argc, char **argv) {
         return 0;
     }
     if (strcmp(argv[step_tag], "-S") == 0) {
+        // 创建RISC-V机器代码单元
         MachineUnit *m_unit = new RiscV64Unit();
+        // 寄存器分配工具
         RiscV64RegisterAllocTools regs;
+        // 用于处理寄存器溢出的类
         RiscV64Spiller spiller;
 
+        // 指令选择并构建控制流图
         RiscV64Selector(m_unit, &llvmIR).SelectInstructionAndBuildCFG();
+        // 栈帧布局调整
         RiscV64LowerFrame(m_unit).Execute();
-
+        // 寄存器分配
         FastLinearScan(m_unit, &regs, &spiller).Execute();
+        // 栈调整优化
         RiscV64LowerStack(m_unit).Execute();
-
+        // 生成目标代码
         RiscV64Printer(fout, m_unit).emit();
     }
     if (strcmp(argv[step_tag], "-select") == 0) {

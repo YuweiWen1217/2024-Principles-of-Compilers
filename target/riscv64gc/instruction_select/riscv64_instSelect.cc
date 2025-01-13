@@ -148,32 +148,37 @@ template <> void RiscV64Selector::ConvertAndAppend<Instruction>(Instruction inst
 void RiscV64Selector::SelectInstructionAndBuildCFG() {
     // 与中间代码生成一样, 如果你完全无从下手, 可以先看看输出是怎么写的
     // 即riscv64gc/instruction_print/*  common/machine_passes/machine_printer.h
-
     // 指令选择除了一些函数调用约定必须遵守的情况需要物理寄存器，其余情况必须均为虚拟寄存器
+
     dest->global_def = IR->global_def;
-    // 遍历每个LLVM IR函数
-    for (auto [defI,cfg] : IR->llvm_cfg) {
-        if(cfg == nullptr){
+
+    // 遍历每个LLVM IR函数，每个有指令列表和cfg两个属性
+    for (auto [defI, cfg] : IR->llvm_cfg) {
+        if (cfg == nullptr) {
             ERROR("LLVMIR CFG is Empty, you should implement BuildCFG in MidEnd first");
         }
-        std::string name = cfg->function_def->GetFunctionName();
 
+        // 1、设置cur_func的相关信息
+        // 新建：RiscV64Function、MachineCFG
+        // 可以使用cur_func->GetNewRegister来获取新的虚拟寄存器
+        std::string name = cfg->function_def->GetFunctionName();
         cur_func = new RiscV64Function(name);
         cur_func->SetParent(dest);
-        // 你可以使用cur_func->GetNewRegister来获取新的虚拟寄存器
-        dest->functions.push_back(cur_func);
+        dest->functions.push_back(cur_func);    // 将新建的函数对象加入目标函数列表。
 
+        // 创建并关联 MachineCFG（用于记录低级指令控制流图）
         auto cur_mcfg = new MachineCFG;
         cur_func->SetMachineCFG(cur_mcfg);
 
         // 清空指令选择状态(可能需要自行添加初始化操作)
         ClearFunctionSelectState();
 
-        // TODO: 添加函数参数(推荐先阅读一下riscv64_lowerframe.cc中的代码和注释)
+        // 2、添加函数参数(推荐先阅读一下riscv64_lowerframe.cc中的代码和注释)
         // See MachineFunction::AddParameter()
-        TODO("Add function parameter if you need");
 
-        // 遍历每个LLVM IR基本块
+
+
+        // 遍历当前函数的每个block
         for (auto [id, block] : *(cfg->block_map)) {
             cur_block = new RiscV64Block(id);
             // 将新块添加到Machine CFG中

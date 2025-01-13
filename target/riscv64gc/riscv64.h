@@ -353,36 +353,42 @@ bne %1, %2, .L1(即jmp_label_id)
 j L2
 */
 struct RiscVLabel {
-    int jmp_label_id = 0; // 该id为跳转的基本块编号
-    bool is_data_address = false; // 是否为数据段标签
+    int jmp_label_id = 0;            // 该id为跳转的基本块编号
+    bool is_data_address = false;    // 是否为数据段标签
     std::string name;
-    bool is_hi; // 对应%hi(name) 和 %lo(name)
+    bool is_hi;    // 对应%hi(name) 和 %lo(name)
     RiscVLabel() = default;
-    RiscVLabel(std::string name, bool is_hi):name(name), is_hi(is_hi) { this->is_data_address = true; }
+    RiscVLabel(std::string name, bool is_hi) : name(name), is_hi(is_hi) { this->is_data_address = true; }
     // 添加一些你想用的构造函数
 };
 
 class RiscV64Instruction : public MachineBaseInstruction {
 private:
-    int op;
-    Register rd, rs1, rs2, rs3;
-    bool use_label;
-    int imm;
-    RiscVLabel label;
+    int op;                        // 存储指令的操作码（opcode），用于区分不同类型的指令
+    Register rd, rs1, rs2, rs3;    // 目标寄存器 (rd) 和源寄存器 (rs1, rs2, rs3)
+    bool use_label;                // 指示是否使用标签地址（如跳转指令时）
+    int imm;                       // 存储立即数（immediate），用于某些指令中的常量操作
+    RiscVLabel label;              // 存储跳转指令的目标标签
 
     // 下面两个变量的具体作用见ConstructCall函数
+    // 这两个变量与函数调用相关，用于存储函数调用中整型和浮点型寄存器参数的数量
     int callireg_num;
     int callfreg_num;
 
-    int ret_type; // 用于GetI_typeReadreg(), 即确定函数返回时用的是a0寄存器还是fa0寄存器, 或者没有返回值
+    // 1表示返回整型值，使用a0寄存器；2表示返回浮点值，使用fa0寄存器；0表示无返回值
+    int ret_type;    // 用于GetI_typeReadreg(), 即确定函数返回时用的是a0寄存器还是fa0寄存器, 或者没有返回值
 
+    // 获取R、R2、R4类型指令的源寄存器
     std::vector<Register *> GetR_typeReadreg() { return {&rs1, &rs2}; }
     std::vector<Register *> GetR2_typeReadreg() { return {&rs1}; }
     std::vector<Register *> GetR4_typeReadreg() { return {&rs1, &rs2, &rs3}; }
+
+    // 获取I型指令的源寄存器
     std::vector<Register *> GetI_typeReadreg() {
         std::vector<Register *> ret;
+        // 默认读取 rs1 寄存器
         ret.push_back(&rs1);
-        if (op == RISCV_JALR) { 
+        if (op == RISCV_JALR) {
             // 当ret_type为1或2时, 我们认为jalr只会用于函数返回, 所以jalr会读取a0或fa0寄存器(即函数返回值)
             // 如果函数没有返回值或者你在其他地方使用到了jalr指令，将ret_type设置为0即可
             if (ret_type == 1) {
@@ -393,6 +399,7 @@ private:
         }
         return ret;
     }
+
     std::vector<Register *> GetS_typeReadreg() { return {&rs1, &rs2}; }
     std::vector<Register *> GetB_typeReadreg() { return {&rs1, &rs2}; }
     std::vector<Register *> GetU_typeReadreg() { return {}; }
@@ -408,6 +415,7 @@ private:
         return ret;
     }
 
+    // 以下函数类似于源寄存器函数，但返回的是目的寄存器
     std::vector<Register *> GetR_typeWritereg() { return {&rd}; }
     std::vector<Register *> GetR2_typeWritereg() { return {&rd}; }
     std::vector<Register *> GetR4_typeWritereg() { return {&rd}; }
@@ -440,10 +448,12 @@ private:
     RiscV64Instruction() : MachineBaseInstruction(MachineBaseInstruction::RiscV), imm(0), use_label(false) {}
 
 public:
+    // 设置操作码和是否使用标签
     void setOpcode(int op, bool use_label) {
         this->op = op;
         this->use_label = use_label;
     }
+    // 设置和获取寄存器、立即数、标签等
     void setRd(Register rd) { this->rd = rd; }
     void setRs1(Register rs1) { this->rs1 = rs1; }
     void setRs2(Register rs2) { this->rs2 = rs2; }
@@ -476,7 +486,7 @@ public:
     static RiscV64InstructionConstructor *GetConstructor() { return &instance; }
     // 函数命名方法大部分与RISC-V指令格式一致
 
-    // example: addw Rd, Rs1, Rs2 
+    // example: addw Rd, Rs1, Rs2
     RiscV64Instruction *ConstructR(int op, Register Rd, Register Rs1, Register Rs2) {
         RiscV64Instruction *ret = new RiscV64Instruction();
         ret->setOpcode(op, false);
@@ -506,7 +516,7 @@ public:
         ret->setRs3(Rs3);
         return ret;
     }
-    // example: lw Rd, imm(Rs1) 
+    // example: lw Rd, imm(Rs1)
     // example: addi Rd, Rs1, imm
     RiscV64Instruction *ConstructIImm(int op, Register Rd, Register Rs1, int imm) {
         RiscV64Instruction *ret = new RiscV64Instruction();
@@ -585,7 +595,7 @@ public:
         ret->setLabel(label);
         return ret;
     }
-    // example: call funcname  
+    // example: call funcname
     // iregnum 和 fregnum 表示该函数调用会分别用几个物理寄存器和浮点寄存器传参
     // iregnum 和 fregnum 的作用为精确确定call会读取哪些寄存器 (具体见GetCall_typeWritereg()函数)
     // 可以进行更精确的寄存器分配
@@ -600,7 +610,6 @@ public:
         ret->setLabel(RiscVLabel(funcname, false));
         return ret;
     }
-
 };
 extern RiscV64InstructionConstructor *rvconstructor;
 
@@ -628,6 +637,9 @@ public:
     // TODO: add your own members here
 };
 class RiscV64Unit : public MachineUnit {};
+
+
+
 
 class RiscV64RegisterAllocTools : public PhysicalRegistersAllocTools {
 protected:

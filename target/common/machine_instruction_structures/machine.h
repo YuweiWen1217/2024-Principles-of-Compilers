@@ -82,6 +82,9 @@ protected:
     MachineCFG *mcfg;
 
 public:
+    // 参数是否超过一定数量，然后用栈传递。
+    bool hasStackParas = false;
+
     // 更新现存的最大块编号
     void UpdateMaxLabel(int labelid) { max_exist_label = max_exist_label > labelid ? max_exist_label : labelid; }
     // 获取形参列表

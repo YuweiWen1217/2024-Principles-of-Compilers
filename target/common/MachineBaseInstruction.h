@@ -102,25 +102,34 @@ typedef unsigned __int128 Uint128;
 typedef unsigned long long Uint64;
 typedef unsigned int Uint32;
 
+// 机器数据类型的定义
 struct MachineDataType {
-    enum { INT, FLOAT };
-    enum { B32, B64, B128 };
-    unsigned data_type;
-    unsigned data_length;
+    // 枚举值：数据类型和数据长度
+    enum { INT, FLOAT };        // 数据类型可以是整数或浮点数
+    enum { B32, B64, B128 };    // 数据长度分别表示 32 位、64 位、128 位
+
+    unsigned data_type;      // 数据类型 (INT/FLOAT)
+    unsigned data_length;    // 数据长度 (B32/B64/B128)
+
+    // 构造函数
     MachineDataType() {}
     MachineDataType(const MachineDataType &other) {
         this->data_type = other.data_type;
         this->data_length = other.data_length;
     }
+    MachineDataType(unsigned data_type, unsigned data_length) : data_type(data_type), data_length(data_length) {}
+
+    // 运算符重载
     MachineDataType operator=(const MachineDataType &other) {
         this->data_type = other.data_type;
         this->data_length = other.data_length;
         return *this;
     }
-    MachineDataType(unsigned data_type, unsigned data_length) : data_type(data_type), data_length(data_length) {}
     bool operator==(const MachineDataType &other) const {
         return this->data_type == other.data_type && this->data_length == other.data_length;
     }
+
+    // 获取数据宽度(字节数), 32位占4字节, 64位占8字节, 128位占16字节
     int getDataWidth() {
         switch (data_length) {
         case B32:
@@ -132,6 +141,7 @@ struct MachineDataType {
         }
         return 0;
     }
+    // i32, i64 ...
     std::string toString() {
         std::string ret;
         if (data_type == INT)
@@ -148,22 +158,30 @@ struct MachineDataType {
     }
 };
 
+// 声明一些常见的全局数据类型变量
 extern MachineDataType INT32, INT64, INT128, FLOAT_32, FLOAT64, FLOAT128;
 
+// 定义寄存器结构体
 struct Register {
 public:
-    int reg_no;         // 寄存器编号
-    bool is_virtual;    // 是否为虚拟寄存器
-    MachineDataType type;
+    int reg_no;              // 寄存器编号
+    bool is_virtual;         // 标识是否为虚拟寄存器
+    MachineDataType type;    // 寄存器的数据类型
+
+    // 构造函数
     Register() {}
     Register(bool is_virtual, int reg_no, MachineDataType type, bool save = false)
         : is_virtual(is_virtual), reg_no(reg_no), type(type) {}
-    int getDataWidth() { return type.getDataWidth(); }
     Register(const Register &other) {
         this->is_virtual = other.is_virtual;
         this->reg_no = other.reg_no;
         this->type = other.type;
     }
+
+    // 获取寄存器的数据宽度
+    int getDataWidth() { return type.getDataWidth(); }
+
+    // 运算符重载
     Register operator=(const Register &other) {
         this->is_virtual = other.is_virtual;
         this->reg_no = other.reg_no;
@@ -187,72 +205,83 @@ public:
     }
 };
 
+// 定义机器操作数基类
 struct MachineBaseOperand {
-    MachineDataType type;
-    enum { REG, IMMI, IMMF, IMMD };
-    int op_type;
+    MachineDataType type;    // 操作数的数据类型
+    enum { REG, IMMI, IMMF, IMMD };    // 操作数类型：寄存器、整型立即数、浮点立即数、双精度浮点数，对应下面4个派生类
+    int op_type;    // 当前操作数类型
+
     MachineBaseOperand(int op_type) : op_type(op_type) {}
     virtual std::string toString() = 0;
 };
 
+// 寄存器操作数
 struct MachineRegister : public MachineBaseOperand {
     Register reg;
     MachineRegister(Register reg) : MachineBaseOperand(MachineBaseOperand::REG), reg(reg) {}
     std::string toString() {
         if (reg.is_virtual)
-            return "%" + std::to_string(reg.reg_no);
+            return "%" + std::to_string(reg.reg_no);    // 虚拟寄存器
         else
-            return "phy_" + std::to_string(reg.reg_no);
+            return "phy_" + std::to_string(reg.reg_no);    // 物理寄存器
     }
 };
 
+// 整型立即数
 struct MachineImmediateInt : public MachineBaseOperand {
     int imm32;
     MachineImmediateInt(int imm32) : MachineBaseOperand(MachineBaseOperand::IMMI), imm32(imm32) {}
     std::string toString() { return std::to_string(imm32); }
 };
+
+// 浮点立即数
 struct MachineImmediateFloat : public MachineBaseOperand {
     float fimm32;
     MachineImmediateFloat(float fimm32) : MachineBaseOperand(MachineBaseOperand::IMMF), fimm32(fimm32) {}
     std::string toString() { return std::to_string(fimm32); }
 };
+
+// 双精度浮点立即数
 struct MachineImmediateDouble : public MachineBaseOperand {
     double dimm64;
     MachineImmediateDouble(double dimm64) : MachineBaseOperand(MachineBaseOperand::IMMD), dimm64(dimm64) {}
     std::string toString() { return std::to_string(dimm64); }
 };
 
+// 定义基础指令类
 class MachineBaseInstruction {
 public:
-    enum { ARM = 0, RiscV, PHI};
-    const int arch;
+    enum { ARM = 0, RiscV, PHI };    // 支持的架构类型
+    const int arch;                  // 指令所属架构
 
 private:
-    int ins_number; // 指令编号, 用于活跃区间计算
+    int ins_number;    // 指令编号, 用于活跃区间计算
 
 public:
     void setNumber(int ins_number) { this->ins_number = ins_number; }
     int getNumber() { return ins_number; }
+
+    // 构造函数
     MachineBaseInstruction(int arch) : arch(arch) {}
     virtual std::vector<Register *> GetReadReg() = 0;     // 获得该指令所有读的寄存器
     virtual std::vector<Register *> GetWriteReg() = 0;    // 获得该指令所有写的寄存器
     virtual int GetLatency() = 0;    // 如果你不打算实现指令调度优化，可以忽略该函数
 };
 
-// 如果你没有实现优化的进阶要求，可以忽略下面的指令类
+// PHI 指令类
 class MachinePhiInstruction : public MachineBaseInstruction {
 private:
-    Register result;
-    std::vector<std::pair<int, MachineBaseOperand *>> phi_list;
+    Register result;                                               // PHI 指令结果寄存器
+    std::vector<std::pair<int, MachineBaseOperand *>> phi_list;    // PHI 分支列表
 
 public:
-    std::vector<Register *> GetReadReg();
-    std::vector<Register *> GetWriteReg();
-
     MachinePhiInstruction(Register result) : result(result), MachineBaseInstruction(MachineBaseInstruction::PHI) {}
+
     Register GetResult() { return result; }
     void SetResult(Register result) { this->result = result; }
     std::vector<std::pair<int, MachineBaseOperand *>> &GetPhiList() { return phi_list; }
+
+    // 操作 PHI 列表
     MachineBaseOperand *removePhiList(int label) {
         for (auto it = phi_list.begin(); it != phi_list.end(); ++it) {
             if (it->first == label) {
@@ -272,5 +301,20 @@ public:
     }
     void pushPhiList(int label, MachineBaseOperand *op) { phi_list.push_back(std::make_pair(label, op)); }
     int GetLatency() { return 0; }
+
+    // // 获取读寄存器列表
+    // std::vector<Register *> GetReadReg() override {
+    //     std::vector<Register *> readRegs;
+    //     for (auto &phi : phi_list) {
+    //         if (phi.second->op_type == MachineBaseOperand::REG) {
+    //             readRegs.push_back(&((MachineRegister *)(phi.second))->reg);
+    //         }
+    //     }
+    //     return readRegs;
+    // }
+
+    // // 获取写寄存器列表
+    // std::vector<Register *> GetWriteReg() override { return {&result}; }
 };
+
 #endif

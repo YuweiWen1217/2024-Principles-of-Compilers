@@ -3,9 +3,9 @@
 #include "../machine_instruction_structures/machine.h"
 class MachinePass {
 protected:
-    MachineUnit *unit;
-    MachineFunction *current_func;
-    MachineBlock *cur_block;
+    MachineUnit *unit;                // 指向整个机器代码单元的指针
+    MachineFunction *current_func;    // 当前正在处理的函数
+    MachineBlock *cur_block;          // 当前正在处理的基本块
 
 public:
     virtual void Execute() = 0;

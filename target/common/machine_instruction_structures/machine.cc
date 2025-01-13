@@ -9,20 +9,28 @@ MachineDataType FLOAT_32(MachineDataType::FLOAT, MachineDataType::B32);
 MachineDataType FLOAT64(MachineDataType::FLOAT, MachineDataType::B64);
 MachineDataType FLOAT128(MachineDataType::FLOAT, MachineDataType::B128);
 
+// 将一个空的基本块节点分配到控制流图（CFG）中
 void MachineCFG::AssignEmptyNode(int id, MachineBlock *Mblk) {
+    // 如果给定的基本块编号 id 大于当前的最大标签值，则更新最大标签值
     if (id > this->max_label) {
-        this->max_label = id;
+        this->max_label = id;    // 更新控制流图的最大基本块标签值
     }
+
+    // 创建一个新的 MachineCFGNode 并与提供的 MachineBlock 关联
     MachineCFGNode *node = new MachineCFGNode;
-    node->Mblock = Mblk;
-    block_map[id] = node;
+    node->Mblock = Mblk;     // 将当前的 MachineBlock 关联到新的 CFG 节点
+    block_map[id] = node;    // 将该节点存储到 block_map 中，索引为基本块的 id
+
+    // 确保控制流图（G）的大小足够容纳 id + 1 个基本块
     while (G.size() < id + 1) {
-        G.push_back({});
-        // G.resize(id + 1);
+        G.push_back({});    // 如果当前图的大小不足，则添加一个空的基本块列表
+        // G.resize(id + 1); // 也可以使用 resize 方法扩展图的大小
     }
+
+    // 确保反向控制流图（invG）的大小足够容纳 id + 1 个基本块
     while (invG.size() < id + 1) {
-        invG.push_back({});
-        // invG.resize(id + 1);
+        invG.push_back({});    // 如果当前反向图的大小不足，则添加一个空的基本块列表
+        // invG.resize(id + 1); // 也可以使用 resize 方法扩展反向图的大小
     }
 }
 
