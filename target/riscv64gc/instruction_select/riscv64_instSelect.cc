@@ -9,8 +9,174 @@ template <> void RiscV64Selector::ConvertAndAppend<StoreInstruction *>(StoreInst
     TODO("Implement this if you need");
 }
 
+int GetOpcodeForArithmetic(int opcode) {
+    switch (opcode) {
+    case BasicInstruction::FADD:
+        return RISCV_FADD_S;
+    case BasicInstruction::FSUB:
+        return RISCV_FSUB_S;
+    case BasicInstruction::FMUL:
+        return RISCV_FMUL_S;
+    case BasicInstruction::FDIV:
+        return RISCV_FDIV_S;
+    case BasicInstruction::ADD:
+        return RISCV_ADD;
+    case BasicInstruction::SUB:
+        return RISCV_SUB;
+    case BasicInstruction::MUL:
+        return RISCV_MUL;
+    case BasicInstruction::DIV:
+        return RISCV_DIV;
+    case BasicInstruction::MOD:
+        return RISCV_REM;
+    default:
+        ERROR("Unsupported integer opcode");
+    }
+}
+
 template <> void RiscV64Selector::ConvertAndAppend<ArithmeticInstruction *>(ArithmeticInstruction *ins) {
-    TODO("Implement this if you need");
+    // 判断是否为浮点运算
+    int opcode = ins->GetOpcode();
+    bool isfloat = (opcode == BasicInstruction::FADD || opcode == BasicInstruction::FSUB ||
+                    opcode == BasicInstruction::FMUL || opcode == BasicInstruction::FDIV);
+    auto imm_type = isfloat ? BasicOperand::IMMF32 : BasicOperand::IMMI32;
+    auto reg_type = isfloat ? FLOAT64 : INT64;
+
+    // 获取操作数1和操作数2
+    auto op1 = ins->GetOperand1();
+    auto op2 = ins->GetOperand2();
+
+    // 获取目的寄存器（获取ir、分配rv）
+    auto *result_op = (RegOperand *)ins->GetResult();
+    auto rd = GetRvReg(result_op->GetRegNo(), reg_type);
+
+    if (!isfloat) {
+        // 情况1：立即数 op 立即数
+        if (op1->GetOperandType() == imm_type && op2->GetOperandType() == imm_type) {
+            auto *Iop1 = (ImmI32Operand *)op1;
+            auto *Iop2 = (ImmI32Operand *)op2;
+            int result_value;
+            // 根据操作符计算立即数结果
+            switch (opcode) {
+            case BasicInstruction::ADD:
+                result_value = Iop1->GetIntImmVal() + Iop2->GetIntImmVal();
+                break;
+            case BasicInstruction::SUB:
+                result_value = Iop1->GetIntImmVal() - Iop2->GetIntImmVal();
+                break;
+            case BasicInstruction::MUL:
+                result_value = Iop1->GetIntImmVal() * Iop2->GetIntImmVal();
+                break;
+            case BasicInstruction::DIV:
+                result_value = Iop1->GetIntImmVal() / Iop2->GetIntImmVal();
+                break;
+            case BasicInstruction::MOD:
+                result_value = Iop1->GetIntImmVal() % Iop2->GetIntImmVal();
+                break;
+            default:
+                ERROR("Unsupported opcode for immediate operands");
+            }
+            // 生成立即数加载指令并追加到当前块
+            cur_block->push_back(rvconstructor->ConstructUImm(RISCV_LI, rd, result_value));
+        }
+        // 情况2：寄存器 op 寄存器
+        else if (op1->GetOperandType() == BasicOperand::REG && op1->GetOperandType() == BasicOperand::REG) {
+            auto *rs1_op = (RegOperand *)ins->GetOperand1();
+            auto *rs2_op = (RegOperand *)ins->GetOperand2();
+            auto rs1 = GetRvReg(rs1_op->GetRegNo(), reg_type);
+            auto rs2 = GetRvReg(rs2_op->GetRegNo(), reg_type);
+
+            int opcode_instr = GetOpcodeForArithmetic(ins->GetOpcode());
+            cur_block->push_back(rvconstructor->ConstructR(opcode_instr, rd, rs1, rs2));
+
+        }
+        // 情况3：立即数 op 寄存器
+        else if (op1->GetOperandType() == imm_type && op1->GetOperandType() == BasicOperand::REG) {
+            auto *imm_op = (ImmI32Operand *)op1;
+            auto imm = imm_op->GetIntImmVal();
+
+            auto *rs_op = (RegOperand *)op2;
+            auto rs = GetRvReg(rs_op->GetRegNo(), reg_type);    // 获取寄存器号
+            // ADD 或 SUB 操作，并且立即数在范围内  -> ADDI
+            if ((opcode == BasicInstruction::ADD || opcode == BasicInstruction::SUB) && (imm <= 2047 && imm >= -2048)) {
+                imm = opcode == BasicInstruction::ADD ? imm : -imm;
+                cur_block->push_back(rvconstructor->ConstructIImm(RISCV_ADDI, rd, rs, imm));
+            } else {
+                // li temp_reg, imm
+                // opcode rd, rs, temp_reg
+                Register temp_reg = cur_func->GetNewReg(reg_type);    // 获取新的临时寄存器
+                cur_block->push_back(rvconstructor->ConstructUImm(RISCV_LI, temp_reg, imm));
+                cur_block->push_back(rvconstructor->ConstructR(GetOpcodeForArithmetic(opcode), rd, rs, temp_reg));
+            }
+        } else {
+            ERROR("Unsupported operand type combination for ArithmeticInstruction");
+        }
+    }
+    // 浮点数运算
+    else {
+        if (op1->GetOperandType() == imm_type && op2->GetOperandType() == imm_type) {
+
+            auto *Iop1 = (ImmF32Operand *)op1;
+            auto *Iop2 = (ImmF32Operand *)op2;
+            double result_value;
+            switch (opcode) {
+            case BasicInstruction::FADD:
+                result_value = Iop1->GetFloatVal() + Iop2->GetFloatVal();
+                break;
+            case BasicInstruction::FSUB:
+                result_value = Iop1->GetFloatVal() - Iop2->GetFloatVal();
+                break;
+            case BasicInstruction::FMUL:
+                result_value = Iop1->GetFloatVal() * Iop2->GetFloatVal();
+                break;
+            case BasicInstruction::FDIV:
+                result_value = Iop1->GetFloatVal() / Iop2->GetFloatVal();
+                break;
+            default:
+                ERROR("Unsupported opcode for immediate operands");
+            }
+            // 3.14 -> 0x4048F5C3，先当作整数放到整型寄存器，然后使用fmv.w.x将值移动到
+            // 例如：
+            // li t0, 0x4048F5C3    # 将立即数 0x4048F5C3 加载到整数寄存器 t0
+            // fmv.w.x f0, t0       # 将整数寄存器 t0 的值移动到浮点寄存器 f0
+            uint32_t result_binary;
+            memcpy(&result_binary, &result_value, sizeof(float));    // 将浮点数转为二进制
+            Register temp_int_reg = cur_func->GetNewReg(INT64);
+            cur_block->push_back(rvconstructor->ConstructUImm(RISCV_LI, temp_int_reg, result_binary));
+            cur_block->push_back(rvconstructor->ConstructR2(RISCV_FMV_W_X, rd, temp_int_reg));
+
+        } else if (op1->GetOperandType() == BasicOperand::REG && op1->GetOperandType() == BasicOperand::REG) {
+            auto *rs1_op = (RegOperand *)op1;
+            auto *rs2_op = (RegOperand *)op2;
+
+            auto rs1 = GetRvReg(rs1_op->GetRegNo(), FLOAT64);
+            auto rs2 = GetRvReg(rs2_op->GetRegNo(), FLOAT64);
+
+            int opcode_instr = GetOpcodeForArithmetic(opcode);
+            cur_block->push_back(rvconstructor->ConstructR(opcode_instr, rd, rs1, rs2));
+        } else if (op1->GetOperandType() == imm_type && op1->GetOperandType() == BasicOperand::REG) {
+            // 操作数1：立即数 -> 整型寄存器 -> 浮点数寄存器
+            auto *imm_op = (ImmF32Operand *)op1;
+            auto imm_val = imm_op->GetFloatVal();
+            uint32_t imm_binary;
+            memcpy(&imm_binary, &imm_val, sizeof(float));
+            Register temp_int_reg = cur_func->GetNewReg(INT64);
+            Register imm_reg = cur_func->GetNewReg(FLOAT64);
+            cur_block->push_back(rvconstructor->ConstructUImm(RISCV_LI, temp_int_reg, imm_binary));
+            cur_block->push_back(rvconstructor->ConstructR2(RISCV_FMV_W_X, imm_reg, temp_int_reg));
+
+            // 操作数2：寄存器
+            auto *rs_op = (RegOperand *)op2;
+            auto rs = GetRvReg(rs_op->GetRegNo(), FLOAT64);    // 第二个操作数寄存器
+
+            // 添加最终指令！
+            int opcode_instr = GetOpcodeForArithmetic(opcode);
+            cur_block->push_back(rvconstructor->ConstructR(opcode_instr, rd, imm_reg, rs));
+
+        } else {
+            ERROR("Unsupported operand type combination for ArithmeticInstruction");
+        }
+    }
 }
 
 template <> void RiscV64Selector::ConvertAndAppend<IcmpInstruction *>(IcmpInstruction *ins) {
@@ -176,8 +342,6 @@ void RiscV64Selector::SelectInstructionAndBuildCFG() {
         // 2、添加函数参数(推荐先阅读一下riscv64_lowerframe.cc中的代码和注释)
         // See MachineFunction::AddParameter()
 
-
-
         // 遍历当前函数的每个block
         for (auto [id, block] : *(cfg->block_map)) {
             cur_block = new RiscV64Block(id);
@@ -212,3 +376,10 @@ void RiscV64Selector::SelectInstructionAndBuildCFG() {
 }
 
 void RiscV64Selector::ClearFunctionSelectState() { cur_offset = 0; }
+
+Register RiscV64Selector::GetRvReg(int irRegNo, MachineDataType type) {
+    // std::cout << "GetRvReg" << std::endl;
+    if (irReg2rvReg.find(irRegNo) == irReg2rvReg.end())
+        irReg2rvReg[irRegNo] = cur_func->GetNewRegister(type.data_type, type.data_length);
+    return irReg2rvReg[irRegNo];
+}
