@@ -336,17 +336,14 @@ template <> void RiscV64Selector::ConvertAndAppend<BrCondInstruction *>(BrCondIn
 }
 
 template <> void RiscV64Selector::ConvertAndAppend<BrUncondInstruction *>(BrUncondInstruction *ins) {
-    auto target_label = ((LabelOperand *)(ins->GetDestLabel() ))->GetLabelNo();
+    auto target_label = ((LabelOperand *)(ins->GetDestLabel()))->GetLabelNo();
     auto br_ins = rvconstructor->ConstructJLabel(RISCV_JAL, GetPhysicalReg(RISCV_x0), RiscVLabel(target_label));
     cur_block->push_back(br_ins);
 }
 
-
 template <> void RiscV64Selector::ConvertAndAppend<AllocaInstruction *>(AllocaInstruction *ins) {
     TODO("Implement this if you need");
 }
-
-
 
 template <> void RiscV64Selector::ConvertAndAppend<CallInstruction *>(CallInstruction *ins) {
     TODO("Implement this if you need");
@@ -354,20 +351,43 @@ template <> void RiscV64Selector::ConvertAndAppend<CallInstruction *>(CallInstru
 
 template <> void RiscV64Selector::ConvertAndAppend<RetInstruction *>(RetInstruction *ins) {
     if (ins->GetRetVal() != NULL) {
+        // 返回值是整数
         if (ins->GetRetVal()->GetOperandType() == BasicOperand::IMMI32) {
             auto retimm_op = (ImmI32Operand *)ins->GetRetVal();
             auto imm = retimm_op->GetIntImmVal();
 
+            // 使用 LI 指令将立即数加载到 a0 寄存器作为返回值
             auto retcopy_instr = rvconstructor->ConstructUImm(RISCV_LI, GetPhysicalReg(RISCV_a0), imm);
             cur_block->push_back(retcopy_instr);
-        } else if (ins->GetRetVal()->GetOperandType() == BasicOperand::IMMF32) {
-            TODO("Implement this if you need");
-        } else if (ins->GetRetVal()->GetOperandType() == BasicOperand::REG) {
-            TODO("Implement this if you need");
+        }
+        // 返回值是浮点数
+        else if (ins->GetRetVal()->GetOperandType() == BasicOperand::IMMF32) {
+            auto retimm_op = (ImmF32Operand *)ins->GetRetVal();
+            float imm_val = retimm_op->GetFloatVal();
+            uint32_t immr;
+            memcpy(&immr, &imm_val, sizeof(float));
+            Register temp_reg = cur_func->GetNewReg(INT64);
+            // LI + FMV.W.X
+            cur_block->push_back(rvconstructor->ConstructUImm(RISCV_LI, temp_reg, immr));
+            cur_block->push_back(rvconstructor->ConstructR2(RISCV_FMV_W_X, GetPhysicalReg(RISCV_fa0), temp_reg));
+        }
+        // 返回值是寄存器
+        else if (ins->GetRetVal()->GetOperandType() == BasicOperand::REG) {
+            auto retRegNo = ((RegOperand *)ins->GetRetVal())->GetRegNo();
+            if (ins->GetType() == BasicInstruction::FLOAT32) {
+                auto retreg = GetRvReg(retRegNo, FLOAT64);
+                cur_block->push_back(rvconstructor->ConstructR2(RISCV_FMV_S, GetPhysicalReg(RISCV_fa0), retreg));
+            } else {
+                auto retreg = GetRvReg(retRegNo, FLOAT64);
+                cur_block->push_back(rvconstructor->ConstructIImm(RISCV_ADDI, GetPhysicalReg(RISCV_a0), retreg, 0));
+            }
         }
     }
 
+    // 构造返回指令 JALR x0, ra, 0
     auto ret_instr = rvconstructor->ConstructIImm(RISCV_JALR, GetPhysicalReg(RISCV_x0), GetPhysicalReg(RISCV_ra), 0);
+
+    // 根据函数返回类型设置标志（1: int, 2: float, 0: void）
     if (ins->GetType() == BasicInstruction::I32) {
         ret_instr->setRetType(1);
     } else if (ins->GetType() == BasicInstruction::FLOAT32) {
@@ -375,6 +395,8 @@ template <> void RiscV64Selector::ConvertAndAppend<RetInstruction *>(RetInstruct
     } else {
         ret_instr->setRetType(0);
     }
+
+    // 添加返回指令到当前基本块
     cur_block->push_back(ret_instr);
 }
 
