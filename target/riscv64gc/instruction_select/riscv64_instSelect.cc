@@ -202,6 +202,7 @@ struct CmpStruct {
     Register op1;    // 第一个操作数（寄存器）
     Register op2;    // 第二个操作数（寄存器）
     int cond;        // 比较条件（例如：等于、不等于、大于等）
+    bool isfloat;    // 主要给zext那个函数进行指示
 };
 std::unordered_map<int, CmpStruct> reg2cmpInfo;
 
@@ -231,7 +232,7 @@ template <> void RiscV64Selector::ConvertAndAppend<IcmpInstruction *>(IcmpInstru
 
     // 将比较指令的信息保存下来，等待 brcond 处理
     auto result = ins->GetResult();
-    CmpStruct cmp_info = {op1_reg, op2_reg, ins->GetCond()};
+    CmpStruct cmp_info = {op1_reg, op2_reg, ins->GetCond(), false};
     reg2cmpInfo[((RegOperand *)result)->GetRegNo()] = cmp_info;
 }
 
@@ -295,7 +296,7 @@ template <> void RiscV64Selector::ConvertAndAppend<FcmpInstruction *>(FcmpInstru
 
     // 保存比较信息到 reg2cmpInfo
     auto result = ins->GetResult();
-    CmpStruct cmp_info = {rd, GetPhysicalReg(RISCV_x0), brcond};
+    CmpStruct cmp_info = {rd, GetPhysicalReg(RISCV_x0), brcond, true};
     reg2cmpInfo[((RegOperand *)result)->GetRegNo()] = cmp_info;
 }
 
@@ -401,15 +402,64 @@ template <> void RiscV64Selector::ConvertAndAppend<RetInstruction *>(RetInstruct
 }
 
 template <> void RiscV64Selector::ConvertAndAppend<FptosiInstruction *>(FptosiInstruction *ins) {
-    TODO("Implement this if you need");
+    auto src_op = (RegOperand *)ins->GetSrc();
+    auto dest_op = (RegOperand *)ins->GetResult();
+    auto src_reg = GetRvReg(src_op->GetRegNo(), FLOAT64);
+    auto dest_reg = GetRvReg(dest_op->GetRegNo(), INT64);
+
+    // 使用 RISC-V 的浮点到整数转换指令
+    cur_block->push_back(rvconstructor->ConstructR2(RISCV_FCVT_W_S, src_reg, dest_reg));
 }
 
 template <> void RiscV64Selector::ConvertAndAppend<SitofpInstruction *>(SitofpInstruction *ins) {
-    TODO("Implement this if you need");
+    auto src_op = (RegOperand *)ins->GetSrc();
+    auto dest_op = (RegOperand *)ins->GetResult();
+    auto src_reg = GetRvReg(src_op->GetRegNo(), INT64);
+    auto dest_reg = GetRvReg(dest_op->GetRegNo(), FLOAT64);
+
+    // 使用 RISC-V 的整数到浮点转换指令
+    cur_block->push_back(rvconstructor->ConstructR2(RISCV_FCVT_S_W, dest_reg, src_reg));
 }
 
+/*
+    什么时候会出现zext？
+    先以整型为例：
+        %r4 = icmp eq i32 %r3,0
+        %r5 = zext i1 %r4 to i32
+    注意到：zext的%r4一定来源于一个eq比较语句，且第二个op一定是0。
+    因此只需要让%r3和0作比较，直接给%r5赋值。
+
+    对于浮点数：
+        %r4 = fcmp oeq float %r3,0x0
+        %r5 = zext i1 %r4 to i32
+    在处理fcmp时，会生成如下指令：
+        LI x5, 0x00000000          # 将 0.0 的 IEEE-754 表示加载到 x5
+        FMV.W.X f2, x5             # 将 x5 的值移动到浮点寄存器 f2
+        FEQ.S x6, f1, f2           # 如果 f1 == f2，则 x6 = 1，否则 x6 = 0
+    因此，我们只需要将 %r5 与 rd建立联系即可
+*/
 template <> void RiscV64Selector::ConvertAndAppend<ZextInstruction *>(ZextInstruction *ins) {
-    TODO("Implement this if you need");
+    // 获取指令的目的寄存器和源寄存器
+    auto result = ins->GetResult();
+    auto src = ins->GetSrc();
+    auto result_op = (RegOperand *)result;
+    auto src_op = (RegOperand *)src;
+    auto result_reg = GetRvReg(result_op->GetRegNo(), INT32);
+    auto src_reg = GetRvReg(src_op->GetRegNo(), INT32);
+
+    // 从reg2cmpInfo中获取源寄存器的比较信息（op1）
+    CmpStruct cmp_info = reg2cmpInfo[src_op->GetRegNo()];
+
+    if (cmp_info.isfloat) {
+        // 如果是浮点型，将结果寄存器直接映射到 cmp_info 的 rd
+        irReg2rvReg[result_op->GetRegNo()] = cmp_info.op1;
+    } else {
+        // 如果是整型比较，生成 SLTIU 指令，将 op1_reg 与 0 进行比较（无符号小于1）
+        auto op1_reg = cmp_info.op1;
+        auto sltiu_instr = rvconstructor->ConstructIImm(RISCV_SLTIU, result_reg, op1_reg, 1);    // op1_reg == 0
+        cur_block->pop_back();    // 把li op2reg  0给删了
+        cur_block->push_back(sltiu_instr);
+    }
 }
 
 template <> void RiscV64Selector::ConvertAndAppend<GetElementptrInstruction *>(GetElementptrInstruction *ins) {
