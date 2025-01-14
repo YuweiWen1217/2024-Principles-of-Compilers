@@ -359,6 +359,7 @@ struct RiscVLabel {
     bool is_hi;    // 对应%hi(name) 和 %lo(name)
     RiscVLabel() = default;
     RiscVLabel(std::string name, bool is_hi) : name(name), is_hi(is_hi) { this->is_data_address = true; }
+    RiscVLabel(int jmp_id) :  name() {jmp_label_id = jmp_id;}
     // 添加一些你想用的构造函数
 };
 

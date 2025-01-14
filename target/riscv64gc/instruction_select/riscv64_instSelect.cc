@@ -179,19 +179,163 @@ template <> void RiscV64Selector::ConvertAndAppend<ArithmeticInstruction *>(Arit
     }
 }
 
+/*
+    先看整型：
+        对于跳转指令
+        例如，有如下llvm ir
+            %r2 = icmp sge i32 %r0,%r1
+            br i1 %r2, label %L2, label %L3
+        如果r0 >= r1，则跳转到L2，否则跳转到L3。
+        一种方法是：
+            sge x3, %1, %2
+            bne %3, x0, L2
+            j .L3
+        实验指导书上的方法是：
+            bge	%1, %2, .L2
+            j .L3
+        如果采用实验指导书上的方法，那么需要先储存第一个指令（icmp那个），然后在br时再统一处理。
+        另：框架中没有j，用jal x0 .L3 代替
+    对于浮点数：
+        bge、beq这种只能针对整数，因此浮点数采用第一个方法。
+*/
+struct CmpStruct {
+    Register op1;    // 第一个操作数（寄存器）
+    Register op2;    // 第二个操作数（寄存器）
+    int cond;        // 比较条件（例如：等于、不等于、大于等）
+};
+std::unordered_map<int, CmpStruct> reg2cmpInfo;
+
 template <> void RiscV64Selector::ConvertAndAppend<IcmpInstruction *>(IcmpInstruction *ins) {
-    TODO("Implement this if you need");
+    // 获取操作数
+    auto op1 = ins->GetOp1();
+    auto op2 = ins->GetOp2();
+    Register op1_reg, op2_reg;
+
+    // 处理第一个操作数，只可能是reg（详见ir部分）
+    if (op1->GetOperandType() == BasicOperand::REG) {
+        op1_reg = GetRvReg(((RegOperand *)op1)->GetRegNo(), INT64);
+    } else {
+        ERROR("Unexpected ICMP op1 type");
+    }
+
+    // 处理第二个操作数
+    if (op2->GetOperandType() == BasicOperand::IMMI32) {
+        op2_reg = cur_func->GetNewReg(INT64);
+        int imm_val = ((ImmI32Operand *)op2)->GetIntImmVal();
+        cur_block->push_back(rvconstructor->ConstructUImm(RISCV_LI, op2_reg, imm_val));
+    } else if (op2->GetOperandType() == BasicOperand::REG) {
+        op2_reg = GetRvReg(((RegOperand *)op2)->GetRegNo(), INT64);
+    } else {
+        ERROR("Unexpected ICMP op2 type");
+    }
+
+    // 将比较指令的信息保存下来，等待 brcond 处理
+    auto result = ins->GetResult();
+    CmpStruct cmp_info = {op1_reg, op2_reg, ins->GetCond()};
+    reg2cmpInfo[((RegOperand *)result)->GetRegNo()] = cmp_info;
 }
 
 template <> void RiscV64Selector::ConvertAndAppend<FcmpInstruction *>(FcmpInstruction *ins) {
-    TODO("Implement this if you need");
+    auto op1 = ins->GetOp1();
+    auto op2 = ins->GetOp2();
+    Register op1_reg, op2_reg;
+
+    // 处理第一个操作数，只可能是reg（详见ir部分）
+    if (op1->GetOperandType() == BasicOperand::REG) {
+        op1_reg = GetRvReg(((RegOperand *)op1)->GetRegNo(), FLOAT64);
+    } else {
+        ERROR("Unexpected FCMP op1 type");
+    }
+
+    // 处理第二个操作数
+    if (op2->GetOperandType() == BasicOperand::IMMF32) {
+        op2_reg = cur_func->GetNewReg(FLOAT64);
+        float imm_val = ((ImmF32Operand *)op2)->GetFloatVal();
+        uint32_t immr;
+        memcpy(&immr, &imm_val, sizeof(float));
+        Register temp_reg = cur_func->GetNewReg(INT64);
+        cur_block->push_back(rvconstructor->ConstructUImm(RISCV_LI, temp_reg, immr));
+        cur_block->push_back(rvconstructor->ConstructR2(RISCV_FMV_W_X, op2_reg, temp_reg));
+    } else if (op2->GetOperandType() == BasicOperand::REG) {
+        op2_reg = GetRvReg(((RegOperand *)op2)->GetRegNo(), FLOAT64);
+    } else {
+        ERROR("Unexpected FCMP op2 type");
+    }
+
+    // 用于保存结果的寄存器
+    Register rd = cur_func->GetNewReg(INT64);
+
+    // 根据浮点条件生成指令
+    int cond = ins->GetCond();
+    switch (cond) {
+    case BasicInstruction::OEQ:
+        cur_block->push_back(rvconstructor->ConstructR(RISCV_FEQ_S, rd, op1_reg, op2_reg));
+        break;
+    case BasicInstruction::OGT:
+        cur_block->push_back(rvconstructor->ConstructR(RISCV_FLE_S, rd, op1_reg, op2_reg));
+        break;
+    case BasicInstruction::OGE:
+        cur_block->push_back(rvconstructor->ConstructR(RISCV_FLT_S, rd, op1_reg, op2_reg));
+        break;
+    case BasicInstruction::OLT:
+        cur_block->push_back(rvconstructor->ConstructR(RISCV_FLT_S, rd, op1_reg, op2_reg));
+        break;
+    case BasicInstruction::OLE:
+        cur_block->push_back(rvconstructor->ConstructR(RISCV_FLE_S, rd, op1_reg, op2_reg));
+        break;
+    case BasicInstruction::ONE:
+        cur_block->push_back(rvconstructor->ConstructR(RISCV_FEQ_S, rd, op1_reg, op2_reg));
+        break;
+    default:
+        ERROR("Unexpected condition in FcmpInstruction");
+    }
+    // OEQ: 如果为真，rd是1，因此和0做ne比较；
+    // 其余：如果为真，那么此条指令后，rd为0，因此和0做eq比较。
+    auto brcond = (cond == BasicInstruction::OEQ) ? BasicInstruction::ne : BasicInstruction::eq;
+
+    // 保存比较信息到 reg2cmpInfo
+    auto result = ins->GetResult();
+    CmpStruct cmp_info = {rd, GetPhysicalReg(RISCV_x0), brcond};
+    reg2cmpInfo[((RegOperand *)result)->GetRegNo()] = cmp_info;
 }
 
-template <> void RiscV64Selector::ConvertAndAppend<AllocaInstruction *>(AllocaInstruction *ins) {
-    TODO("Implement this if you need");
+int GetRiscVCondOpcode(int cond) {
+    switch (cond) {
+    case BasicInstruction::eq:
+        return RISCV_BEQ;
+    case BasicInstruction::ne:
+        return RISCV_BNE;
+    case BasicInstruction::sle:
+        return RISCV_BLE;
+    case BasicInstruction::slt:
+        return RISCV_BLT;
+    case BasicInstruction::sge:
+        return RISCV_BGE;
+    case BasicInstruction::sgt:
+        return RISCV_BGT;
+    default:
+        ERROR("Unexpected condition for BrCondInstruction");
+        return -1;
+    }
 }
 
 template <> void RiscV64Selector::ConvertAndAppend<BrCondInstruction *>(BrCondInstruction *ins) {
+    // 获取已保存的比较信息
+    auto cond_reg = (RegOperand *)ins->GetCond();
+    CmpStruct cmp_info = reg2cmpInfo[cond_reg->GetRegNo()];
+
+    // 获取 RISC-V 条件跳转指令的 opcode
+    int opcode = GetRiscVCondOpcode(cmp_info.cond);
+
+    // 构造两条指令
+    cur_block->push_back(rvconstructor->ConstructBLabel(
+    opcode, cmp_info.op1, cmp_info.op2, RiscVLabel(((LabelOperand *)(ins->GetTrueLabel()))->GetLabelNo())));
+
+    cur_block->push_back(rvconstructor->ConstructJLabel(
+    RISCV_JAL, GetPhysicalReg(RISCV_x0), RiscVLabel(((LabelOperand *)(ins->GetFalseLabel()))->GetLabelNo())));
+}
+
+template <> void RiscV64Selector::ConvertAndAppend<AllocaInstruction *>(AllocaInstruction *ins) {
     TODO("Implement this if you need");
 }
 
@@ -268,6 +412,7 @@ template <> void RiscV64Selector::ConvertAndAppend<Instruction>(Instruction inst
     case BasicInstruction::MOD:
     case BasicInstruction::SHL:
     case BasicInstruction::BITXOR:
+        // shl、bitxor前面根本没实现，可以不管
         ConvertAndAppend<ArithmeticInstruction *>((ArithmeticInstruction *)inst);
         break;
     case BasicInstruction::ICMP:
