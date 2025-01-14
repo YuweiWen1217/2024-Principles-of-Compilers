@@ -335,13 +335,18 @@ template <> void RiscV64Selector::ConvertAndAppend<BrCondInstruction *>(BrCondIn
     RISCV_JAL, GetPhysicalReg(RISCV_x0), RiscVLabel(((LabelOperand *)(ins->GetFalseLabel()))->GetLabelNo())));
 }
 
+template <> void RiscV64Selector::ConvertAndAppend<BrUncondInstruction *>(BrUncondInstruction *ins) {
+    auto target_label = ((LabelOperand *)(ins->GetDestLabel() ))->GetLabelNo();
+    auto br_ins = rvconstructor->ConstructJLabel(RISCV_JAL, GetPhysicalReg(RISCV_x0), RiscVLabel(target_label));
+    cur_block->push_back(br_ins);
+}
+
+
 template <> void RiscV64Selector::ConvertAndAppend<AllocaInstruction *>(AllocaInstruction *ins) {
     TODO("Implement this if you need");
 }
 
-template <> void RiscV64Selector::ConvertAndAppend<BrUncondInstruction *>(BrUncondInstruction *ins) {
-    TODO("Implement this if you need");
-}
+
 
 template <> void RiscV64Selector::ConvertAndAppend<CallInstruction *>(CallInstruction *ins) {
     TODO("Implement this if you need");
