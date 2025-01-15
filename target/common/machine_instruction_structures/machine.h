@@ -52,6 +52,16 @@ public:
         // return (*(instructions.rbegin()))->getNumber();
     }
     MachineBlock(int id) : label_id(id) {}
+
+    // 检查 instructions 列表是否为空
+    bool empty() const { return instructions.empty(); }
+    // 返回 instructions 列表的最后一个指令
+    MachineBaseInstruction *back() const {
+        if (!instructions.empty()) {
+            return instructions.back();
+        }
+        return nullptr;
+    }
 };
 
 class MachineBlockFactory {
@@ -134,7 +144,7 @@ protected:
 
 public:
     MachineFunction(std::string name, MachineBlockFactory *blockfactory)
-        : func_name(name), stack_sz(0), para_sz(0), block_factory(blockfactory), max_exist_label(0){}
+        : func_name(name), stack_sz(0), para_sz(0), block_factory(blockfactory), max_exist_label(0) {}
 };
 
 class MachineUnit {
@@ -158,7 +168,7 @@ private:
     int max_label;
 
 public:
-    MachineCFG() : max_label(0){};
+    MachineCFG() : max_label(0) {};
     void AssignEmptyNode(int id, MachineBlock *Mblk);
 
     // Just modify CFG edge, no change on branch instructions

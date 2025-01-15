@@ -1,12 +1,9 @@
-int b[2] = {1,2};
-int d = 1;
 int main()
 {
-    int a[10][10] = {1};
-    
-    int c = b[0];
-    a[1][1] = 2;
-    a[2][2] = b[1];
-    d = 4;
-    return c+d;
+   int a = 1;
+   while(a>0)
+   {
+        a = a-1;
+   }
+   return a;
 }

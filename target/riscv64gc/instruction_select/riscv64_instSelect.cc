@@ -808,9 +808,42 @@ template <> void RiscV64Selector::ConvertAndAppend<GetElementptrInstruction *>(G
 // phi syntax:
 // <result>=phi <ty> [val1,label1],[val2,label2],……
 // 每一个pair里，第一个是label，第二个是val
+
+// template <> void RiscV64Selector::ConvertAndAppend<PhiInstruction *>(PhiInstruction *ins) {
+//     // 确保Phi指令的结果操作数是一个寄存器操作数
+//     assert(ins->GetResult()->GetOperandType() == BasicOperand::REG);
+
+//     // 分配目的寄存器
+//     auto resulstOp = (RegOperand *)ins->GetResult();
+//     Register resultReg;
+//     if (ins->GetDataType() == BasicInstruction::I32) {
+//         resultReg = GetRvReg(resulstOp->GetRegNo(), INT64);
+//     } else if (ins->GetDataType() == BasicInstruction::FLOAT32) {
+//         resultReg = GetRvReg(resulstOp->GetRegNo(), FLOAT64);
+//     }
+
+//     auto phimInst = new MachinePhiInstruction(resultReg);
+
+//     // 遍历Phi指令的phi列表（label和对应值的映射）
+//     for (auto [label, val] : ins->GetPhiList()) {
+//         auto labelOp = (LabelOperand *)label;
+//         auto regOp = (RegOperand *)val;
+//         if (val->GetOperandType() == BasicOperand::REG && ins->GetDataType() == BasicInstruction::I32) {
+//             auto valReg = GetRvReg(regOp->GetRegNo(), INT64);
+//             phimInst->pushPhiList(labelOp->GetLabelNo(), valReg);
+//         } else if (val->GetOperandType() == BasicOperand::REG && ins->GetDataType() == BasicInstruction::FLOAT32) {
+//             auto valReg = GetRvReg(regOp->GetRegNo(), FLOAT64);
+//             phimInst->pushPhiList(labelOp->GetLabelNo(), valReg);
+//         } else {
+//             ERROR("Unexpected OperandType");
+//         }
+//     }
+//     cur_block->push_back(phimInst);
+// }
+
+std::map<int, std::vector<RiscV64Instruction *>> block_insert_map;
+
 template <> void RiscV64Selector::ConvertAndAppend<PhiInstruction *>(PhiInstruction *ins) {
-    // 确保Phi指令的结果操作数是一个寄存器操作数
-    assert(ins->GetResult()->GetOperandType() == BasicOperand::REG);
 
     // 分配目的寄存器
     auto resulstOp = (RegOperand *)ins->GetResult();
@@ -821,23 +854,22 @@ template <> void RiscV64Selector::ConvertAndAppend<PhiInstruction *>(PhiInstruct
         resultReg = GetRvReg(resulstOp->GetRegNo(), FLOAT64);
     }
 
-    auto phimInst = new MachinePhiInstruction(resultReg);
-
-    // 遍历Phi指令的phi列表（label和对应值的映射）
+    // 遍历 Phi 指令的 [label, val] 对
     for (auto [label, val] : ins->GetPhiList()) {
         auto labelOp = (LabelOperand *)label;
+        int label_id = labelOp->GetLabelNo();
         auto regOp = (RegOperand *)val;
-        if (val->GetOperandType() == BasicOperand::REG && ins->GetDataType() == BasicInstruction::I32) {
-            auto valReg = GetRvReg(regOp->GetRegNo(), INT64);
-            phimInst->pushPhiList(labelOp->GetLabelNo(), valReg);
-        } else if (val->GetOperandType() == BasicOperand::REG && ins->GetDataType() == BasicInstruction::FLOAT32) {
-            auto valReg = GetRvReg(regOp->GetRegNo(), FLOAT64);
-            phimInst->pushPhiList(labelOp->GetLabelNo(), valReg);
+        Register valReg;
+        if (ins->GetDataType() == BasicInstruction::I32) {
+            valReg = GetRvReg(regOp->GetRegNo(), INT64);
+        } else if (ins->GetDataType() == BasicInstruction::FLOAT32) {
+            valReg = GetRvReg(regOp->GetRegNo(), FLOAT64);
         } else {
             ERROR("Unexpected OperandType");
         }
+        RiscV64Instruction *inst = rvconstructor->ConstructR(RISCV_ADD, resultReg, valReg, GetPhysicalReg(RISCV_x0));
+        block_insert_map[label_id].push_back(inst);
     }
-    cur_block->push_back(phimInst);
 }
 
 template <> void RiscV64Selector::ConvertAndAppend<Instruction>(Instruction inst) {
@@ -961,6 +993,22 @@ void RiscV64Selector::SelectInstructionAndBuildCFG() {
             }
         }
 
+        // 处理phi指令
+        for (auto &block : cur_func->blocks) {
+            int block_id = block->getLabelId();
+            if (block_insert_map.find(block_id) != block_insert_map.end()) {
+                auto &instr_list = block_insert_map[block_id];   
+                auto last_instr = block->back();
+                block->pop_back();
+                for (auto &instr : instr_list) {
+                    block->push_back(instr);
+                }
+                if (last_instr) {
+                    block->push_back(last_instr);
+                }
+            }
+        }
+
         // RISCV 8字节对齐（）
         if (cur_offset % 8 != 0) {
             cur_offset = ((cur_offset + 7) / 8) * 8;
@@ -982,6 +1030,7 @@ void RiscV64Selector::ClearFunctionSelectState() {
     irReg2rvReg.clear();
     reg2offset.clear();
     reg2cmpInfo.clear();
+    block_insert_map.clear();
 }
 
 Register RiscV64Selector::GetRvReg(int irRegNo, MachineDataType type) {
