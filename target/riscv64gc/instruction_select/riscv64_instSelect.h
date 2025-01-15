@@ -22,7 +22,7 @@ public:
     std::unordered_map<int, Register> irReg2rvReg;
     Register GetRvReg(int irRegNo, MachineDataType type);
 
-    
-
+    // llvm ir的寄存器编号 -> 该寄存器在栈上的偏移量
+    std::unordered_map<int, int> reg2offset;
 };
 #endif

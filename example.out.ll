@@ -15,27 +15,31 @@ declare i32 @llvm.umax.i32(i32,i32)
 declare i32 @llvm.umin.i32(i32,i32)
 declare i32 @llvm.smax.i32(i32,i32)
 declare i32 @llvm.smin.i32(i32,i32)
-@a = global float 0x3ff19999a0000000
-@b = global i32 2
+@b = global [2 x i32] [i32 1,i32 2]
 define i32 @main()
 {
 L0:  ;
+    %r0 = alloca [10 x [10 x i32]]
     br label %L1
 L1:  ;
-    %r0 = load float, ptr @a
-    %r1 = add i32 1024,0
-    %r2 = sitofp i32 %r1 to float
-    %r3 = fadd float %r0,%r2
-    %r4 = fcmp oeq float %r3,0x0
-    %r5 = zext i1 %r4 to i32
-    %r6 = icmp eq i32 %r5,0
-    %r7 = zext i1 %r6 to i32
-    %r8 = load float, ptr @a
-    %r9 = fcmp oeq float %r8,0x0
-    %r10 = zext i1 %r9 to i32
-    %r11 = add i32 %r7,%r10
+    call void @llvm.memset.p0.i32(ptr %r0,i8 0,i32 400,i1 0)
+    %r1 = getelementptr [10 x [10 x i32]], ptr %r0, i32 0, i32 0, i32 0
+    %r2 = add i32 1,0
+    store i32 %r2, ptr %r1
+    %r4 = add i32 0,0
+    %r5 = getelementptr [2 x i32], ptr @b, i32 0, i32 %r4
+    %r6 = load i32, ptr %r5
+    %r7 = add i32 1,0
+    %r8 = add i32 1,0
+    %r9 = getelementptr [10 x [10 x i32]], ptr %r0, i32 0, i32 %r7, i32 %r8
+    %r10 = add i32 2,0
+    store i32 %r10, ptr %r9
+    %r11 = add i32 2,0
     %r12 = add i32 2,0
-    %r13 = sub i32 %r11,%r12
-    store i32 %r13, ptr @b
-    ret i32 0
+    %r13 = getelementptr [10 x [10 x i32]], ptr %r0, i32 0, i32 %r11, i32 %r12
+    %r14 = add i32 1,0
+    %r15 = getelementptr [2 x i32], ptr @b, i32 0, i32 %r14
+    %r16 = load i32, ptr %r15
+    store i32 %r16, ptr %r13
+    ret i32 %r6
 }

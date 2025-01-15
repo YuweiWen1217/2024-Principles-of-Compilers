@@ -359,7 +359,7 @@ struct RiscVLabel {
     bool is_hi;    // 对应%hi(name) 和 %lo(name)
     RiscVLabel() = default;
     RiscVLabel(std::string name, bool is_hi) : name(name), is_hi(is_hi) { this->is_data_address = true; }
-    RiscVLabel(int jmp_id) :  name() {jmp_label_id = jmp_id;}
+    RiscVLabel(int jmp_id) : name() { jmp_label_id = jmp_id; }
     // 添加一些你想用的构造函数
 };
 
@@ -631,16 +631,16 @@ public:
 class RiscV64Function : public MachineFunction {
 public:
     RiscV64Function(std::string name) : MachineFunction(name, new RiscV64BlockFactory()) {}
-
+    // 用于存储函数中的栈参数指令的列表
+    std::vector<RiscV64Instruction *> stackparameterlist;
+    // 用于存储函数中分配内存的指令的列表（如分配局部变量的指令）
+    std::vector<RiscV64Instruction *> allocalist;
 private:
     // TODO: add your own members here
 public:
     // TODO: add your own members here
 };
 class RiscV64Unit : public MachineUnit {};
-
-
-
 
 class RiscV64RegisterAllocTools : public PhysicalRegistersAllocTools {
 protected:

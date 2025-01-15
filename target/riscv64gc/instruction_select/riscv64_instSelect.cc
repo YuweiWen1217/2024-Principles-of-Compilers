@@ -1,12 +1,132 @@
 #include "riscv64_instSelect.h"
 #include <sstream>
 
+// load
+// Syntax: <result>=load <ty>, ptr <pointer>
 template <> void RiscV64Selector::ConvertAndAppend<LoadInstruction *>(LoadInstruction *ins) {
-    TODO("Implement this if you need");
+    auto rd_op = (RegOperand *)ins->GetResult();
+
+    // 右值为数组某元素值
+    if (ins->GetPointer()->GetOperandType() == BasicOperand::REG) {
+        auto ptr_op = (RegOperand *)ins->GetPointer();
+        if (reg2offset.find(ptr_op->GetRegNo()) != reg2offset.end())
+            ERROR("Unexpected situation!");
+        if (ins->GetDataType() == BasicInstruction::I32) {
+            Register rd = GetRvReg(rd_op->GetRegNo(), INT64);
+            Register ptr = GetRvReg(ptr_op->GetRegNo(), INT64);
+            // 类似于 lw x5, 0(x6) # x6 中的地址，加载 32 位值到 x5
+            cur_block->push_back(rvconstructor->ConstructIImm(RISCV_LW, rd, ptr, 0));
+        } else if (ins->GetDataType() == BasicInstruction::FLOAT32) {
+            Register rd = GetRvReg(rd_op->GetRegNo(), FLOAT64);
+            Register ptr = GetRvReg(ptr_op->GetRegNo(), INT64);
+            cur_block->push_back(rvconstructor->ConstructIImm(RISCV_FLW, rd, ptr, 0));
+        } else {
+            ERROR("Unexpected data type");
+        }
+    }
+    // 右值为全局变量/常量（非数组）
+    else if (ins->GetPointer()->GetOperandType() == BasicOperand::GLOBAL) {
+        auto global_op = (GlobalOperand *)ins->GetPointer();
+
+        // lui x5, %hi(global_var)  # 加载 global_var 的高 20 位地址到 x5
+        Register addr_hi = cur_func->GetNewReg(INT64);    // 获取一个新的寄存器，用于存储全局变量的高位地址部分
+        auto lui_instr = rvconstructor->ConstructULabel(RISCV_LUI, addr_hi, RiscVLabel(global_op->GetName(), true));
+        cur_block->push_back(lui_instr);
+
+        if (ins->GetDataType() == BasicInstruction::I32) {
+            Register rd = GetRvReg(rd_op->GetRegNo(), INT64);
+            // lw x6, %lo(global_var)(x5)  # 将全局变量的低 12 位地址与 addr_hi 相结合，然后加载 32 位整数到 rd
+            auto lw_instr =
+            rvconstructor->ConstructILabel(RISCV_LW, rd, addr_hi, RiscVLabel(global_op->GetName(), false));
+            cur_block->push_back(lw_instr);
+
+        } else if (ins->GetDataType() == BasicInstruction::FLOAT32) {
+            Register rd = GetRvReg(rd_op->GetRegNo(), FLOAT64);
+            auto lw_instr =
+            rvconstructor->ConstructILabel(RISCV_FLW, rd, addr_hi, RiscVLabel(global_op->GetName(), false));
+            cur_block->push_back(lw_instr);
+        } else {
+            ERROR("Unexpected data type");
+        }
+    }
 }
 
+// RISC-V 存储指令处理
+// 语法：store <类型> <值>, ptr<pointer>
 template <> void RiscV64Selector::ConvertAndAppend<StoreInstruction *>(StoreInstruction *ins) {
-    TODO("Implement this if you need");
+    // 1、提取存储值
+    auto value_operand = (RegOperand *)ins->GetValue();
+    Register valueReg =
+    GetRvReg(value_operand->GetRegNo(), (ins->GetDataType() == BasicInstruction::I32) ? INT32 : FLOAT64);
+
+    // 2、处理存的位置
+    auto pointer_type = ins->GetPointer()->GetOperandType();
+    // 2.1、存到一个寄存器指示的地址
+    if (pointer_type == BasicOperand::REG) {
+
+        auto pointer_operand = (RegOperand *)ins->GetPointer();
+        Register pointer_register;
+        int offset = 0;
+
+        // 检查指针是否为栈上分配的变量
+        if (reg2offset.find(pointer_operand->GetRegNo()) == reg2offset.end()) {
+            // 指针未在栈上分配
+            pointer_register = GetRvReg(pointer_operand->GetRegNo(), INT64);
+        } else {
+            pointer_register = GetPhysicalReg(RISCV_sp);
+            // 指针为栈上分配
+            offset = reg2offset[pointer_operand->GetRegNo()];
+
+            // 处理偏移量超出范围 [-2048, 2047] 的情况
+            if (offset > 2047 || offset < -2048) {
+                // 保存偏移量
+                // li offset_high_reg, <offset>
+                // 例如 li x10, 4096
+                Register offsetReg = cur_func->GetNewReg(INT64);
+                cur_block->push_back(rvconstructor->ConstructUImm(RISCV_LI, offsetReg, offset));
+
+                // add x11, x10, sp
+                // 加上sp得到最后的地址
+                Register ptrReg = cur_func->GetNewReg(INT64);
+                cur_block->push_back(rvconstructor->ConstructR(RISCV_ADD, ptrReg, offsetReg, GetPhysicalReg(RISCV_sp)));
+
+                // sw 或 fsw value_register, 0(ptrReg)
+                auto store_instr = rvconstructor->ConstructSImm(
+                (ins->GetDataType() == BasicInstruction::I32) ? RISCV_SW : RISCV_FSW, valueReg, ptrReg, 0);
+
+                ((RiscV64Function *)cur_func)->allocalist.push_back(store_instr);
+                cur_block->push_back(store_instr);
+                return;
+            }
+        }
+
+        // 偏移量在范围内 [-2048, 2047]，可以直接用sw！
+        // 生成存储指令：sw 或 fsw valuereg offset(pointreg)
+        auto store_instr = rvconstructor->ConstructSImm(
+        (ins->GetDataType() == BasicInstruction::I32) ? RISCV_SW : RISCV_FSW, valueReg, pointer_register, offset);
+
+        if (reg2offset.find(pointer_operand->GetRegNo()) != reg2offset.end()) {
+            ((RiscV64Function *)cur_func)->allocalist.push_back(store_instr);
+        }
+        cur_block->push_back(store_instr);
+    }
+    // 2.2、存到全局变量
+    else {
+        // 处理指针为全局变量的情况
+        auto global_operand = (GlobalOperand *)ins->GetPointer();
+        Register addr_hi = cur_func->GetNewReg(INT64);
+
+        // lui addr_hi, %hi(global_var)
+        // sw 或 fsw value_register, %lo(global_var)(addr_hi)
+        auto lui_instr =
+        rvconstructor->ConstructULabel(RISCV_LUI, addr_hi, RiscVLabel(global_operand->GetName(), true));
+        cur_block->push_back(lui_instr);
+
+        auto store_instr =
+        rvconstructor->ConstructSLabel((ins->GetDataType() == BasicInstruction::I32) ? RISCV_SW : RISCV_FSW, valueReg,
+                                       addr_hi, RiscVLabel(global_operand->GetName(), false));
+        cur_block->push_back(store_instr);
+    }
 }
 
 int GetOpcodeForArithmetic(int opcode) {
@@ -343,7 +463,17 @@ template <> void RiscV64Selector::ConvertAndAppend<BrUncondInstruction *>(BrUnco
 }
 
 template <> void RiscV64Selector::ConvertAndAppend<AllocaInstruction *>(AllocaInstruction *ins) {
-    TODO("Implement this if you need");
+    // 提取 Alloca 指令的结果操作数（即分配的指针寄存器）
+    auto result_operand = (RegOperand *)ins->GetResult();
+    int size = 1;
+    for (auto d : ins->GetDims()) {
+        size *= d;
+    }
+    // 一个元素占4字节
+    int allocation_size = size << 2;
+    reg2offset[result_operand->GetRegNo()] = cur_offset;
+    // 更新当前栈的偏移量
+    cur_offset += allocation_size;
 }
 
 template <> void RiscV64Selector::ConvertAndAppend<CallInstruction *>(CallInstruction *ins) {
