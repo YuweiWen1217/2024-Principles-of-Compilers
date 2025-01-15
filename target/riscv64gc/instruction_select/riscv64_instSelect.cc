@@ -1,4 +1,5 @@
 #include "riscv64_instSelect.h"
+#include <cassert>
 #include <sstream>
 
 // load
@@ -477,7 +478,90 @@ template <> void RiscV64Selector::ConvertAndAppend<AllocaInstruction *>(AllocaIn
 }
 
 template <> void RiscV64Selector::ConvertAndAppend<CallInstruction *>(CallInstruction *ins) {
-    TODO("Implement this if you need");
+    int int_reg_used = 0;         // 已使用的整数参数寄存器数量
+    int float_reg_used = 0;       // 已使用的浮点参数寄存器数量
+    int stack_param_count = 0;    // 使用栈传递的参数数量
+    int stack_offset = 0;         // 栈偏移量
+    // 遍历指令的参数列表
+    for (auto &param : ins->GetParameterList()) {
+        auto param_type = param.first;        // 参数类型
+        auto param_operand = param.second;    // 参数操作数
+        assert(param_operand->GetOperandType() == BasicOperand::REG);
+        auto regOperandNo = ((RegOperand *)param_operand)->GetRegNo();    // llvmir寄存器号
+
+        if (param_type == BasicInstruction::I32 || param_type == BasicInstruction::PTR) {
+            // 如果整数寄存器未超出限制，将参数分配到 a0~a7
+            if (int_reg_used < 8) {
+                // 参数在寄存器中，直接将其拷贝到目标寄存器
+                if (reg2offset.find(regOperandNo) == reg2offset.end()) {
+                    auto copy_instr = rvconstructor->ConstructIImm(RISCV_ADDI, GetPhysicalReg(RISCV_a0 + int_reg_used),
+                                                                   GetRvReg(regOperandNo, INT64), 0);
+                    cur_block->push_back(copy_instr);
+                }
+                // 参数在栈中，根据偏移量加载到目标寄存器
+                else {
+                    auto stack_offset = reg2offset[regOperandNo];
+                    if (stack_offset > 2047 || stack_offset < -2048) {
+                        Register temp_reg = cur_func->GetNewReg(INT64);
+                        cur_block->push_back(rvconstructor->ConstructUImm(RISCV_LI, temp_reg, stack_offset));
+                        auto load_instr = rvconstructor->ConstructR(RISCV_ADD, GetPhysicalReg(RISCV_a0 + int_reg_used),
+                                                                    GetPhysicalReg(RISCV_sp), temp_reg);
+                        cur_block->push_back(load_instr);
+                    } else {
+                        auto load_instr = rvconstructor->ConstructIImm(
+                        RISCV_ADDI, GetPhysicalReg(RISCV_a0 + int_reg_used), GetPhysicalReg(RISCV_sp), stack_offset);
+                        cur_block->push_back(load_instr);
+                    }
+                }
+            }
+            // 如果寄存器已用完，将参数存放到栈中
+            else {
+                // SD reg, stack_offset(sp)
+                // 把 reg 寄存器的值存储到当前栈指针（sp）加上 stack_offset 的地址处。
+                auto reg = GetRvReg(regOperandNo, INT64);
+                cur_block->push_back(
+                rvconstructor->ConstructSImm(RISCV_SD, reg, GetPhysicalReg(RISCV_sp), stack_offset));
+                stack_offset += 8;
+                stack_param_count++;
+            }
+            int_reg_used++;
+            break;
+        }
+        // 浮点参数
+        else {
+            if (float_reg_used < 8) {
+                cur_block->push_back(rvconstructor->ConstructR2(RISCV_FMV_S, GetPhysicalReg(RISCV_fa0 + float_reg_used),
+                                                                GetRvReg(regOperandNo, FLOAT64)));
+            } else {
+                cur_block->push_back(rvconstructor->ConstructSImm(RISCV_FSD, GetRvReg(regOperandNo, FLOAT64),
+                                                                  GetPhysicalReg(RISCV_sp), stack_offset));
+                stack_offset += 8;
+                stack_param_count++;
+            }
+            float_reg_used++;
+        }
+    }
+
+    // 生成函数调用指令
+    auto function_name = ins->GetFunctionName();
+    cur_block->push_back(
+    rvconstructor->ConstructCall(RISCV_CALL, function_name, std::min(int_reg_used, 8), std::min(float_reg_used, 8)));
+
+    // 更新栈的大小，每个参数在栈上的存储位置需要占用 8字节 (64位) 的对齐单位
+    cur_func->UpdateParaSize(stack_param_count * 8);
+
+    // 处理函数返回值
+    auto return_type = ins->GetReturnType();
+    auto resultOperandNo = ins->GetResultRegNo();
+    if (return_type == BasicInstruction::I32) {
+        cur_block->push_back(
+        rvconstructor->ConstructIImm(RISCV_ADDI, GetRvReg(resultOperandNo, INT64), GetPhysicalReg(RISCV_a0), 0));
+    } else if (return_type == BasicInstruction::FLOAT32) {
+        cur_block->push_back(
+        rvconstructor->ConstructR2(RISCV_FMV_S, GetRvReg(resultOperandNo, FLOAT64), GetPhysicalReg(RISCV_fa0)));
+    } else if (return_type == BasicInstruction::VOID) {
+        // Do nothing for void return type
+    }
 }
 
 template <> void RiscV64Selector::ConvertAndAppend<RetInstruction *>(RetInstruction *ins) {

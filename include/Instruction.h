@@ -643,6 +643,7 @@ public:
     void ReplaceRegByMap(const std::map<int, int> &Rule);
     std::vector<int> GetOperandRegsNo();
     int GetResultRegNo();
+    int GetReturnType() { return ret_type; };
 };
 
 /*
