@@ -676,8 +676,91 @@ template <> void RiscV64Selector::ConvertAndAppend<ZextInstruction *>(ZextInstru
     }
 }
 
+/*
+    int a[][5]   dim: {5}
+    a[2][5] -> index {2，5}
+    -----------------------
+    int a[3][5]  dim: {3, 5}
+    a[2] -> indexs {0, 2}
+    a[1][2] -> indexs {0,1,2}
+
+    访问从ptr开始的一个数组，数组的维度为dim，索引的维度储存在indexs（其中第一个索引为跳过整个数组的值）中。
+*/
 template <> void RiscV64Selector::ConvertAndAppend<GetElementptrInstruction *>(GetElementptrInstruction *ins) {
-    TODO("Implement this if you need");
+
+    size_t index = 0;
+    // 1、数组维度计算
+    auto dims = ins->GetDims();
+    int arraysize = 1;
+    for (int i = 0; i < dims.size(); i++)
+        arraysize *= dims[i];
+
+    int assigned = 0;
+    int i = 0;
+
+    // 2、索引计算，最终偏移量存在offsetReg中（先以元素为单位，后以字节为单位）
+    auto indexs = ins->GetIndexes();
+    int offset = 0;    // offset初始化为0,最后储存的是imm型index的总offset
+    auto offsetReg =
+    cur_func->GetNewReg(INT64);    // offsetReg初始化为0, 先储存的是reg型index的总offset，最后是全部总的offset
+    cur_block->push_back(rvconstructor->ConstructIImm(RISCV_ADDI, offsetReg, GetPhysicalReg(RISCV_x0), 0));
+    for (int i = 0; i < indexs.size(); i++) {
+        // imm
+        if (indexs[i]->GetOperandType() == BasicOperand::IMMI32) {
+            int imm_value = ((ImmI32Operand *)ins->GetIndexes()[i])->GetIntImmVal();
+            offset += imm_value * arraysize;
+        }
+        // reg
+        else {
+            auto index_op = (RegOperand *)indexs[i];
+            auto indexReg = GetRvReg(index_op->GetRegNo(), INT64);
+            auto tempOffsetReg = cur_func->GetNewReg(INT64);
+            auto arraysizeReg = cur_func->GetNewReg(INT64);
+
+            // offset += index * arraysize
+            cur_block->push_back(rvconstructor->ConstructUImm(RISCV_LI, arraysizeReg, arraysize));
+            cur_block->push_back(rvconstructor->ConstructR(RISCV_MUL, tempOffsetReg, indexReg, arraysizeReg));
+            cur_block->push_back(rvconstructor->ConstructR(RISCV_ADD, offsetReg, offsetReg, tempOffsetReg));
+        }
+        // 更新arraysize
+        if (i < ins->GetDims().size())
+            arraysize /= ins->GetDims()[i];
+    }
+
+    // offsetReg = offset + offsetReg ->  *4 变为字节
+    cur_block->push_back(rvconstructor->ConstructIImm(RISCV_ADDI, offsetReg, offsetReg, offset));
+    cur_block->push_back(rvconstructor->ConstructIImm(RISCV_SLLI, offsetReg, offsetReg, 2));
+
+    // 3、获取基地址
+    auto baseReg = cur_func->GetNewReg(INT64);    // 存储基地址
+    if (ins->GetPtrVal()->GetOperandType() == BasicOperand::REG) {
+        auto ptrOp = (RegOperand *)ins->GetPtrVal();
+        assert(reg2offset.find(ptrOp->GetRegNo()) != reg2offset.end());
+        auto offset_on_stack = reg2offset[ptrOp->GetRegNo()];
+        if (offset_on_stack > 2047 || offset_on_stack < -2048) {
+            Register temp = cur_func->GetNewReg(INT64);
+            cur_block->push_back(rvconstructor->ConstructUImm(RISCV_LI, temp, offset_on_stack));
+            auto ld_alloca = rvconstructor->ConstructR(RISCV_ADD, baseReg, GetPhysicalReg(RISCV_sp), temp);
+            cur_block->push_back(ld_alloca);
+            ((RiscV64Function *)cur_func)->allocalist.push_back(ld_alloca);
+        } else {
+            auto ld_alloca =
+            rvconstructor->ConstructIImm(RISCV_ADDI, baseReg, GetPhysicalReg(RISCV_sp), offset_on_stack);
+            cur_block->push_back(ld_alloca);
+            ((RiscV64Function *)cur_func)->allocalist.push_back(ld_alloca);
+        }
+    } else if (ins->GetPtrVal()->GetOperandType() == BasicOperand::GLOBAL) {
+        auto ptrOp = (GlobalOperand *)ins->GetPtrVal();
+        auto basehiReg = cur_func->GetNewReg(INT64);
+        cur_block->push_back(rvconstructor->ConstructULabel(RISCV_LUI, basehiReg, RiscVLabel(ptrOp->GetName(), true)));
+        cur_block->push_back(
+        rvconstructor->ConstructILabel(RISCV_ADDI, baseReg, basehiReg, RiscVLabel(ptrOp->GetName(), false)));
+    }
+
+    // 4、最终地址 = 基地址 + 字节偏移
+    auto resultOp = (RegOperand *)ins->GetResult();
+    auto resultReg = GetRvReg(resultOp->GetRegNo(), INT64);
+    cur_block->push_back(rvconstructor->ConstructR(RISCV_ADD, resultReg, baseReg, offsetReg));
 }
 
 template <> void RiscV64Selector::ConvertAndAppend<PhiInstruction *>(PhiInstruction *ins) {
