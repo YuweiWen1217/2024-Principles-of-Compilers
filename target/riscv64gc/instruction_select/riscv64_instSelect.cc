@@ -763,8 +763,40 @@ template <> void RiscV64Selector::ConvertAndAppend<GetElementptrInstruction *>(G
     cur_block->push_back(rvconstructor->ConstructR(RISCV_ADD, resultReg, baseReg, offsetReg));
 }
 
+// Reference: https://github.com/yuhuifishash/SysY
+// phi syntax:
+// <result>=phi <ty> [val1,label1],[val2,label2],……
+// 每一个pair里，第一个是label，第二个是val
 template <> void RiscV64Selector::ConvertAndAppend<PhiInstruction *>(PhiInstruction *ins) {
-    TODO("Implement this if you need");
+    // 确保Phi指令的结果操作数是一个寄存器操作数
+    assert(ins->GetResult()->GetOperandType() == BasicOperand::REG);
+
+    // 分配目的寄存器
+    auto resulstOp = (RegOperand *)ins->GetResult();
+    Register resultReg;
+    if (ins->GetDataType() == BasicInstruction::I32) {
+        resultReg = GetRvReg(resulstOp->GetRegNo(), INT64);
+    } else if (ins->GetDataType() == BasicInstruction::FLOAT32) {
+        resultReg = GetRvReg(resulstOp->GetRegNo(), FLOAT64);
+    }
+
+    auto phimInst = new MachinePhiInstruction(resultReg);
+
+    // 遍历Phi指令的phi列表（label和对应值的映射）
+    for (auto [label, val] : ins->GetPhiList()) {
+        auto labelOp = (LabelOperand *)label;
+        auto regOp = (RegOperand *)val;
+        if (val->GetOperandType() == BasicOperand::REG && ins->GetDataType() == BasicInstruction::I32) {
+            auto valReg = GetRvReg(regOp->GetRegNo(), INT64);
+            phimInst->pushPhiList(labelOp->GetLabelNo(), valReg);
+        } else if (val->GetOperandType() == BasicOperand::REG && ins->GetDataType() == BasicInstruction::FLOAT32) {
+            auto valReg = GetRvReg(regOp->GetRegNo(), FLOAT64);
+            phimInst->pushPhiList(labelOp->GetLabelNo(), valReg);
+        } else {
+            ERROR("Unexpected OperandType");
+        }
+    }
+    cur_block->push_back(phimInst);
 }
 
 template <> void RiscV64Selector::ConvertAndAppend<Instruction>(Instruction inst) {
@@ -855,13 +887,24 @@ void RiscV64Selector::SelectInstructionAndBuildCFG() {
         auto cur_mcfg = new MachineCFG;
         cur_func->SetMachineCFG(cur_mcfg);
 
-        // 清空指令选择状态(可能需要自行添加初始化操作)
+        // 清空指令选择状态
         ClearFunctionSelectState();
 
         // 2、添加函数参数(推荐先阅读一下riscv64_lowerframe.cc中的代码和注释)
         // See MachineFunction::AddParameter()
+        for (int i = 0; i < defI->formals.size(); i++) {
+            MachineDataType type;
+            // 判断参数的LLVM类型并映射到对应的RISC-V数据类型
+            if (defI->formals[i] == BasicInstruction::I32 || defI->formals[i] == BasicInstruction::PTR)
+                type = INT64;
+            else if (defI->formals[i] == BasicInstruction::FLOAT32)
+                type = FLOAT64;
+            else
+                ERROR("Unknown llvm type");  
+            cur_func->AddParameter(GetRvReg(((RegOperand *)defI->formals_reg[i])->GetRegNo(), type));
+        }
 
-        // 遍历当前函数的每个block
+        // 3、遍历当前函数的每个block
         for (auto [id, block] : *(cfg->block_map)) {
             cur_block = new RiscV64Block(id);
             // 将新块添加到Machine CFG中
@@ -871,9 +914,8 @@ void RiscV64Selector::SelectInstructionAndBuildCFG() {
             cur_block->setParent(cur_func);
             cur_func->blocks.push_back(cur_block);
 
-            // 指令选择主要函数, 请注意指令选择时需要维护变量cur_offset
+            // 4、遍历每条指令，进行指令选择, 请注意指令选择时需要维护变量cur_offset
             for (auto instruction : block->Instruction_list) {
-                // Log("Selecting Instruction");
                 ConvertAndAppend<Instruction>(instruction);
             }
         }
@@ -894,7 +936,12 @@ void RiscV64Selector::SelectInstructionAndBuildCFG() {
     }
 }
 
-void RiscV64Selector::ClearFunctionSelectState() { cur_offset = 0; }
+void RiscV64Selector::ClearFunctionSelectState() {
+    cur_offset = 0;
+    irReg2rvReg.clear();
+    reg2offset.clear();
+    reg2cmpInfo.clear();
+}
 
 Register RiscV64Selector::GetRvReg(int irRegNo, MachineDataType type) {
     // std::cout << "GetRvReg" << std::endl;

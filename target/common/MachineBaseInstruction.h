@@ -302,19 +302,10 @@ public:
     void pushPhiList(int label, MachineBaseOperand *op) { phi_list.push_back(std::make_pair(label, op)); }
     int GetLatency() { return 0; }
 
-    // // 获取读寄存器列表
-    // std::vector<Register *> GetReadReg() override {
-    //     std::vector<Register *> readRegs;
-    //     for (auto &phi : phi_list) {
-    //         if (phi.second->op_type == MachineBaseOperand::REG) {
-    //             readRegs.push_back(&((MachineRegister *)(phi.second))->reg);
-    //         }
-    //     }
-    //     return readRegs;
-    // }
-
-    // // 获取写寄存器列表
-    // std::vector<Register *> GetWriteReg() override { return {&result}; }
+    // 获取读寄存器列表
+    std::vector<Register *> GetReadReg();
+    // 获取写寄存器列表
+    std::vector<Register *> GetWriteReg();
 };
 
 #endif

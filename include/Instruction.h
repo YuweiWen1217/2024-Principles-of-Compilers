@@ -473,6 +473,7 @@ public:
     std::vector<int> GetOperandRegsNo();
     int GetResultRegNo();
     Operand GetResult() { return result; }
+    int GetDataType() { return type; }
     void InsertPhi(Operand label, Operand val) { phi_list.push_back({label, val}); }
     std::vector<std::pair<Operand, Operand>> GetPhiList() { return phi_list; };
 };
