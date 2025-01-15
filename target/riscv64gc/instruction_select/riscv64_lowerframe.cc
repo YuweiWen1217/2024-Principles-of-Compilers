@@ -12,13 +12,11 @@
 */
 
 void RiscV64LowerFrame::Execute() {
-    std::cout << "RiscV64LowerFrame::Execute()" << std::endl;
-    // 遍历所有的函数
+    // std::cout << "RiscV64LowerFrame::Execute()" << std::endl;
+    // 遍历所有的函数的0号块
     for (auto func : unit->functions) {
         current_func = func;
         for (auto &b : func->blocks) {
-            cur_block = b;
-            // 判断是否为函数入口块（bid为0表示入口）
             if (b->getLabelId() == 0) {
                 // i32_cnt、f32_cnt：用于计数当前有多少个整型/浮点型参数
                 int i32_cnt = 0;
@@ -26,21 +24,19 @@ void RiscV64LowerFrame::Execute() {
                 int para_offset = 0;
                 // 遍历当前函数的所有参数
                 for (auto para : func->GetParameters()) {
-                    // 检查参数类型是否为64位整数类型
                     if (para.type.data_type == INT64.data_type) {
                         if (i32_cnt < 8) {
                             // 如果参数可以使用寄存器传递（a0-a7），生成指令将物理寄存器的值赋给虚拟寄存器
                             b->push_front(rvconstructor->ConstructR(RISCV_ADD, para, GetPhysicalReg(RISCV_a0 + i32_cnt),
                                                                     GetPhysicalReg(RISCV_x0)));
                         } else {
-                            // 如果超过了寄存器数量限制，应该通过栈传参（尚未实现）
-                            // TODO("Implement this if you need");
+                            // 如果超过了寄存器数量限制，应该通过栈传参
                             b->push_front(
                             rvconstructor->ConstructIImm(RISCV_LD, para, GetPhysicalReg(RISCV_fp), para_offset));
                             para_offset += 8;
                         }
-                        i32_cnt++;    // 递增整数参数计数器
-                    }    // 如果参数是 64 位浮点类型
+                        i32_cnt++;
+                    } 
                     else if (para.type.data_type == FLOAT64.data_type) {
                         if (f32_cnt < 8) {
                             // 如果参数可以使用浮点寄存器传递（fa0-fa7）
@@ -59,7 +55,7 @@ void RiscV64LowerFrame::Execute() {
                 if (para_offset != 0) {
                     Register para_basereg = current_func->GetNewReg(INT64);
                     current_func->hasStackParas = true;
-                    b->push_front(rvconstructor->ConstructIImm(RISCV_ADDI, para_basereg, GetPhysicalReg(RISCV_fp), 0));
+                    // b->push_front(rvconstructor->ConstructIImm(RISCV_ADDI, para_basereg, GetPhysicalReg(RISCV_fp), 0));
                 }
                 break;
             }

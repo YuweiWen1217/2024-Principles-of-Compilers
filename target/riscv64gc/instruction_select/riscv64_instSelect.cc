@@ -478,6 +478,47 @@ template <> void RiscV64Selector::ConvertAndAppend<AllocaInstruction *>(AllocaIn
 }
 
 template <> void RiscV64Selector::ConvertAndAppend<CallInstruction *>(CallInstruction *ins) {
+
+    // void *memset(起始地址, 每字节初始化的值, 字节数);
+    // memsetCall->push_back_Parameter(BasicInstruction::PTR, GetNewRegOperand(reg_now));
+    // memsetCall->push_back_Parameter(BasicInstruction::I8, new ImmI32Operand(0x3f));
+    // memsetCall->push_back_Parameter(BasicInstruction::I32, new ImmI32Operand(size * sizeof(int)));
+    // memsetCall->push_back_Parameter(BasicInstruction::I1, new ImmI32Operand(0));
+    if (ins->GetFunctionName() == "llvm.memset.p0.i32") {
+        auto paras = ins->GetParameterList();
+        // 参数1：起始地址
+        int ptrRegNo = ((RegOperand *)paras[0].second)->GetRegNo();
+        auto offset_on_stack = reg2offset[ptrRegNo];
+
+        if (offset_on_stack > 2047 || offset_on_stack < -2048) {
+            Register temp = cur_func->GetNewReg(INT64);
+            cur_block->push_back(rvconstructor->ConstructUImm(RISCV_LI, temp, offset_on_stack));
+            auto ld_alloca =
+            rvconstructor->ConstructR(RISCV_ADD, GetPhysicalReg(RISCV_a0), GetPhysicalReg(RISCV_sp), temp);
+            cur_block->push_back(ld_alloca);
+            ((RiscV64Function *)cur_func)->allocalist.push_back(ld_alloca);
+
+        } else {
+            auto ld_alloca = rvconstructor->ConstructIImm(RISCV_ADDI, GetPhysicalReg(RISCV_a0),
+                                                          GetPhysicalReg(RISCV_sp), offset_on_stack);
+            cur_block->push_back(ld_alloca);
+            ((RiscV64Function *)cur_func)->allocalist.push_back(ld_alloca);
+        }
+
+        // 参数2：填充值
+        auto imm_op = (ImmI32Operand *)(paras[1].second);
+        cur_block->push_back(rvconstructor->ConstructUImm(RISCV_LI, GetPhysicalReg(RISCV_a1), imm_op->GetIntImmVal()));
+
+        // 参数3：size
+        assert(paras[2].second->GetOperandType() == BasicOperand::IMMI32);
+        int size = ((ImmI32Operand *)paras[2].second)->GetIntImmVal();
+        cur_block->push_back(rvconstructor->ConstructUImm(RISCV_LI, GetPhysicalReg(RISCV_a2), size));
+
+        // 生成call指令
+        cur_block->push_back(rvconstructor->ConstructCall(RISCV_CALL, "memset", 3, 0));
+        return;
+    }
+
     int int_reg_used = 0;         // 已使用的整数参数寄存器数量
     int float_reg_used = 0;       // 已使用的浮点参数寄存器数量
     int stack_param_count = 0;    // 使用栈传递的参数数量
@@ -900,7 +941,7 @@ void RiscV64Selector::SelectInstructionAndBuildCFG() {
             else if (defI->formals[i] == BasicInstruction::FLOAT32)
                 type = FLOAT64;
             else
-                ERROR("Unknown llvm type");  
+                ERROR("Unknown llvm type");
             cur_func->AddParameter(GetRvReg(((RegOperand *)defI->formals_reg[i])->GetRegNo(), type));
         }
 
