@@ -635,6 +635,7 @@ public:
     std::vector<RiscV64Instruction *> stackparameterlist;
     // 用于存储函数中分配内存的指令的列表（如分配局部变量的指令）
     std::vector<RiscV64Instruction *> allocalist;
+
 private:
     // TODO: add your own members here
 public:

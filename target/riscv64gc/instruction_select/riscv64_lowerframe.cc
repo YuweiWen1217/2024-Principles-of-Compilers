@@ -39,8 +39,8 @@ void RiscV64LowerFrame::Execute() {
                     } else if (para.type.data_type == FLOAT64.data_type) {
                         if (f32_cnt < 8) {
                             // 如果参数可以使用浮点寄存器传递（fa0-fa7）
-                            b->push_front(rvconstructor->ConstructR(
-                            RISCV_FMV_S, para, GetPhysicalReg(RISCV_fa0 + f32_cnt), GetPhysicalReg(RISCV_x0)));
+                            b->push_front(
+                            rvconstructor->ConstructR2(RISCV_FMV_S, para, GetPhysicalReg(RISCV_fa0 + f32_cnt)));
                         } else {
                             b->push_front(
                             rvconstructor->ConstructIImm(RISCV_FLD, para, GetPhysicalReg(RISCV_fp), para_offset));
@@ -201,7 +201,7 @@ void RiscV64LowerStack::Execute() {
                 // 删除原来的 `ret` 指令
                 b->pop_back();
 
-                 // 8.2.2、释放栈空间
+                // 8.2.2、释放栈空间
                 if (func->GetStackSize() <= 2032) {
                     // 小于2032字节时，直接调整sp
                     b->push_back(rvconstructor->ConstructIImm(RISCV_ADDI, GetPhysicalReg(RISCV_sp),
@@ -231,8 +231,6 @@ void RiscV64LowerStack::Execute() {
                         }
                     }
                 }
-
-               
 
                 // 8.2.3、重新插入 `ret` 指令
                 b->push_back(riscv_last_ins);

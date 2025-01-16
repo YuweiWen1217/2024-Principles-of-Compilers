@@ -267,7 +267,7 @@ template <> void RiscV64Selector::ConvertAndAppend<ArithmeticInstruction *>(Arit
             cur_block->push_back(rvconstructor->ConstructUImm(RISCV_LI, temp_int_reg, result_binary));
             cur_block->push_back(rvconstructor->ConstructR2(RISCV_FMV_W_X, rd, temp_int_reg));
 
-        } else if (op1->GetOperandType() == BasicOperand::REG && op1->GetOperandType() == BasicOperand::REG) {
+        } else if (op1->GetOperandType() == BasicOperand::REG && op2->GetOperandType() == BasicOperand::REG) {
             auto *rs1_op = (RegOperand *)op1;
             auto *rs2_op = (RegOperand *)op2;
 
@@ -276,7 +276,7 @@ template <> void RiscV64Selector::ConvertAndAppend<ArithmeticInstruction *>(Arit
 
             int opcode_instr = GetOpcodeForArithmetic(opcode);
             cur_block->push_back(rvconstructor->ConstructR(opcode_instr, rd, rs1, rs2));
-        } else if (op1->GetOperandType() == imm_type && op1->GetOperandType() == BasicOperand::REG) {
+        } else if (op1->GetOperandType() == imm_type && op2->GetOperandType() == BasicOperand::REG) {
             // 操作数1：立即数 -> 整型寄存器 -> 浮点数寄存器
             auto *imm_op = (ImmF32Operand *)op1;
             auto imm_val = imm_op->GetFloatVal();
@@ -664,7 +664,7 @@ template <> void RiscV64Selector::ConvertAndAppend<FptosiInstruction *>(FptosiIn
     auto dest_reg = GetRvReg(dest_op->GetRegNo(), INT64);
 
     // 使用 RISC-V 的浮点到整数转换指令
-    cur_block->push_back(rvconstructor->ConstructR2(RISCV_FCVT_W_S, src_reg, dest_reg));
+    cur_block->push_back(rvconstructor->ConstructR2(RISCV_FCVT_W_S, dest_reg, src_reg));
 }
 
 template <> void RiscV64Selector::ConvertAndAppend<SitofpInstruction *>(SitofpInstruction *ins) {
@@ -729,7 +729,7 @@ template <> void RiscV64Selector::ConvertAndAppend<ZextInstruction *>(ZextInstru
     访问从ptr开始的一个数组，数组的维度为dim，索引的维度储存在indexs（其中第一个索引为跳过整个数组的值）中。
 */
 template <> void RiscV64Selector::ConvertAndAppend<GetElementptrInstruction *>(GetElementptrInstruction *ins) {
-
+    // ins->PrintIR(std::cout);
     size_t index = 0;
     // 1、数组维度计算
     auto dims = ins->GetDims();
@@ -777,20 +777,25 @@ template <> void RiscV64Selector::ConvertAndAppend<GetElementptrInstruction *>(G
     auto baseReg = cur_func->GetNewReg(INT64);    // 存储基地址
     if (ins->GetPtrVal()->GetOperandType() == BasicOperand::REG) {
         auto ptrOp = (RegOperand *)ins->GetPtrVal();
-        assert(reg2offset.find(ptrOp->GetRegNo()) != reg2offset.end());
-        auto offset_on_stack = reg2offset[ptrOp->GetRegNo()];
-        if (offset_on_stack > 2047 || offset_on_stack < -2048) {
-            Register temp = cur_func->GetNewReg(INT64);
-            cur_block->push_back(rvconstructor->ConstructUImm(RISCV_LI, temp, offset_on_stack));
-            auto ld_alloca = rvconstructor->ConstructR(RISCV_ADD, baseReg, GetPhysicalReg(RISCV_sp), temp);
-            cur_block->push_back(ld_alloca);
-            ((RiscV64Function *)cur_func)->allocalist.push_back(ld_alloca);
-        } else {
-            auto ld_alloca =
-            rvconstructor->ConstructIImm(RISCV_ADDI, baseReg, GetPhysicalReg(RISCV_sp), offset_on_stack);
-            cur_block->push_back(ld_alloca);
-            ((RiscV64Function *)cur_func)->allocalist.push_back(ld_alloca);
+
+        if (reg2offset.find(ptrOp->GetRegNo()) != reg2offset.end()) {
+            auto offset_on_stack = reg2offset[ptrOp->GetRegNo()];
+            if (offset_on_stack > 2047 || offset_on_stack < -2048) {
+                Register temp = cur_func->GetNewReg(INT64);
+                cur_block->push_back(rvconstructor->ConstructUImm(RISCV_LI, temp, offset_on_stack));
+                auto ld_alloca = rvconstructor->ConstructR(RISCV_ADD, baseReg, GetPhysicalReg(RISCV_sp), temp);
+                cur_block->push_back(ld_alloca);
+                ((RiscV64Function *)cur_func)->allocalist.push_back(ld_alloca);
+            } else {
+                auto ld_alloca =
+                rvconstructor->ConstructIImm(RISCV_ADDI, baseReg, GetPhysicalReg(RISCV_sp), offset_on_stack);
+                cur_block->push_back(ld_alloca);
+                ((RiscV64Function *)cur_func)->allocalist.push_back(ld_alloca);
+            }
         }
+        // 数组是参数
+        else
+            baseReg = GetRvReg(ptrOp->GetRegNo(), INT64);
     } else if (ins->GetPtrVal()->GetOperandType() == BasicOperand::GLOBAL) {
         auto ptrOp = (GlobalOperand *)ins->GetPtrVal();
         auto basehiReg = cur_func->GetNewReg(INT64);
@@ -862,13 +867,16 @@ template <> void RiscV64Selector::ConvertAndAppend<PhiInstruction *>(PhiInstruct
         Register valReg;
         if (ins->GetDataType() == BasicInstruction::I32) {
             valReg = GetRvReg(regOp->GetRegNo(), INT64);
+            RiscV64Instruction *inst =
+            rvconstructor->ConstructR(RISCV_ADD, resultReg, valReg, GetPhysicalReg(RISCV_x0));
+            block_insert_map[label_id].push_back(inst);
         } else if (ins->GetDataType() == BasicInstruction::FLOAT32) {
             valReg = GetRvReg(regOp->GetRegNo(), FLOAT64);
+            RiscV64Instruction *inst = rvconstructor->ConstructR2(RISCV_FMV_S, resultReg, valReg);
+            block_insert_map[label_id].push_back(inst);
         } else {
             ERROR("Unexpected OperandType");
         }
-        RiscV64Instruction *inst = rvconstructor->ConstructR(RISCV_ADD, resultReg, valReg, GetPhysicalReg(RISCV_x0));
-        block_insert_map[label_id].push_back(inst);
     }
 }
 
