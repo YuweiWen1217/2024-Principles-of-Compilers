@@ -567,7 +567,6 @@ template <> void RiscV64Selector::ConvertAndAppend<CallInstruction *>(CallInstru
                 stack_param_count++;
             }
             int_reg_used++;
-            break;
         }
         // 浮点参数
         else {
@@ -1023,6 +1022,8 @@ void RiscV64Selector::SelectInstructionAndBuildCFG() {
             cur_offset = ((cur_offset + 7) / 8) * 8;
         }
         cur_func->SetStackSize(cur_offset + cur_func->GetParaSize());
+        // Reference: https://github.com/yuhuifishash/SysY
+        ((RiscV64Function *)cur_func)->AddParameterSize(cur_func->GetParaSize());
 
         // 控制流图连边
         for (int i = 0; i < cfg->G.size(); i++) {

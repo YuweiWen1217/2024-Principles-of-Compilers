@@ -1,0 +1,8 @@
+// 6
+int main() {
+    int dp[9];
+    dp[2] = 2;
+    int res = dp[2];
+    return res;
+    // 0
+}

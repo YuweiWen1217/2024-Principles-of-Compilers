@@ -640,6 +640,11 @@ private:
     // TODO: add your own members here
 public:
     // TODO: add your own members here
+    void AddParameterSize(int sz) {
+        for (auto ins : allocalist) {
+            ins->setImm(ins->getImm() + sz);
+        }
+    }
 };
 class RiscV64Unit : public MachineUnit {};
 

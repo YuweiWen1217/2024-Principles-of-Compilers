@@ -54,8 +54,8 @@ void RiscV64LowerFrame::Execute() {
                 if (para_offset != 0) {
                     Register para_basereg = current_func->GetNewReg(INT64);
                     current_func->hasStackParas = true;
-                    // b->push_front(rvconstructor->ConstructIImm(RISCV_ADDI, para_basereg, GetPhysicalReg(RISCV_fp),
-                    // 0));
+                    // 此句的作用：避免fp被当作t0、s0这种寄存器。
+                    b->push_front(rvconstructor->ConstructIImm(RISCV_ADDI, para_basereg, GetPhysicalReg(RISCV_fp), 0));
                 }
                 break;
             }
