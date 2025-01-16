@@ -240,7 +240,7 @@ template <> void RiscV64Selector::ConvertAndAppend<ArithmeticInstruction *>(Arit
 
             auto *Iop1 = (ImmF32Operand *)op1;
             auto *Iop2 = (ImmF32Operand *)op2;
-            double result_value;
+            float result_value;
             switch (opcode) {
             case BasicInstruction::FADD:
                 result_value = Iop1->GetFloatVal() + Iop2->GetFloatVal();
@@ -414,7 +414,9 @@ template <> void RiscV64Selector::ConvertAndAppend<FcmpInstruction *>(FcmpInstru
     }
     // OEQ: 如果为真，rd是1，因此和0做ne比较；
     // 其余：如果为真，那么此条指令后，rd为0，因此和0做eq比较。
-    auto brcond = (cond == BasicInstruction::OEQ) ? BasicInstruction::ne : BasicInstruction::eq;
+    auto brcond = (cond == BasicInstruction::OEQ || cond == BasicInstruction::OLT || cond == BasicInstruction::OLE)
+                  ? BasicInstruction::ne
+                  : BasicInstruction::eq;
 
     // 保存比较信息到 reg2cmpInfo
     auto result = ins->GetResult();
@@ -769,7 +771,13 @@ template <> void RiscV64Selector::ConvertAndAppend<GetElementptrInstruction *>(G
     }
 
     // offsetReg = offset + offsetReg ->  *4 变为字节
-    cur_block->push_back(rvconstructor->ConstructIImm(RISCV_ADDI, offsetReg, offsetReg, offset));
+    if (offset > 2047 || offset < -2048) {
+        Register temp = cur_func->GetNewReg(INT64);
+        cur_block->push_back(rvconstructor->ConstructUImm(RISCV_LI, temp, offset));
+        cur_block->push_back(rvconstructor->ConstructR(RISCV_ADD, offsetReg, offsetReg, temp));
+    } else {
+        cur_block->push_back(rvconstructor->ConstructIImm(RISCV_ADDI, offsetReg, offsetReg, offset));
+    }
     cur_block->push_back(rvconstructor->ConstructIImm(RISCV_SLLI, offsetReg, offsetReg, 2));
 
     // 3、获取基地址
