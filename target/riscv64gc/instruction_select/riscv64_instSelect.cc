@@ -459,7 +459,7 @@ template <> void RiscV64Selector::ConvertAndAppend<BrCondInstruction *>(BrCondIn
     cur_block->push_back(rvconstructor->ConstructJLabel(
     RISCV_JAL, GetPhysicalReg(RISCV_x0), RiscVLabel(((LabelOperand *)(ins->GetFalseLabel()))->GetLabelNo())));
 }
-
+// 把li op2reg  0给删了
 template <> void RiscV64Selector::ConvertAndAppend<BrUncondInstruction *>(BrUncondInstruction *ins) {
     auto target_label = ((LabelOperand *)(ins->GetDestLabel()))->GetLabelNo();
     auto br_ins = rvconstructor->ConstructJLabel(RISCV_JAL, GetPhysicalReg(RISCV_x0), RiscVLabel(target_label));
@@ -683,8 +683,10 @@ template <> void RiscV64Selector::ConvertAndAppend<SitofpInstruction *>(SitofpIn
     先以整型为例：
         %r4 = icmp eq i32 %r3,0
         %r5 = zext i1 %r4 to i32
-    注意到：zext的%r4一定来源于一个eq比较语句，且第二个op一定是0。
-    因此只需要让%r3和0作比较，直接给%r5赋值。
+
+        %r1 = icmp slt i32 %r0,8
+        %r2 = zext i1 %r1 to i32
+    注意到：zext的%r4一定来源于一个cmp比较语句。
 
     对于浮点数：
         %r4 = fcmp oeq float %r3,0x0
@@ -711,11 +713,36 @@ template <> void RiscV64Selector::ConvertAndAppend<ZextInstruction *>(ZextInstru
         // 如果是浮点型，将结果寄存器直接映射到 cmp_info 的 rd
         irReg2rvReg[result_op->GetRegNo()] = cmp_info.op1;
     } else {
-        // 如果是整型比较，生成 SLTIU 指令，将 op1_reg 与 0 进行比较（无符号小于1）
+        auto cond = cmp_info.cond;
         auto op1_reg = cmp_info.op1;
-        auto sltiu_instr = rvconstructor->ConstructIImm(RISCV_SLTIU, result_reg, op1_reg, 1);    // op1_reg == 0
-        cur_block->pop_back();    // 把li op2reg  0给删了
-        cur_block->push_back(sltiu_instr);
+        auto op2_reg = cmp_info.op2;
+        auto tempReg = cur_func->GetNewReg(INT64);
+        switch (cond) {
+        case BasicInstruction::eq:
+            cur_block->push_back(rvconstructor->ConstructR(RISCV_SUB, tempReg, op1_reg, op2_reg));
+            cur_block->push_back(rvconstructor->ConstructIImm(RISCV_SLTIU, result_reg, tempReg, 1));
+            break;
+        case BasicInstruction::sgt:
+            cur_block->push_back(rvconstructor->ConstructR(RISCV_SLT, result_reg, op2_reg, op1_reg));
+            break;
+        case BasicInstruction::sge:
+            cur_block->push_back(rvconstructor->ConstructR(RISCV_SLT, tempReg, op1_reg, op2_reg));
+            cur_block->push_back(rvconstructor->ConstructIImm(RISCV_XORI, result_reg, tempReg, 1));    // 等价于取反
+            break;
+        case BasicInstruction::slt:
+            cur_block->push_back(rvconstructor->ConstructR(RISCV_SLT, result_reg, op1_reg, op2_reg));
+            break;
+        case BasicInstruction::sle:
+            cur_block->push_back(rvconstructor->ConstructR(RISCV_SLT, tempReg, op2_reg, op1_reg));
+            cur_block->push_back(rvconstructor->ConstructIImm(RISCV_XORI, result_reg, tempReg, 1));
+            break;
+        case BasicInstruction::ne:
+            cur_block->push_back(rvconstructor->ConstructR(RISCV_SUB, tempReg, op1_reg, op2_reg));
+            cur_block->push_back(rvconstructor->ConstructR(RISCV_SLTU, result_reg, tempReg, GetPhysicalReg(RISCV_x0)));
+            break;
+        default:
+            ERROR("Unexpected condition in FcmpInstruction");
+        }
     }
 }
 
