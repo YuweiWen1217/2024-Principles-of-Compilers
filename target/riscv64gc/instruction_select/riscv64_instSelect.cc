@@ -841,10 +841,9 @@ template <> void RiscV64Selector::ConvertAndAppend<GetElementptrInstruction *>(G
 //     cur_block->push_back(phimInst);
 // }
 
-std::map<int, std::vector<RiscV64Instruction *>> block_insert_map;
+std::unordered_map<int, std::vector<RiscV64Instruction *>> block_insert_map;
 
 template <> void RiscV64Selector::ConvertAndAppend<PhiInstruction *>(PhiInstruction *ins) {
-
     // 分配目的寄存器
     auto resulstOp = (RegOperand *)ins->GetResult();
     Register resultReg;

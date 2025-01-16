@@ -13,8 +13,9 @@ private:
         int begin;
         int end;
         bool inside(int pos) const {
-            if (begin == end) return begin == pos;
-            return begin <= pos && pos < end; 
+            if (begin == end)
+                return begin == pos;
+            return begin <= pos && pos < end;
         }
         bool operator&(const struct LiveSegment &that) const {
             return this->inside(that.begin) || this->inside(that.end - 1 > that.begin ? that.end - 1 : that.begin) ||
@@ -34,6 +35,8 @@ public:
         TODO("& operator in LiveInterval");
         return false;
     }
+
+    bool operator==(const LiveInterval &that) const { return reg == that.reg; }
 
     // 更新引用计数
     void IncreaseReferenceCount(int count) { reference_count += count; }

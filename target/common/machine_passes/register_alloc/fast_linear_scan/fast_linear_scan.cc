@@ -21,8 +21,41 @@ bool FastLinearScan::DoAllocInCurrentFunc() {
     }
     // TODO: 进行线性扫描寄存器分配, 为每个虚拟寄存器选择合适的物理寄存器或者将其溢出到合适的栈地址中
     // 该函数中只需正确设置alloc_result，并不需要实际生成溢出代码
-    TODO("LinearScan");
+    while (!unalloc_queue.empty()) {
+        auto interval = unalloc_queue.top();
+        unalloc_queue.pop();
+        auto cur_vreg = interval.getReg();
+        int phy_reg_id = phy_regs_tools->getIdleReg(interval);
+        if (phy_reg_id >= 0) {
+            phy_regs_tools->OccupyReg(phy_reg_id, interval);
+            AllocPhyReg(mfun, cur_vreg, phy_reg_id);
+        } else {
+            spilled = true;
 
+            int mem = phy_regs_tools->getIdleMem(interval);
+            phy_regs_tools->OccupyMem(mem, interval);
+
+            AllocStack(mfun, cur_vreg, mem);
+            double spill_weight = CalculateSpillWeight(interval);
+            auto spill_interval = interval;
+            for (auto other : phy_regs_tools->getConflictIntervals(interval)) {
+                double other_weight = CalculateSpillWeight(other);
+                if (spill_weight > other_weight && other.getReg().is_virtual) {
+                    spill_weight = other_weight;
+                    spill_interval = other;
+                }
+            }
+
+            if (!(interval == spill_interval)) {
+                phy_regs_tools->swapRegspill(getAllocResultInReg(mfun, spill_interval.getReg()), spill_interval, mem,
+                                             cur_vreg.getDataWidth(), interval);
+                swapAllocResult(mfun, interval.getReg(), spill_interval.getReg());
+                int spill_mem = phy_regs_tools->getIdleMem(spill_interval);
+                phy_regs_tools->OccupyMem(spill_mem, spill_interval);
+                AllocStack(mfun, spill_interval.getReg(), spill_mem);
+            }
+        }
+    }
     // 返回是否发生溢出
     return spilled;
 }

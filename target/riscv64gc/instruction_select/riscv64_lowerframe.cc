@@ -36,8 +36,7 @@ void RiscV64LowerFrame::Execute() {
                             para_offset += 8;
                         }
                         i32_cnt++;
-                    } 
-                    else if (para.type.data_type == FLOAT64.data_type) {
+                    } else if (para.type.data_type == FLOAT64.data_type) {
                         if (f32_cnt < 8) {
                             // 如果参数可以使用浮点寄存器传递（fa0-fa7）
                             b->push_front(rvconstructor->ConstructR(
@@ -55,7 +54,8 @@ void RiscV64LowerFrame::Execute() {
                 if (para_offset != 0) {
                     Register para_basereg = current_func->GetNewReg(INT64);
                     current_func->hasStackParas = true;
-                    // b->push_front(rvconstructor->ConstructIImm(RISCV_ADDI, para_basereg, GetPhysicalReg(RISCV_fp), 0));
+                    // b->push_front(rvconstructor->ConstructIImm(RISCV_ADDI, para_basereg, GetPhysicalReg(RISCV_fp),
+                    // 0));
                 }
                 break;
             }
@@ -66,7 +66,7 @@ void RiscV64LowerFrame::Execute() {
 // 收集函数中寄存器的定义和读写信息
 void GatherUseSregs(MachineFunction *func, std::vector<std::vector<int>> &def_ids,
                     std::vector<std::vector<int>> &rw_ids) {
-    
+
     // 被调用者保存的寄存器编号 -> 该寄存器被使用的blockid
     // <s0, {0,1,2}>, <s1, {2,4,5}>, ...
     def_ids.resize(64);
@@ -126,12 +126,12 @@ void RiscV64LowerStack::Execute() {
         GatherUseSregs(func, saveregs_occurblockids, saveregs_rwblockids);
 
         // 4、初始化保存寄存器的基本块信息和偏移量
-        std::vector<int> sd_blocks(64, 0);        // 保存指令的块
-        std::vector<int> ld_blocks(64, 0);        // 恢复指令的块
-        std::vector<int> restore_offset(64, 0);   // 保存到栈上的偏移量
+        std::vector<int> sd_blocks(64, 0);         // 保存指令的块
+        std::vector<int> ld_blocks(64, 0);         // 恢复指令的块
+        std::vector<int> restore_offset(64, 0);    // 保存到栈上的偏移量
 
-        int saveregnum = 0;  // 需要保存的寄存器数
-        int cur_restore_offset = 0;  // 当前栈帧的偏移量
+        int saveregnum = 0;            // 需要保存的寄存器数
+        int cur_restore_offset = 0;    // 当前栈帧的偏移量
 
         // 5、统计需要保存的寄存器数量
         for (int i = 0; i < saveregs_occurblockids.size(); i++) {
@@ -176,7 +176,7 @@ void RiscV64LowerStack::Execute() {
                 for (int i = 0; i < 64; i++) {
                     if (!saveregs_occurblockids[i].empty()) {
                         int regno = i;
-                        offset -= 8;  // 每个寄存器占8字节
+                        offset -= 8;    // 每个寄存器占8字节
                         if (regno >= RISCV_x0 && regno <= RISCV_x31) {
                             // 保存整数寄存器
                             b->push_front(rvconstructor->ConstructSImm(RISCV_SD, GetPhysicalReg(regno),
@@ -195,10 +195,8 @@ void RiscV64LowerStack::Execute() {
             auto riscv_last_ins = (RiscV64Instruction *)last_ins;
 
             // 检查最后一条指令是否为 `ret`，即 JALR x0, x1, 0
-            if (riscv_last_ins->getOpcode() == RISCV_JALR && 
-                riscv_last_ins->getRd() == GetPhysicalReg(RISCV_x0) && 
-                riscv_last_ins->getRs1() == GetPhysicalReg(RISCV_ra) && 
-                riscv_last_ins->getImm() == 0) {
+            if (riscv_last_ins->getOpcode() == RISCV_JALR && riscv_last_ins->getRd() == GetPhysicalReg(RISCV_x0) &&
+                riscv_last_ins->getRs1() == GetPhysicalReg(RISCV_ra) && riscv_last_ins->getImm() == 0) {
 
                 // 删除原来的 `ret` 指令
                 b->pop_back();
@@ -208,7 +206,7 @@ void RiscV64LowerStack::Execute() {
                 for (int i = 0; i < 64; i++) {
                     if (!saveregs_occurblockids[i].empty()) {
                         int regno = i;
-                        offset -= 8;  // 每个寄存器占8字节
+                        offset -= 8;    // 每个寄存器占8字节
                         if (regno >= RISCV_x0 && regno <= RISCV_x31) {
                             // 恢复整数寄存器
                             b->push_back(rvconstructor->ConstructIImm(RISCV_LD, GetPhysicalReg(regno),
