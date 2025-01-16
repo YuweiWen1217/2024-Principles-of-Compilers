@@ -59,9 +59,7 @@ public:
 
     // 获取所有溢出寄存器占用内存大小之和
     int getSpillSize() {
-        // 也许需要添加新的成员变量进行维护
-        TODO("GetSpillSize");
-        return -1;
+        return mem_occupied.size() * 4;
     }
 };
 

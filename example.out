@@ -1,35 +1,29 @@
-declare i32 @getint()
-declare i32 @getch()
-declare float @getfloat()
-declare i32 @getarray(ptr)
-declare i32 @getfarray(ptr)
-declare void @putint(i32)
-declare void @putch(i32)
-declare void @putfloat(float)
-declare void @putarray(i32,ptr)
-declare void @putfarray(i32,ptr)
-declare void @_sysy_starttime(i32)
-declare void @_sysy_stoptime(i32)
-declare void @llvm.memset.p0.i32(ptr,i8,i32,i1)
-declare i32 @llvm.umax.i32(i32,i32)
-declare i32 @llvm.umin.i32(i32,i32)
-declare i32 @llvm.smax.i32(i32,i32)
-declare i32 @llvm.smin.i32(i32,i32)
-define i32 @main()
-{
-L0:  ;
-    br label %L1
-L1:  ;
-    %r1 = add i32 1,0
-    br label %L2
-L2:  ;
-    %r8 = phi i32 [%r1,%L1],[%r6,%L3]
-    %r3 = icmp sgt i32 %r8,0
-    br i1 %r3, label %L3, label %L4
-L3:  ;
-    %r5 = add i32 1,0
-    %r6 = sub i32 %r8,%r5
-    br label %L2
-L4:  ;
-    ret i32 %r8
-}
+	.text
+	.globl main
+	.attribute arch, "rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zicsr2p0_zifencei2p0_zba1p0_zbb1p0"
+main:
+.main_0:
+	jal			x0,.main_1
+.main_1:
+	li			%0,837
+	li			%1,128
+	add			%2,%0,%1
+	li			%3,241
+	add			%4,%2,%3
+	li			%5,412
+	sub			%6,%4,%5
+	li			%7,771
+	add			%8,%3,%7
+	li			%9,18
+	sub			%10,%8,%9
+	add			%11,%10,%6
+	li			%12,33
+	sub			%13,%11,%12
+	li			%14,55
+	sub			%15,%13,%14
+	add			%16,%15,%13
+	li			%17,21
+	rem			%18,%16,%17
+	addi		a0,%18,0
+	jalr		x0,ra,0
+	.data

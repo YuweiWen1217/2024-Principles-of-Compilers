@@ -201,6 +201,19 @@ void RiscV64LowerStack::Execute() {
                 // 删除原来的 `ret` 指令
                 b->pop_back();
 
+                 // 8.2.2、释放栈空间
+                if (func->GetStackSize() <= 2032) {
+                    // 小于2032字节时，直接调整sp
+                    b->push_back(rvconstructor->ConstructIImm(RISCV_ADDI, GetPhysicalReg(RISCV_sp),
+                                                              GetPhysicalReg(RISCV_sp), func->GetStackSize()));
+                } else {
+                    // 大于2032字节时，使用中间寄存器调整sp
+                    auto stacksz_reg = GetPhysicalReg(RISCV_t0);
+                    b->push_back(rvconstructor->ConstructUImm(RISCV_LI, stacksz_reg, func->GetStackSize()));
+                    b->push_back(rvconstructor->ConstructR(RISCV_ADD, GetPhysicalReg(RISCV_sp),
+                                                           GetPhysicalReg(RISCV_sp), stacksz_reg));
+                }
+
                 // 8.2.1、恢复寄存器
                 int offset = 0;
                 for (int i = 0; i < 64; i++) {
@@ -219,18 +232,7 @@ void RiscV64LowerStack::Execute() {
                     }
                 }
 
-                // 8.2.2、释放栈空间
-                if (func->GetStackSize() <= 2032) {
-                    // 小于2032字节时，直接调整sp
-                    b->push_back(rvconstructor->ConstructIImm(RISCV_ADDI, GetPhysicalReg(RISCV_sp),
-                                                              GetPhysicalReg(RISCV_sp), func->GetStackSize()));
-                } else {
-                    // 大于2032字节时，使用中间寄存器调整sp
-                    auto stacksz_reg = GetPhysicalReg(RISCV_t0);
-                    b->push_back(rvconstructor->ConstructUImm(RISCV_LI, stacksz_reg, func->GetStackSize()));
-                    b->push_back(rvconstructor->ConstructR(RISCV_ADD, GetPhysicalReg(RISCV_sp),
-                                                           GetPhysicalReg(RISCV_sp), stacksz_reg));
-                }
+               
 
                 // 8.2.3、重新插入 `ret` 指令
                 b->push_back(riscv_last_ins);

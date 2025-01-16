@@ -32,7 +32,28 @@ public:
     // 检测两个活跃区间是否重叠
     // 保证两个活跃区间各个段各自都是不降序（升序）排列的
     bool operator&(const LiveInterval &that) const {
-        TODO("& operator in LiveInterval");
+        if (segments.empty() || that.segments.empty())
+            return false;
+        auto it = segments.begin();
+        auto jt = that.segments.begin();
+        while (1) {
+            if (*it & *jt) {
+                return true;
+            }
+            if (it->end <= jt->begin) {
+                ++it;
+                if (it == segments.end()) {
+                    return false;
+                }
+            } else if (jt->end <= it->begin) {
+                ++jt;
+                if (jt == that.segments.end()) {
+                    return false;
+                }
+            } else {
+                ERROR("LiveInterval::operator&: Error");
+            }
+        }
         return false;
     }
 

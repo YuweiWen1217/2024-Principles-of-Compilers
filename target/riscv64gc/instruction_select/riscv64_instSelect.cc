@@ -201,7 +201,7 @@ template <> void RiscV64Selector::ConvertAndAppend<ArithmeticInstruction *>(Arit
             cur_block->push_back(rvconstructor->ConstructUImm(RISCV_LI, rd, result_value));
         }
         // 情况2：寄存器 op 寄存器
-        else if (op1->GetOperandType() == BasicOperand::REG && op1->GetOperandType() == BasicOperand::REG) {
+        else if (op1->GetOperandType() == BasicOperand::REG && op2->GetOperandType() == BasicOperand::REG) {
             auto *rs1_op = (RegOperand *)ins->GetOperand1();
             auto *rs2_op = (RegOperand *)ins->GetOperand2();
             auto rs1 = GetRvReg(rs1_op->GetRegNo(), reg_type);
@@ -212,24 +212,25 @@ template <> void RiscV64Selector::ConvertAndAppend<ArithmeticInstruction *>(Arit
 
         }
         // 情况3：立即数 op 寄存器
-        else if (op1->GetOperandType() == imm_type && op1->GetOperandType() == BasicOperand::REG) {
+        else if (op1->GetOperandType() == imm_type && op2->GetOperandType() == BasicOperand::REG) {
             auto *imm_op = (ImmI32Operand *)op1;
             auto imm = imm_op->GetIntImmVal();
 
             auto *rs_op = (RegOperand *)op2;
             auto rs = GetRvReg(rs_op->GetRegNo(), reg_type);    // 获取寄存器号
             // ADD 或 SUB 操作，并且立即数在范围内  -> ADDI
-            if ((opcode == BasicInstruction::ADD || opcode == BasicInstruction::SUB) && (imm <= 2047 && imm >= -2048)) {
-                imm = opcode == BasicInstruction::ADD ? imm : -imm;
+            if (opcode == BasicInstruction::ADD && (imm <= 2047 && imm >= -2048)) {
                 cur_block->push_back(rvconstructor->ConstructIImm(RISCV_ADDI, rd, rs, imm));
             } else {
                 // li temp_reg, imm
                 // opcode rd, rs, temp_reg
                 Register temp_reg = cur_func->GetNewReg(reg_type);    // 获取新的临时寄存器
                 cur_block->push_back(rvconstructor->ConstructUImm(RISCV_LI, temp_reg, imm));
-                cur_block->push_back(rvconstructor->ConstructR(GetOpcodeForArithmetic(opcode), rd, rs, temp_reg));
+                cur_block->push_back(rvconstructor->ConstructR(GetOpcodeForArithmetic(opcode), rd, temp_reg, rs));
             }
         } else {
+            // std::cout << op1->GetOperandType() << " " << op2->GetOperandType() << std::endl;
+            // std::cout << imm_type << " " << BasicOperand::REG << std::endl;
             ERROR("Unsupported operand type combination for ArithmeticInstruction");
         }
     }
@@ -988,6 +989,7 @@ void RiscV64Selector::SelectInstructionAndBuildCFG() {
 
             // 4、遍历每条指令，进行指令选择, 请注意指令选择时需要维护变量cur_offset
             for (auto instruction : block->Instruction_list) {
+                // instruction->PrintIR(std::cout);
                 ConvertAndAppend<Instruction>(instruction);
             }
         }
@@ -996,7 +998,7 @@ void RiscV64Selector::SelectInstructionAndBuildCFG() {
         for (auto &block : cur_func->blocks) {
             int block_id = block->getLabelId();
             if (block_insert_map.find(block_id) != block_insert_map.end()) {
-                auto &instr_list = block_insert_map[block_id];   
+                auto &instr_list = block_insert_map[block_id];
                 auto last_instr = block->back();
                 block->pop_back();
                 for (auto &instr : instr_list) {
