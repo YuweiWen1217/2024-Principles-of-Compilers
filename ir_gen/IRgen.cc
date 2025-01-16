@@ -577,6 +577,8 @@ void UnaryExp_neg::codeIR() {
     unary_exp->codeIR();
     IRgenTypeConverse(B, unary_exp->attribute.T.type, attribute.T.type, reg_now);
     int ori_reg = reg_now;
+    if (attribute.V.ConstTag && attribute.V.val.IntVal == -2147483648)
+        return;
     if (attribute.T.type == Type::INT)
         IRgenArithmeticI32ImmLeft(B, BasicInstruction::SUB, 0, ori_reg, ++reg_now);
     else
