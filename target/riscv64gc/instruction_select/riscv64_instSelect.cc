@@ -149,7 +149,7 @@ int GetOpcodeForArithmetic(int opcode) {
     case BasicInstruction::DIV:
         return RISCV_DIV;
     case BasicInstruction::MOD:
-        return RISCV_REM;
+        return RISCV_REMW;
     default:
         ERROR("Unsupported integer opcode");
     }
